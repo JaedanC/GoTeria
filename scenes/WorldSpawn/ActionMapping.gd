@@ -3,31 +3,23 @@ extends Node
 var mapping_data = {
 	"Keyboard": {
 		"binds": {},
-		"string_to_int": "key_string_to_int",
-		"int_to_string": "key_int_to_string",
 		"get_int" : "get_key_int",
-		"type": InputEventKey 
+		"input_event_type": InputEventKey 
 	},
 	"Joystick": {
 		"binds": {},
-		"string_to_int": "joy_string_to_int",
-		"int_to_string": "joy_int_to_string",
 		"get_int" : "get_joy_int",
-		"type": InputEventJoypadButton
+		"input_event_type": InputEventJoypadButton
 	},
 	"Mouse": {
 		"binds": {},
-		"string_to_int": "mouse_string_to_int",
-		"int_to_string": "mouse_int_to_string",
 		"get_int" : "get_mouse_int",
-		"type": InputEventMouseButton
+		"input_event_type": InputEventMouseButton
 	},
 	"Axis": {
 		"binds": {},
-		"string_to_int": "axis_string_to_int",
-		"int_to_string": "axis_int_to_string",
 		"get_int" : "get_axis_int",
-		"type": InputEventJoypadMotion
+		"input_event_type": InputEventJoypadMotion
 	}
 }
 
@@ -36,18 +28,18 @@ func _ready():
 	setup_aliases()
 	
 	add_action_mapping("jump", KEY_SPACE, InputEventKey)
-	add_action_mapping("jump", KEY_W, InputEventKey)
-	add_action_mapping("save_config", KEY_C, InputEventKey)
-	add_action_mapping("load_config", KEY_V, InputEventKey)
+	add_action_mapping("save_config", KEY_I, InputEventKey)
+	add_action_mapping("load_config", KEY_O, InputEventKey)
 	add_action_mapping("show_mappings", KEY_P, InputEventKey)
 	
-	add_action_mapping("jump", $Keyboard.key_string_to_int("h"), InputEventKey)
-	
-	add_action_mapping("shoot", BUTTON_LEFT, InputEventMouseButton)
-	
-	add_action_mapping("turn_left", JOY_AXIS_0, InputEventJoypadMotion)
-	
-	
+	add_action_mapping("move_left", KEY_A, InputEventKey)
+	add_action_mapping("move_right", KEY_D, InputEventKey)
+	add_action_mapping("move_up", KEY_W, InputEventKey)
+	add_action_mapping("move_down", KEY_S, InputEventKey)
+	add_action_mapping("zoom_reset", key_string_to_int("backspace", "Keyboard"), InputEventKey)
+	add_action_mapping("zoom_in", key_string_to_int("mwheeldown", "Mouse"), InputEventMouseButton)
+	add_action_mapping("zoom_out", key_string_to_int("mwheelup", "Mouse"), InputEventMouseButton)
+	add_action_mapping("save_world", key_string_to_int("m", "Keyboard"), InputEventKey)
 
 func setup_aliases():
 	# TODO: No Axis Mappings yet. Though is this required?
@@ -153,6 +145,9 @@ func setup_aliases():
 
 func _input(event : InputEvent):
 	
+#	var result = get_event_key(event)
+#	if result:
+#		print(result)
 	if event.is_action_pressed("jump"):
 		print("jumping")
 	
@@ -161,70 +156,33 @@ func _input(event : InputEvent):
 	
 	if event.is_action_pressed("save_config"):
 		print("Saving Config")
-		save_mappings_config()
+		get_node("../ConfigHandler").save_action_mappings_config()
 		print("Saved Config")
 	
 	if event.is_action_pressed("load_config"):
-		load_mappings_config()
+		get_node("../ConfigHandler").load_action_mappings_config()
 		print("Loaded Config")
-		
-	var result = null
-	if event is InputEventKey and event.pressed:
-		result = $Keyboard.key_int_to_string(event.scancode)
-	elif event is InputEventJoypadButton:
-		result = $Joystick.joy_int_to_string(event.button_index)
-	elif event is InputEventJoypadMotion:
-		result = $Axis.axis_int_to_string(event.axis)
-	elif event is InputEventMouseButton:
-		result = $Mouse.mouse_int_to_string(event.button_index)
-		
-	if result:
-		print(result)
 
 func add_action_mapping(action : String, keycode : int, type):
+	"""
+	Binds a key to an action. You also need to pass it the type of event this
+	keycode is so that it can be stored correctly.
+	Example usage:
+		add_action_mapping('move_down', KEY_S, InputEventKey)
+		add_action_mapping('zoom_reset', key_string_to_int('backspace', 'Keyboard'), InputEventKey)
+		add_action_mapping('zoom_in', key_string_to_int('mwheeldown', 'Mouse'), InputEventMouseButton)
+	"""
 	var event = type.new()
-	
-	if "scancode" in event:
-		event.set_scancode(keycode)
-	elif "button_index" in event:
-		event.set_button_index(keycode)
-	elif "axis" in event:
-		event.set_axis(keycode)
-	else:
-		print("Unknown event type")
+	set_event_key(event, keycode)
 	
 	if !(action in InputMap.get_actions()):
 		InputMap.add_action(action)
 	InputMap.action_add_event(action, event)
 
-func save_mappings_config():
-	var config = ConfigFile.new()
-	var action_mappings = get_action_mappings_as_saveable_dict()
-	
-	for input_type in action_mappings.keys():
-		for action in action_mappings[input_type].keys():
-			config.set_value(input_type, action, action_mappings[input_type][action])
-	
-	config.save("user://action_mapping_config.ini")
-	
-func load_mappings_config():
-	var config = ConfigFile.new()
-	config.load("user://action_mapping_config.ini")
-	
-	for input_type in mapping_data.keys():
-		for action in config.get_section_keys(input_type):
-			for bind in config.get_value(input_type, action):
-				
-				add_action_mapping(
-					action,
-					get_node(input_type).call(
-						mapping_data[input_type]["string_to_int"],
-						bind
-					),
-					mapping_data[input_type]["type"]
-				)
-
 func show_mappings():
+	"""
+	Print all the ActionMappings to the console.
+	"""
 	for action in InputMap.get_actions():
 		print("Action: " + str(action) + ", Mappings: " + str(InputMap.get_action_list(action)))
 
@@ -255,17 +213,55 @@ func get_action_mappings_as_saveable_dict():
 	for action in InputMap.get_actions():
 		for input_event in InputMap.get_action_list(action):
 			for input_type in mapping_data.keys():
-				if input_event is mapping_data[input_type]["type"]:
+				if input_event is mapping_data[input_type]["input_event_type"]:
 					if !(action in action_mappings_dict[input_type]):
 						action_mappings_dict[input_type][action] = []
 					
+					var key_int = get_node(input_type).call(
+						mapping_data[input_type]["get_int"],
+						input_event
+					)
+					
 					action_mappings_dict[input_type][action].append(
-						get_node(input_type).call(
-							mapping_data[input_type]["int_to_string"],
-							get_node(input_type).call(
-								mapping_data[input_type]["get_int"],
-								input_event
-							)
-						)
+						key_int_to_string(key_int, input_type)
 					)
 	return action_mappings_dict
+
+func key_int_to_string(key_int : int, input_type : String):
+	"""
+	Converts KeyCode Enum values to readable string that can be stored in a file.
+	The strings are defined in setup_aliases().
+	"""
+	for key_string in mapping_data[input_type]["binds"].keys():
+		if mapping_data[input_type]["binds"][key_string] == key_int:
+			return key_string
+	return null
+
+func key_string_to_int(key_string : String, input_type : String):
+	"""
+	Converts readable string representations of keys into the godot KeyCode Enum
+	values. The strings are defined in setup_aliases().
+	"""
+	if key_string in mapping_data[input_type]["binds"].keys():
+		return mapping_data[input_type]["binds"][key_string]
+	return null
+
+func set_event_key(event, keycode : int):
+	if "scancode" in event:
+		event.set_scancode(keycode)
+	elif "button_index" in event:
+		event.set_button_index(keycode)
+	elif "axis" in event:
+		event.set_axis(keycode)
+	else:
+		print("Unknown event type")
+
+func get_event_key(event):
+	if "scancode" in event:
+		return event.get_scancode()
+	elif "button_index" in event:
+		return event.get_button_index()
+	elif "axis" in event:
+		return event.get_axis()
+		
+	return null

@@ -1,0 +1,31 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://icon.png" type="Texture" id=1]
+[ext_resource path="res://scenes/Player/Camera.gd" type="Script" id=2]
+[ext_resource path="res://scenes/Player/Player.gd" type="Script" id=3]
+
+[sub_resource type="RectangleShape2D" id=2]
+extents = Vector2( 30, 45 )
+
+[node name="Player" type="Sprite"]
+position = Vector2( 8.5641, 9.58364 )
+texture = ExtResource( 1 )
+script = ExtResource( 3 )
+
+[node name="Camera" type="Camera2D" parent="."]
+current = true
+script = ExtResource( 2 )
+
+[node name="GravityRaycastDisabled" type="RayCast2D" parent="."]
+position = Vector2( 30, 28 )
+cast_to = Vector2( 0, 6 )
+
+[node name="GravityRaycastDisabled2" type="RayCast2D" parent="."]
+position = Vector2( -30, 28 )
+cast_to = Vector2( 0, 6 )
+
+[node name="KinematicBody2D" type="KinematicBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="KinematicBody2D"]
+position = Vector2( 0, -14 )
+shape = SubResource( 2 )
