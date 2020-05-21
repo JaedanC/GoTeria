@@ -7,10 +7,11 @@ export(Vector2) var chunk_block_count
 var chunk_scene = preload("res://scenes/Chunk.tscn")
 
 var loaded_chunks = {}
+var player = null
 
 func _ready():
+	player = get_tree().get_root().find_node("Player", true, false)
 #	generate_world()
-	pass
 
 func _process(_delta):
 	# Save the all chunks loaded in memory to a file.
@@ -21,9 +22,6 @@ func _process(_delta):
 	free_all_invisible_chunks()
 	create_visible_chunks()
 	
-	# Tells Godot to run the draw() method each frame.
-	update()
-	
 func free_all_invisible_chunks():
 	"""
 	This method uses the visibility points to determine which chunks should be
@@ -31,7 +29,7 @@ func free_all_invisible_chunks():
 	"""
 	
 	# First we grab a set the world_positions that should be loaded in the game 
-	var visibility_points = get_visibility_points()
+	var visibility_points = player.get_visibility_points()
 	
 	# Create a temporary dictionary to store chunks that are already loaded
 	# and should stay loaded
@@ -55,99 +53,12 @@ func free_all_invisible_chunks():
 	# dictionary
 	loaded_chunks = visible_chunks
 
-func get_visibility_points() -> Array:
-	"""
-	This method returns a list of integer Vector2's that represent the indexes of
-	chunks that should be loaded for the player. This takes into account where
-	the player is and the camera zoom by performing some neat mathematical
-	tricks on the viewport, player and camera, position vectors.
-	
-	Example Output:
-	[
-		Vector2(0, 0),
-		Vector2(0, 1),
-		Vector2(1, 0),
-		Vector2(1, 1)
-	]
-	"""
-	# Grab important data
-	var player = get_tree().get_root().find_node("Player", true, false)
-	var camera = player.find_node("Camera")
-	var viewport_rectangle = get_viewport_rect()
-	
-	# Using the viewport rectangle as a base, centre a copy of it around the player.
-	viewport_rectangle.position = player.position - viewport_rectangle.size/2
-	
-	# Expand this Rectangle to take into account camera zooming by using two
-	# Vector2's the point the the corners of the screen and using the Rect2.expand
-	# method. TODO: This strategy does not take into account zooming in, only zooming
-	# out is considered. Adding this feature would only slightly increase the fps
-	# when zoomed in and thus it isn't a high priority
-	viewport_rectangle = viewport_rectangle.expand(player.position - (get_viewport_rect().size / 2) * camera.zoom)
-	viewport_rectangle = viewport_rectangle.expand(player.position + (get_viewport_rect().size / 2) * camera.zoom)
-	
-	# Convert the top left and bottom right points of the Rect2 into an integer
-	# that we can loop through to get the points for the visible chunks. This
-	# takes into account the size of each chunk.
-	var chunk_dimensions = get_chunk_pixel_dimensions()
-	var top_left = (viewport_rectangle.position / chunk_dimensions).floor()
-	var bottom_right = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).floor()
-	
-	# Loop through these two values and include them in the visibility point
-	# list. +1 is there so that the right and bottom edge are forced to be
-	# included. Remove it if you don't know what I mean an then you'll see.
-	var visibility_points = []
-	for i in range(top_left.x, bottom_right.x + 1):
-		for j in range(top_left.y, bottom_right.y + 1):
-			var visible_point = Vector2(i, j)
-			visibility_points.append(visible_point)
-
-	return visibility_points
-
-func create_visible_chunks():
-	"""
-	This method uses the visibility points to load chunks from memory if they
-	not already loaded. Loaded chunks are added to the loaded_chunk dictionary
-	and added as children to this scene. Points including negative values
-	will be rejected by create_chunk so we need to check if the return is null
-	before we add it to the tree.
-	"""
-	var visibility_points = get_visibility_points()
-	for point in visibility_points:
-		if !loaded_chunks.has(point):
-			var chunk = create_chunk(point)
-			# If create_chunk was successful.
-			if chunk:
-				add_child(chunk)
-
-func create_chunk(world_position : Vector2):
-	"""
-	This method creates and loads a chunk based on the world_position Vector2.
-	It will return null if the x or y value is negative. Otherwise it will add
-	the chunk to the loaded_chunks dictionary and return the chunk instance
-	it created. 
-	"""
-	# Input checks
-	if world_position.x < 0 or world_position.y < 0:
-		return null
-	
-	# Instance a chunk
-	var chunk = chunk_scene.instance()
-	chunk.init(world_position,
-		chunk_block_count,
-		block_pixel_size
-	)
-	
-	# Cache the chunk for future reference
-	loaded_chunks[world_position] = chunk
-	return chunk
-
 func delete_chunk(chunk):
 	"""
 	This method deletes the chunk passed in and removed the reference to this
 	chunk in the loaded_chunks dictionary.
 	"""
-	loaded_chunks.erase(chunk.world_position)
+	loaded_chunks.erase(chunk.chunk_position)
 	chunk.queue_free()
 
 func generate_world():
@@ -162,14 +73,79 @@ func generate_world():
 			var chunk = create_chunk(Vector2(i, j))
 			chunk.save_chunk()
 
+func create_visible_chunks():
+	"""
+	This method uses the visibility points to load chunks from memory if they
+	not already loaded. Loaded chunks are added to the loaded_chunk dictionary
+	and added as children to this scene. Points including negative values
+	will be rejected by create_chunk so we need to check if the return is null
+	before we add it to the tree.
+	"""
+	var visibility_points = player.get_visibility_points()
+	for point in visibility_points:
+		if !loaded_chunks.has(point):
+			create_chunk(point)
+
+func create_chunk(chunk_position : Vector2) -> bool:
+	"""
+	This method creates and loads a chunk based on the chunk_position Vector2.
+	It will return null if the x or y value is negative. Otherwise it will add
+	the chunk to the loaded_chunks dictionary. returns whether the chunk exists
+	"""
+	# Input checks. TODO: World Boundaries
+	if chunk_position.x < 0 or chunk_position.y < 0:
+		return false
+	
+	# Check if it's already loaded
+	if loaded_chunks.has(chunk_position):
+		return true
+	
+	# Instance a chunk
+	var chunk = chunk_scene.instance()
+	chunk.init(chunk_position,
+		chunk_block_count,
+		block_pixel_size
+	)
+	# Cache the chunk for future reference
+	loaded_chunks[chunk_position] = chunk
+	add_child(chunk)
+	return true
+
+func get_chunk_from_chunk_position(chunk_position : Vector2):
+	if create_chunk(chunk_position):
+		return loaded_chunks[chunk_position]
+	return null
+
+func get_chunk_from_world_position(world_position : Vector2):
+	return get_chunk_from_chunk_position(get_chunk_position_from_world_position(world_position))
+
+func get_block_from_world_position(world_position : Vector2):
+	var chunk_position = get_chunk_position_from_world_position(world_position)
+	var block_position = get_block_position_from_world_position(world_position)
+	return get_block_from_chunk_position_and_block_position(chunk_position, block_position)
+
+func get_block_from_chunk_position_and_block_position(chunk_position : Vector2, block_position : Vector2):
+	var chunk = get_chunk_from_chunk_position(chunk_position)
+	if !chunk:
+		return null
+	
+	var block = {}
+	block["id"] = chunk.blocks["id"][block_position]
+	block["colour"] = chunk.blocks["colour"][block_position]
+	return block
+
+func get_block_position_from_world_position(world_position : Vector2):
+	var chunk_position = get_chunk_position_from_world_position(world_position)
+	var block_position = (world_position - chunk_position * get_chunk_pixel_dimensions()).floor()
+	return (block_position / block_pixel_size).floor()
+
+func get_chunk_position_from_world_position(world_position : Vector2) -> Vector2:
+	return (world_position / get_chunk_pixel_dimensions()).floor()
+
 func get_chunk_pixel_dimensions() -> Vector2:
 	"""
 	Returns the size of a chunk in pixels as a Vector2
 	"""
 	return block_pixel_size * chunk_block_count
 
-func _draw():
-#	var points = get_visibility_points()
-#	for point in points:
-#		draw_circle(point * get_chunk_pixel_dimensions(), 15, Color(0, 1, 0, 1))
-	pass
+

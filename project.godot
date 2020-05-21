@@ -27,6 +27,10 @@ InputLayering="*res://scenes/InputLayering.gd"
 
 window/vsync/use_vsync=false
 
+[editor_plugins]
+
+enabled=PoolStringArray( "smoothing" )
+
 [input]
 
 ui_accept={

@@ -1,31 +1,37 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://icon.png" type="Texture" id=1]
 [ext_resource path="res://scenes/Player/Camera.gd" type="Script" id=2]
-[ext_resource path="res://scenes/Player/Player.gd" type="Script" id=3]
+[ext_resource path="res://scenes/Components/GravityComponent.tscn" type="PackedScene" id=3]
+[ext_resource path="res://addons/smoothing/smoothing_2d.gd" type="Script" id=4]
+[ext_resource path="res://scenes/Player/Player.gd" type="Script" id=5]
 
-[sub_resource type="RectangleShape2D" id=2]
+[sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 30, 45 )
 
-[node name="Player" type="Sprite"]
-position = Vector2( 8.5641, 9.58364 )
-texture = ExtResource( 1 )
-script = ExtResource( 3 )
+[node name="Player" type="Node2D"]
+script = ExtResource( 5 )
 
-[node name="Camera" type="Camera2D" parent="."]
+[node name="Rigidbody" type="KinematicBody2D" parent="."]
+
+[node name="Hitbox" type="CollisionShape2D" parent="Rigidbody"]
+shape = SubResource( 1 )
+
+[node name="Smoothing" type="Node2D" parent="."]
+script = ExtResource( 4 )
+target = NodePath("../Rigidbody")
+
+[node name="PlayerSprite" type="Sprite" parent="Smoothing"]
+position = Vector2( 0, 3 )
+texture = ExtResource( 1 )
+
+[node name="Camera" type="Camera2D" parent="Smoothing"]
 current = true
+drag_margin_left = 0.0
+drag_margin_top = 0.0
+drag_margin_right = 0.0
+drag_margin_bottom = 0.0
 script = ExtResource( 2 )
 
-[node name="GravityRaycastDisabled" type="RayCast2D" parent="."]
-position = Vector2( 30, 28 )
-cast_to = Vector2( 0, 6 )
-
-[node name="GravityRaycastDisabled2" type="RayCast2D" parent="."]
-position = Vector2( -30, 28 )
-cast_to = Vector2( 0, 6 )
-
-[node name="KinematicBody2D" type="KinematicBody2D" parent="."]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="KinematicBody2D"]
-position = Vector2( 0, -14 )
-shape = SubResource( 2 )
+[node name="GravityComponent" parent="." instance=ExtResource( 3 )]
+enabled = false
