@@ -111,6 +111,12 @@ func create_chunk(chunk_position : Vector2) -> bool:
 	add_child(chunk)
 	return true
 
+func get_chunk_pixel_dimensions() -> Vector2:
+	"""
+	Returns the size of a chunk in pixels as a Vector2
+	"""
+	return block_pixel_size * chunk_block_count
+
 func get_chunk_from_chunk_position(chunk_position : Vector2):
 	if create_chunk(chunk_position):
 		return loaded_chunks[chunk_position]
@@ -128,11 +134,7 @@ func get_block_from_chunk_position_and_block_position(chunk_position : Vector2, 
 	var chunk = get_chunk_from_chunk_position(chunk_position)
 	if !chunk:
 		return null
-	
-	var block = {}
-	block["id"] = chunk.blocks["id"][block_position]
-	block["colour"] = chunk.blocks["colour"][block_position]
-	return block
+	return chunk.blocks[block_position]
 
 func get_block_position_from_world_position(world_position : Vector2):
 	var chunk_position = get_chunk_position_from_world_position(world_position)
@@ -142,10 +144,10 @@ func get_block_position_from_world_position(world_position : Vector2):
 func get_chunk_position_from_world_position(world_position : Vector2) -> Vector2:
 	return (world_position / get_chunk_pixel_dimensions()).floor()
 
-func get_chunk_pixel_dimensions() -> Vector2:
-	"""
-	Returns the size of a chunk in pixels as a Vector2
-	"""
-	return block_pixel_size * chunk_block_count
-
+func set_block_at_world_position(world_position : Vector2, new_block : Dictionary):
+	var chunk = get_chunk_from_world_position(world_position)
+	if chunk:
+		var block_position = get_block_position_from_world_position(world_position)
+		chunk.set_block_from_block_position(block_position, new_block)
+	return null
 

@@ -4,4 +4,4 @@ export(bool) var enabled = true
 
 func _physics_process(_delta):
 	if enabled:
-		get_parent().velocity += Vector2(0, 0.5)
+		get_parent().velocity += Vector2(0, 98)

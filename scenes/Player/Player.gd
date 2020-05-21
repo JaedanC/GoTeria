@@ -18,28 +18,55 @@ func _process(_delta):
 	if InputLayering.pop_action("zoom_reset"):
 		camera.zoom = Vector2(1, 1)
 	
+	if InputLayering.pop_action("click"):
+		var world_position = screen_to_world_position(get_viewport().get_mouse_position())
+		var block = terrain.get_block_from_world_position(world_position)
+		if block:
+			block["id"] = 1
+			block["colour"] = Color(randf(), randf(), randf(), 0.2)
+			terrain.set_block_at_world_position(world_position, block)
+	
+	if InputLayering.pop_action("dig"):
+		var world_position = screen_to_world_position(get_viewport().get_mouse_position())
+		var block = terrain.get_block_from_world_position(world_position)
+		if block:
+			block["id"] = 0
+			terrain.set_block_at_world_position(world_position, block)
+	
 	update()
 
 func _physics_process(delta):
-	self.rigidbody.position += velocity
 	
 	if InputLayering.pop_action("move_left"):
-		velocity.x -= 1
+		velocity.x -= 50
 	
 	if InputLayering.pop_action("move_right"):
-		velocity.x += 1
+		velocity.x += 50
 	
 	if InputLayering.pop_action("move_up"):
-		velocity.y -= 1
+		velocity.y += -50
 	
 	if InputLayering.pop_action("move_down"):
-		velocity.y += 1
+		velocity.y += 50
 	
 	if InputLayering.pop_action("jump"):
-		velocity.y = -15
+		velocity.y = -1000
 	
 	if InputLayering.pop_action("brake"):
 		velocity = Vector2(0, 0)
+	
+	move(velocity)
+	
+func move(vector : Vector2):
+	self.rigidbody.move_and_slide(vector, Vector2(0, -1))
+	if self.rigidbody.is_on_floor():
+		self.velocity.y = 0
+	if self.rigidbody.is_on_wall():
+		self.velocity.x = 0
+#	for i in self.rigidbody.get_slide_count():
+#		var collision = self.rigidbody.get_slide_collision(i)
+#		print("Collided with: ", collision.collider.name)
+
 
 func _input(event):
 	if event.is_action_pressed("zoom_in"):
@@ -48,17 +75,7 @@ func _input(event):
 	if event.is_action_pressed("zoom_out"):
 		camera.zoom -= Vector2(0.25, 0.25)
 	
-	if event.is_action_pressed("click"):
-		var world_position = screen_to_world_position(get_viewport().get_mouse_position())
-		
-		var chunk_position = terrain.get_chunk_position_from_world_position(world_position)
-		var block_position = terrain.get_block_position_from_world_position(world_position)
-		
-		var block = terrain.get_block_from_world_position(world_position)
-		
-		print("Chunk Position: " + str(chunk_position))
-		print("Block Position: " + str(block_position))
-		print(block)
+	
 		
 	
 	camera.zoom.x = clamp(camera.zoom.x, 0.5, 3)
@@ -135,5 +152,11 @@ func _draw():
 		5,
 		Color(1, 1, 0, 1)
 	)
-
+	
+	draw_line(
+		screen_to_world_position(get_viewport().size/2),
+		screen_to_world_position(get_viewport().size/2 + velocity / 10),
+		Color(1, 0, 0)
+	)
+	
 	pass

@@ -41,6 +41,7 @@ func _ready():
 	add_action_mapping("zoom_out", key_string_to_int("mwheelup", "Mouse"), InputEventMouseButton)
 	add_action_mapping("save_world", key_string_to_int("m", "Keyboard"), InputEventKey)
 	add_action_mapping("click", key_string_to_int("mouse1", "Mouse"), InputEventMouseButton)
+	add_action_mapping("dig", key_string_to_int("mouse2", "Mouse"), InputEventMouseButton)
 	add_action_mapping("brake", key_string_to_int("x", "Keyboard"), InputEventKey)
 
 func setup_aliases():
