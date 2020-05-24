@@ -7,6 +7,13 @@ var terrain = null
 
 var velocity = Vector2(0, 0)
 
+var original_player_hitbox = null
+var next_physics_player_hitbox = null
+var visibility_hitbox = null
+
+var block_scene = preload("res://scenes/Block.tscn")
+var blocks = {}
+
 func _ready():
 	self.camera = find_node("Camera")
 	self.rigidbody = find_node("Rigidbody")
@@ -36,7 +43,6 @@ func _process(_delta):
 	update()
 
 func _physics_process(delta):
-	
 	if InputLayering.pop_action("move_left"):
 		velocity.x -= 50
 	
@@ -55,6 +61,10 @@ func _physics_process(delta):
 	if InputLayering.pop_action("brake"):
 		velocity = Vector2(0, 0)
 	
+	
+	update_collision_visiblity_rect(delta)
+	delete_invisible_blocks_hitboxes()
+	create_visible_blocks_hitboxes()
 	move(velocity)
 	
 func move(vector : Vector2):
@@ -63,10 +73,6 @@ func move(vector : Vector2):
 		self.velocity.y = 0
 	if self.rigidbody.is_on_wall():
 		self.velocity.x = 0
-#	for i in self.rigidbody.get_slide_count():
-#		var collision = self.rigidbody.get_slide_collision(i)
-#		print("Collided with: ", collision.collider.name)
-
 
 func _input(event):
 	if event.is_action_pressed("zoom_in"):
@@ -75,11 +81,39 @@ func _input(event):
 	if event.is_action_pressed("zoom_out"):
 		camera.zoom -= Vector2(0.25, 0.25)
 	
-	
-		
-	
 	camera.zoom.x = clamp(camera.zoom.x, 0.5, 3)
 	camera.zoom.y = clamp(camera.zoom.y, 0.5, 3)
+
+func create_visible_blocks_hitboxes():
+	var visible_blocks = get_hitbox_visibility_points(visibility_hitbox)
+	
+	for visible_block_point in visible_blocks:
+		if blocks.has(visible_block_point):
+			continue
+		
+		var existing_block = terrain.get_block_from_world_position(visible_block_point * terrain.block_pixel_size)
+		if existing_block and existing_block["id"] != 0:
+			var block = block_scene.instance()
+			block.position = visible_block_point * terrain.block_pixel_size + terrain.block_pixel_size / 2
+			add_child(block)
+			
+			blocks[visible_block_point] = block
+
+func delete_invisible_blocks_hitboxes():
+	var visible_blocks = {}
+	
+	for visible_block_point in get_hitbox_visibility_points(visibility_hitbox):
+		if blocks.has(visible_block_point):
+			var existing_block_data = terrain.get_block_from_world_position(visible_block_point * terrain.block_pixel_size)
+			if existing_block_data["id"] == 0:
+				continue
+			visible_blocks[visible_block_point] = blocks[visible_block_point]
+			blocks.erase(visible_block_point)
+	
+	for invisible_blocks in blocks.keys():
+		blocks[invisible_blocks].queue_free()
+	
+	blocks = visible_blocks
 
 func get_visibility_points() -> Array:
 	"""
@@ -139,13 +173,42 @@ func screen_to_world_position(screen_position : Vector2) -> Vector2:
 	var world_position = self.smoothing.position + screen_position * camera.zoom
 	return world_position - camera.zoom * get_viewport_rect().size/2
 
+func update_collision_visiblity_rect(delta):
+	# TODO Hardcoded hitbox size
+	var collision_visibility = find_node("Hitbox", true, false).position - Vector2(32, 32)
+	original_player_hitbox = Rect2(collision_visibility + rigidbody.position, 2 * Vector2(32, 32))
+	next_physics_player_hitbox = original_player_hitbox
+	next_physics_player_hitbox.position += velocity * delta
+	visibility_hitbox = next_physics_player_hitbox.merge(original_player_hitbox)
+
+func get_hitbox_visibility_points(area : Rect2) -> Array:
+	var visibility_points = []
+	var top_left = (area.position / terrain.block_pixel_size).floor()
+	var bottom_right = ((area.position + area.size) / terrain.block_pixel_size).floor()
+	for i in range(top_left.x, bottom_right.x + 1):
+		for j in range(top_left.y, bottom_right.y + 1):
+			var visible_point = Vector2(i, j)
+			visibility_points.append(visible_point)
+	return visibility_points
+
 func _draw():
 #	for point in get_visibility_points():
 #		draw_circle(
-#			point * get_tree().get_root().find_node("Terrain", true, false).get_chunk_pixel_dimensions(),
+#			point * terrain.get_chunk_pixel_dimensions(),
 #			15,
 #			Color(0, 1, 0, 1)
 #		)
+	
+#	if original_player_hitbox:
+#		draw_rect(original_player_hitbox, Color(0, 0, 1, 0.1))
+#		draw_rect(next_physics_player_hitbox, Color(0, 1, 0, 0.1))
+#		draw_rect(visibility_hitbox, Color(1, 0, 0, 0.1))
+#		for point in get_hitbox_visibility_points(visibility_hitbox):
+#			draw_circle(
+#				point * terrain.block_pixel_size,
+#				5,
+#				Color(0, 1, 0, 1)
+#			)
 	
 	draw_circle(
 		screen_to_world_position(get_viewport().get_mouse_position()),

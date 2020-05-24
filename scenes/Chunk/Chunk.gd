@@ -40,9 +40,9 @@ func init(_chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size 
 #				abs(sin(randi()) - 0.5)
 			)
 			
-			var block = block_scene.instance()
-			block.position = Vector2(i, j) * self.block_pixel_size + self.block_pixel_size / 2
-			add_child(block)
+#			var block = block_scene.instance()
+#			block.position = Vector2(i, j) * self.block_pixel_size + self.block_pixel_size / 2
+#			add_child(block)
 			
 	
 func save_chunk():
