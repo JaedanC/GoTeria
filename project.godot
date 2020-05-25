@@ -16,12 +16,12 @@ _global_script_class_icons={
 [application]
 
 config/name="Testing"
-run/main_scene="res://scenes/WorldSpawn.tscn"
+run/main_scene="res://scenes/WorldSpawn/WorldSpawn.tscn"
 config/icon="res://icon.png"
 
 [autoload]
 
-InputLayering="*res://scenes/InputLayering.gd"
+InputLayering="*res://scenes/Singletons/InputLayering.gd"
 
 [display]
 

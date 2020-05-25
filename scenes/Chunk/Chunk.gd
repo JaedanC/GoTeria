@@ -4,12 +4,10 @@ var chunk_position : Vector2
 var block_count : Vector2
 var block_pixel_size : Vector2
 
-var block_scene = preload("res://scenes/Block.tscn")
-
 var blocks = {
 }
 
-func _process(delta):
+func _process(_delta):
 #	update()
 	pass
 
@@ -39,12 +37,8 @@ func init(_chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size 
 				0.2
 #				abs(sin(randi()) - 0.5)
 			)
-			
-#			var block = block_scene.instance()
-#			block.position = Vector2(i, j) * self.block_pixel_size + self.block_pixel_size / 2
-#			add_child(block)
-			
-	
+
+
 func save_chunk():
 	"""
 	This method will save all the data in a chunk to disk. Currently it is being
@@ -62,8 +56,8 @@ func save_chunk():
 	chunk.open_compressed("user://chunk_data/%s.dat" % chunk_position, File.WRITE, File.COMPRESSION_ZSTD)
 	
 	# Save all chunk data in here
-	for i in range(block_count.x):
-		for j in range(block_count.y):
+	for _i in range(block_count.x):
+		for _j in range(block_count.y):
 			chunk.store_16(floor(rand_range(0, 5)))
 	chunk.close()
 

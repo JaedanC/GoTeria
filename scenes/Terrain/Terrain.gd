@@ -4,7 +4,7 @@ extends Node2D
 export(Vector2) var block_pixel_size
 export(Vector2) var world_size_in_chunks
 export(Vector2) var chunk_block_count
-var chunk_scene = preload("res://scenes/Chunk.tscn")
+var chunk_scene = preload("res://scenes/Chunk/Chunk.tscn")
 
 var loaded_chunks = {}
 var player = null
