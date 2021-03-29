@@ -178,7 +178,8 @@ func add_action_mapping(action : String, keycode : int, type):
 	var event = type.new()
 	set_event_key(event, keycode)
 	
-	if !(action in InputMap.get_actions()):
+#	if !(action in InputMap.get_actions()):
+	if !(InputMap.has_action(action)):
 		InputMap.add_action(action)
 	InputMap.action_add_event(action, event)
 

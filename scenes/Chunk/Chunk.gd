@@ -7,11 +7,16 @@ var block_pixel_size : Vector2
 var blocks = {
 }
 
+var terrain = null
+
+func _ready():
+	terrain = get_tree().get_root().find_node("Terrain", true, false)
+
 func _process(_delta):
 #	update()
 	pass
 
-func init(_chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size : Vector2):
+func init(world_image: Image, _chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size : Vector2):
 	"""
 	Chunks require a constructor to pass in all the data. Unfortunately this means
 	that you cannot mark this script as a tool and visually see the chunk. This
@@ -23,20 +28,32 @@ func init(_chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size 
 	self.block_pixel_size = _block_pixel_size
 	self.position = block_pixel_size * chunk_position * block_count
 	
+	
+	
+	world_image.lock()
+	
 	for i in range(block_count.x):
 		for j in range(block_count.y):
 			var block_position = Vector2(i, j)
 			if !blocks.has(block_position):
 				blocks[block_position] = {}
-				
-			blocks[block_position]["id"] = 1
-			blocks[block_position]["colour"] = Color(
-				abs(sin(((i + j) * 4) / 255.0)),
-				abs(sin((200 - (i * 2)) / 255.0)),
-				abs(sin((200 - (j * 3)) / 255.0)),
-				0.2
-#				abs(sin(randi()) - 0.5)
-			)
+			
+			var block_pixel_position = self.chunk_position * block_count + block_position
+			var pixel = Color(world_image.get_pixelv(block_pixel_position))
+			
+			if (pixel.a == 0):
+				blocks[block_position]["id"] = 0
+			else:
+				blocks[block_position]["id"] = 1
+			blocks[block_position]["colour"] = pixel
+#			blocks[block_position]["colour"] = Color(
+#				abs(sin(((i + j) * 4) / 255.0)),
+#				abs(sin((200 - (i * 2)) / 255.0)),
+#				abs(sin((200 - (j * 3)) / 255.0)),
+#				0.2
+##				abs(sin(randi()) - 0.5)
+#			)
+	world_image.unlock()
 
 
 func save_chunk():

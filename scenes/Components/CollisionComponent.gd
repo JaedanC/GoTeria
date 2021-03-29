@@ -17,7 +17,7 @@ func _ready():
 	parent = get_parent()
 	parent_hitbox = parent.find_node("Hitbox", true, false)
 	parent_rigidbody = parent.find_node("Rigidbody", true, false)
-	parent.velocity
+#	parent.velocity
 
 func _physics_process(delta):
 	update_collision_visiblity_rect(delta)
@@ -52,7 +52,7 @@ func delete_invisible_blocks_hitboxes():
 	for visible_block_point in get_hitbox_visibility_points(merged_parent_hitbox_rect):
 		if loaded_blocks.has(visible_block_point):
 			var existing_block_data = terrain.get_block_from_world_position(visible_block_point * terrain.block_pixel_size)
-			if existing_block_data["id"] == 0:
+			if existing_block_data["id"] == 0: # Don't add collision for air. TODO: use a future is_solid() method
 				continue
 			visible_blocks[visible_block_point] = loaded_blocks[visible_block_point]
 			loaded_blocks.erase(visible_block_point)
@@ -99,3 +99,12 @@ func move(vector : Vector2, delta):
 #		self.parent.velocity.y = 0
 #	if self.parent_rigidbody.is_on_wall():
 #		self.parent.velocity.x = 0
+
+func _process(delta):
+	update()
+
+func _draw():
+	if (merged_parent_hitbox_rect != null):
+		for point in get_hitbox_visibility_points(merged_parent_hitbox_rect):
+			var world_location = point * terrain.block_pixel_size
+			draw_circle(world_location, 1, Color(0, 1, 0))

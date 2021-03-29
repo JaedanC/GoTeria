@@ -14,7 +14,6 @@ extents = Vector2( 32, 32 )
 script = ExtResource( 5 )
 
 [node name="Rigidbody" type="KinematicBody2D" parent="."]
-position = Vector2( 51, -57 )
 collision/safe_margin = 0.008
 
 [node name="Hitbox" type="CollisionShape2D" parent="Rigidbody"]
@@ -22,7 +21,6 @@ shape = SubResource( 1 )
 one_way_collision = true
 
 [node name="Smoothing" type="Node2D" parent="."]
-position = Vector2( 51, -57 )
 script = ExtResource( 4 )
 target = NodePath("../Rigidbody")
 

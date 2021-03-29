@@ -9,8 +9,13 @@ var chunk_scene = preload("res://scenes/Chunk/Chunk.tscn")
 var loaded_chunks = {}
 var player = null
 
+var world_image = null
+
 func _ready():
 	player = get_tree().get_root().find_node("Player", true, false)
+	
+	world_image = Image.new()
+	world_image.load("res://blocks.png")
 #	generate_world()
 
 func _process(_delta):
@@ -102,13 +107,15 @@ func create_chunk(chunk_position : Vector2) -> bool:
 	
 	# Instance a chunk
 	var chunk = chunk_scene.instance()
-	chunk.init(chunk_position,
+	add_child(chunk)
+	chunk.init(
+		world_image,
+		chunk_position,
 		chunk_block_count,
 		block_pixel_size
 	)
 	# Cache the chunk for future reference
 	loaded_chunks[chunk_position] = chunk
-	add_child(chunk)
 	return true
 
 func get_chunk_pixel_dimensions() -> Vector2:

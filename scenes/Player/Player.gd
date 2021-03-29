@@ -61,8 +61,8 @@ func _input(event):
 	if event.is_action_pressed("zoom_out"):
 		camera.zoom -= Vector2(0.25, 0.25)
 	
-	camera.zoom.x = clamp(camera.zoom.x, 0.5, 3)
-	camera.zoom.y = clamp(camera.zoom.y, 0.5, 3)
+	camera.zoom.x = clamp(camera.zoom.x, 0.5, 5)
+	camera.zoom.y = clamp(camera.zoom.y, 0.5, 5)
 
 func get_visibility_points() -> Array:
 	"""
@@ -76,7 +76,8 @@ func get_visibility_points() -> Array:
 		Vector2(0, 0),
 		Vector2(0, 1),
 		Vector2(1, 0),
-		Vector2(1, 1)
+		Vector2(1, 1),
+		...
 	]
 	"""
 	# Grab important data
