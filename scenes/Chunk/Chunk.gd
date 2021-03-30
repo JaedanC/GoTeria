@@ -16,19 +16,20 @@ func _process(_delta):
 #	update()
 	pass
 
-func init(world_image: Image, _chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size : Vector2):
+func init(world_image, _chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size : Vector2):
 	"""
 	Chunks require a constructor to pass in all the data. Unfortunately this means
 	that you cannot mark this script as a tool and visually see the chunk. This
 	can bypassed by temporarily hardcoding this data and calling the init
 	function in ready if Engine.editor_hint is true.
+	
+	The method initialise a Chunk to contain all the block data inside the 'blocks'
+	dictionary. It uses the world image to retrieve the colour of the block.
 	"""
 	self.chunk_position = _chunk_position
 	self.block_count = _block_count
 	self.block_pixel_size = _block_pixel_size
 	self.position = block_pixel_size * chunk_position * block_count
-	
-	
 	
 	world_image.lock()
 	
@@ -41,10 +42,7 @@ func init(world_image: Image, _chunk_position : Vector2, _block_count  : Vector2
 			var block_pixel_position = self.chunk_position * block_count + block_position
 			var pixel = Color(world_image.get_pixelv(block_pixel_position))
 			
-			if (pixel.a == 0):
-				blocks[block_position]["id"] = 0
-			else:
-				blocks[block_position]["id"] = 1
+			blocks[block_position]["id"] = pixel.a
 			blocks[block_position]["colour"] = pixel
 #			blocks[block_position]["colour"] = Color(
 #				abs(sin(((i + j) * 4) / 255.0)),

@@ -23,7 +23,7 @@ func _process(_delta):
 		var block = terrain.get_block_from_world_position(world_position)
 		if block:
 			block["id"] = 1
-			block["colour"] = Color(randf(), randf(), randf(), 0.2)
+			block["colour"] = Color(randf(), randf(), randf(), 0.6)
 			terrain.set_block_at_world_position(world_position, block)
 	
 	if InputLayering.pop_action("dig"):
@@ -61,8 +61,8 @@ func _input(event):
 	if event.is_action_pressed("zoom_out"):
 		camera.zoom -= Vector2(0.25, 0.25)
 	
-	camera.zoom.x = clamp(camera.zoom.x, 0.5, 5)
-	camera.zoom.y = clamp(camera.zoom.y, 0.5, 5)
+	camera.zoom.x = clamp(camera.zoom.x, 0.5, 10)
+	camera.zoom.y = clamp(camera.zoom.y, 0.5, 10)
 
 func get_visibility_points() -> Array:
 	"""
@@ -91,11 +91,13 @@ func get_visibility_points() -> Array:
 	
 	# Expand this Rectangle to take into account camera zooming by using two
 	# Vector2's the point the the corners of the screen and using the Rect2.expand
-	# method. TODO: This strategy does not take into account zooming in, only zooming
-	# out is considered. Adding this feature would only slightly increase the fps
-	# when zoomed in and thus it isn't a high priority
+	# method.
 	viewport_rectangle = viewport_rectangle.expand(smoothed_position - (get_viewport_rect().size / 2) * camera.zoom)
 	viewport_rectangle = viewport_rectangle.expand(smoothed_position + (get_viewport_rect().size / 2) * camera.zoom)
+	
+	# Use this to temporarily reduce the size of the viewport loading rectangle
+	# to watch the chunks be streamed in
+	viewport_rectangle = Rect2(viewport_rectangle.position + viewport_rectangle.size/4, viewport_rectangle.size / 2)
 	
 	# Convert the top left and bottom right points of the Rect2 into an integer
 	# that we can loop through to get the points for the visible chunks. This
@@ -141,16 +143,16 @@ func _draw():
 #				Color(0, 1, 0, 1)
 #			)
 	
-	draw_circle(
-		screen_to_world_position(get_viewport().get_mouse_position()),
-		5,
-		Color(1, 1, 0, 1)
-	)
-	
-	draw_line(
-		screen_to_world_position(get_viewport().size/2),
-		screen_to_world_position(get_viewport().size/2 + velocity / 10),
-		Color(1, 0, 0)
-	)
+#	draw_circle(
+#		screen_to_world_position(get_viewport().get_mouse_position()),
+#		5,
+#		Color(1, 1, 0, 1)
+#	)
+#
+#	draw_line(
+#		screen_to_world_position(get_viewport().size/2),
+#		screen_to_world_position(get_viewport().size/2 + velocity / 10),
+#		Color(1, 0, 0)
+#	)
 	
 	pass

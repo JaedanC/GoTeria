@@ -72,7 +72,7 @@ func get_hitbox_visibility_points(area : Rect2) -> Array:
 			visibility_points.append(visible_point)
 	return visibility_points
 
-func move(vector : Vector2, delta):
+func move(vector : Vector2, _delta):
 #	self.parent_rigidbody.move_and_slide_with_snap(vector, Vector2(0, -1))
 #	self.parent.velocity = self.parent_rigidbody.move_and_slide(vector, Vector2(0, -1))
 	var horizontal_vector = Vector2(vector.x, 0)
@@ -100,11 +100,11 @@ func move(vector : Vector2, delta):
 #	if self.parent_rigidbody.is_on_wall():
 #		self.parent.velocity.x = 0
 
-func _process(delta):
-	update()
-
-func _draw():
-	if (merged_parent_hitbox_rect != null):
-		for point in get_hitbox_visibility_points(merged_parent_hitbox_rect):
-			var world_location = point * terrain.block_pixel_size
-			draw_circle(world_location, 1, Color(0, 1, 0))
+#func _process(delta):
+#	update()
+#
+#func _draw():
+#	if (merged_parent_hitbox_rect != null):
+#		for point in get_hitbox_visibility_points(merged_parent_hitbox_rect):
+#			var world_location = point * terrain.block_pixel_size
+#			draw_circle(world_location, 1, Color(0, 1, 0))

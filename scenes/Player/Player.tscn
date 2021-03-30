@@ -14,9 +14,11 @@ extents = Vector2( 32, 32 )
 script = ExtResource( 5 )
 
 [node name="Rigidbody" type="KinematicBody2D" parent="."]
+visible = false
 collision/safe_margin = 0.008
 
 [node name="Hitbox" type="CollisionShape2D" parent="Rigidbody"]
+visible = false
 shape = SubResource( 1 )
 one_way_collision = true
 

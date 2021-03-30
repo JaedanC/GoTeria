@@ -9,14 +9,17 @@ var chunk_scene = preload("res://scenes/Chunk/Chunk.tscn")
 var loaded_chunks = {}
 var player = null
 
-var world_image = null
+var world_image : Image
+var chunk_pixel_dimensions = null
 
 func _ready():
 	player = get_tree().get_root().find_node("Player", true, false)
 	
-	world_image = Image.new()
-	world_image.load("res://blocks.png")
+	var world_texture = load("res://blocks.png")
+	world_image = world_texture.get_data()
+	chunk_pixel_dimensions = block_pixel_size * chunk_block_count
 #	generate_world()
+
 
 func _process(_delta):
 	# Save the all chunks loaded in memory to a file.
@@ -89,7 +92,7 @@ func create_visible_chunks():
 	var visibility_points = player.get_visibility_points()
 	for point in visibility_points:
 		if !loaded_chunks.has(point):
-			create_chunk(point)
+			var _result = create_chunk(point)
 
 func create_chunk(chunk_position : Vector2) -> bool:
 	"""
@@ -122,7 +125,7 @@ func get_chunk_pixel_dimensions() -> Vector2:
 	"""
 	Returns the size of a chunk in pixels as a Vector2
 	"""
-	return block_pixel_size * chunk_block_count
+	return chunk_pixel_dimensions
 
 func get_chunk_from_chunk_position(chunk_position : Vector2):
 	if create_chunk(chunk_position):

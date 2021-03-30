@@ -32,6 +32,6 @@ script = ExtResource( 4 )
 script = ExtResource( 5 )
 
 [node name="Terrain" parent="." instance=ExtResource( 7 )]
-chunk_block_count = Vector2( 50, 32 )
+chunk_block_count = Vector2( 32, 32 )
 
 [node name="Player" parent="." instance=ExtResource( 1 )]
