@@ -7,7 +7,7 @@
 script = ExtResource( 1 )
 block_pixel_size = Vector2( 16, 16 )
 world_size_in_chunks = Vector2( 40, 20 )
-chunk_block_count = Vector2( 64, 64 )
+chunk_block_count = Vector2( 32, 32 )
 
 [node name="World" type="TextureRect" parent="."]
 visible = false

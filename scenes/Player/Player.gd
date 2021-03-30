@@ -103,15 +103,15 @@ func get_visibility_points() -> Array:
 	# that we can loop through to get the points for the visible chunks. This
 	# takes into account the size of each chunk.
 	var chunk_dimensions = terrain.get_chunk_pixel_dimensions()
-	var top_left = (viewport_rectangle.position / chunk_dimensions).floor()
-	var bottom_right = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).floor()
+	var top_left = (viewport_rectangle.position / chunk_dimensions).round()
+	var bottom_right = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).round()
 	
 	# Loop through these two values and include them in the visibility point
 	# list. +1 is there so that the right and bottom edge are forced to be
 	# included. Remove it if you don't know what I mean an then you'll see.
 	var visibility_points = []
-	for i in range(top_left.x, bottom_right.x + 1):
-		for j in range(top_left.y, bottom_right.y + 1):
+	for i in range(top_left.x - 1, bottom_right.x + 2):
+		for j in range(top_left.y - 1, bottom_right.y + 2):
 			var visible_point = Vector2(i, j)
 			visibility_points.append(visible_point)
 

@@ -6,7 +6,35 @@ export(Vector2) var world_size_in_chunks
 export(Vector2) var chunk_block_count
 var chunk_scene = preload("res://scenes/Chunk/Chunk.tscn")
 
+"""
+The premise behind these dictionaries are too improve performance when streaming
+in chunks behind the scenes.
+
+`lightly_loading_blocks_chunks`
+- These are slowly loading in their blocks over a series of frames. These happen
+from a large distance away. Mediumly off the screen.
+
+`lightly_loaded_blocks_chunks`
+- The chunks from above are sent to here when they are done loading their blocks.
+
+`lightly_loading_drawing_chunks`
+- These chunks are drawing their blocks. These happen from a short distance away,
+just off the screen
+
+`urgently_loading_chunks`
+- These chunks are so close to the player that they need to have their blocks
+loaded in right away. The drawing can happen later though
+
+`loaded_chunks`
+- These chunks are fully drawn and visible to the player.
+"""
+var loading_chunks = {}
+var lightly_loading_blocks_chunks = {}
+var lightly_loaded_blocks_chunks = {}
+var lightly_loading_drawing_chunks = {}
+var urgently_loading_blocks_chunks = {}
 var loaded_chunks = {}
+
 var player = null
 
 var world_image : Image
@@ -30,6 +58,70 @@ func _process(_delta):
 	free_all_invisible_chunks()
 	create_visible_chunks()
 	
+	
+	
+	loading_chunks.clear()
+	lightly_loading_blocks_chunks.clear()
+	lightly_loaded_blocks_chunks.clear()
+	lightly_loading_drawing_chunks.clear()
+	urgently_loading_blocks_chunks.clear()
+	new_continue_loading_chunks()
+	update()
+
+func _draw():
+	for point in lightly_loading_blocks_chunks.keys():
+		point *= chunk_pixel_dimensions
+		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.green, false, 10, false)
+#		draw_circle(point, 10, Color.green)
+	
+	for point in lightly_loading_drawing_chunks.keys():
+		point *= chunk_pixel_dimensions
+		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.orange, false, 10, false)
+#		draw_circle(point, 10, Color.orange)
+	
+	for point in urgently_loading_blocks_chunks.keys():
+		point *= chunk_pixel_dimensions
+		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, 10, false)
+#		draw_circle(point, 10, Color.red)
+
+func new_continue_loading_chunks():
+	var player_visibility_points = player.get_visibility_points()
+	
+	# TODO: This requires the implementation to be very specific. Find a better
+	# way to find the top left and bottom right points
+	var top_left_point = player_visibility_points[0]
+	var bottom_right_point = player_visibility_points[-1]
+	
+	var light_loading_block_top_left = top_left_point - Vector2(2, 2)
+	var light_loading_block_bottom_right = bottom_right_point + Vector2(2, 2)
+	var light_loading_drawing_top_left = top_left_point - Vector2(1, 1)
+	var light_loading_drawing_bottom_right = bottom_right_point + Vector2(1, 1)
+	
+	for i in range(light_loading_block_top_left.x, light_loading_block_bottom_right.x):
+		for j in range(light_loading_block_top_left.y, light_loading_block_bottom_right.y):
+			var point = Vector2(i, j)
+#			var chunk
+			var chunk = point
+#			if !loading_chunks.has(point):
+#				chunk = chunk_scene.instance()
+#				add_child(chunk)
+			
+			if (i == light_loading_block_top_left.x ||
+				i == light_loading_block_bottom_right.x - 1 ||
+				j == light_loading_block_top_left.y ||
+				j == light_loading_block_bottom_right.y - 1):
+				lightly_loading_blocks_chunks[point] = chunk
+				continue
+				
+			if (i == light_loading_block_top_left.x + 1 ||
+				i == light_loading_block_bottom_right.x - 2 ||
+				j == light_loading_block_top_left.y + 1 ||
+				j == light_loading_block_bottom_right.y - 2):
+				lightly_loading_drawing_chunks[point] = chunk
+				continue
+			
+			urgently_loading_blocks_chunks[point] = chunk
+
 func free_all_invisible_chunks():
 	"""
 	This method uses the visibility points to determine which chunks should be

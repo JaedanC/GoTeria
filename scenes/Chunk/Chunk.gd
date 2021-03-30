@@ -31,7 +31,7 @@ func _process(_delta):
 	
 	
 	
-func init_stream(world_image : Image, _chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size : Vector2):
+func init_stream(world_image : Image, _chunk_position : Vector2, _block_count : Vector2, _block_pixel_size : Vector2):
 	self.world_image = world_image
 	self.chunk_position = _chunk_position
 	self.block_count = _block_count
@@ -54,7 +54,13 @@ func stream():
 			blocks[block_position] = {}
 		
 		var block_pixel_position = self.chunk_position * block_count + block_position
-		var pixel = Color(self.world_image.get_pixelv(block_pixel_position))
+		
+		var pixel : Color
+		if (block_pixel_position.x >= self.world_image.get_size().x ||
+			block_pixel_position.y >= self.world_image.get_size().y):
+			pixel = Color(0, 0, 0, 0)
+		else:
+			pixel = Color(self.world_image.get_pixelv(block_pixel_position))
 		
 		blocks[block_position]["id"] = pixel.a
 		blocks[block_position]["colour"] = pixel
