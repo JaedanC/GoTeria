@@ -111,7 +111,7 @@ func create_chunk(chunk_position : Vector2) -> bool:
 	# Instance a chunk
 	var chunk = chunk_scene.instance()
 	add_child(chunk)
-	chunk.init(
+	chunk.init_stream(
 		world_image,
 		chunk_position,
 		chunk_block_count,
@@ -144,7 +144,9 @@ func get_block_from_chunk_position_and_block_position(chunk_position : Vector2, 
 	var chunk = get_chunk_from_chunk_position(chunk_position)
 	if !chunk:
 		return null
-	return chunk.blocks[block_position]
+	if chunk.blocks.has(block_position):
+		return chunk.blocks[block_position]
+	return null
 
 func get_block_position_from_world_position(world_position : Vector2):
 	var chunk_position = get_chunk_position_from_world_position(world_position)

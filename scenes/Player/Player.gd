@@ -143,16 +143,16 @@ func _draw():
 #				Color(0, 1, 0, 1)
 #			)
 	
-#	draw_circle(
-#		screen_to_world_position(get_viewport().get_mouse_position()),
-#		5,
-#		Color(1, 1, 0, 1)
-#	)
-#
-#	draw_line(
-#		screen_to_world_position(get_viewport().size/2),
-#		screen_to_world_position(get_viewport().size/2 + velocity / 10),
-#		Color(1, 0, 0)
-#	)
+	draw_circle(
+		screen_to_world_position(get_viewport().get_mouse_position()),
+		5,
+		Color(1, 1, 0, 1)
+	)
+
+	draw_line(
+		screen_to_world_position(get_viewport().size/2),
+		screen_to_world_position(get_viewport().size/2 + velocity / 10),
+		Color(1, 0, 0)
+	)
 	
 	pass
