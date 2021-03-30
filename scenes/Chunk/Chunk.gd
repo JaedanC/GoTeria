@@ -9,8 +9,7 @@ var blocks = {}
 var terrain = null
 
 var drawn = false
-var init_index = 0
-var init_block_calls = 64
+var blocks_loaded = 0
 
 var streaming = false
 var streaming_index = 0
@@ -21,53 +20,61 @@ func _ready():
 
 func _process(_delta):
 #	if (streaming):
+#	update()
+	
+#	if (drawn):
+#		set_process(false)
 #		update()
-	
-	if (drawn):
-		set_process(false)
-		update()
-	else:
-		stream()
+#	else:
+#		stream()
+	pass
 	
 	
 	
-func init_stream(world_image : Image, _chunk_position : Vector2, _block_count : Vector2, _block_pixel_size : Vector2):
-	self.world_image = world_image
+func init_stream(_world_image : Image, _chunk_position : Vector2, _block_count : Vector2, _block_pixel_size : Vector2):
+	self.world_image = _world_image
 	self.chunk_position = _chunk_position
 	self.block_count = _block_count
 	self.block_pixel_size = _block_pixel_size
-	self.position = block_pixel_size * chunk_position * block_count
+	self.position = _block_pixel_size * _chunk_position * _block_count
 
-func stream():
-	var finish_init_index = self.init_index + self.init_block_calls
-	
-	if finish_init_index >= (block_count.x * block_count.y):
-		finish_init_index = block_count.x * block_count.y - 1
-		self.drawn = true
-	
-	self.world_image.lock()
-	for element in range(self.init_index, finish_init_index):
-		var i = element / int(block_count.x)
-		var j = element % int(block_count.y) # Integer division
-		var block_position = Vector2(i, j)
-		if !blocks.has(block_position):
-			blocks[block_position] = {}
-		
-		var block_pixel_position = self.chunk_position * block_count + block_position
-		
-		var pixel : Color
-		if (block_pixel_position.x >= self.world_image.get_size().x ||
-			block_pixel_position.y >= self.world_image.get_size().y):
-			pixel = Color(0, 0, 0, 0)
-		else:
-			pixel = Color(self.world_image.get_pixelv(block_pixel_position))
-		
-		blocks[block_position]["id"] = pixel.a
-		blocks[block_position]["colour"] = pixel
-	self.world_image.unlock()
-	self.init_index = finish_init_index
+func get_loaded_blocks():
+	return self.blocks_loaded
+#
+#func stream_all():
+#	stream(block_count.x * block_count.y)
+#
+#func stream(maximum_blocks_to_load : int):
+#	var blocks_available_to_load = block_count.x * block_count.y - get_loaded_blocks()
+#	var blocks_to_load = min(blocks_available_to_load, maximum_blocks_to_load)
+#
+#	self.world_image.lock()
+#	for element in range(get_loaded_blocks(), get_loaded_blocks() + blocks_to_load):
+#		var i = element / int(block_count.x)
+#		var j = element % int(block_count.y) # Integer division
+#		var block_position = Vector2(i, j)
+#		if !blocks.has(block_position):
+#			blocks[block_position] = {}
+#
+#		var block_pixel_position = self.chunk_position * block_count + block_position
+#
+#		var pixel : Color
+#		if (block_pixel_position.x < 0 ||
+#			block_pixel_position.y < 0 ||
+#			block_pixel_position.x >= self.world_image.get_size().x ||
+#			block_pixel_position.y >= self.world_image.get_size().y):
+#			pixel = Color.red
+#		else:
+#			pixel = Color(self.world_image.get_pixelv(block_pixel_position))
+#
+#		blocks[block_position]["id"] = pixel.a
+#		blocks[block_position]["colour"] = pixel
+#
+#	self.world_image.unlock()
+#	self.blocks_loaded += blocks_to_load
+#	return int(block_count.x * block_count.y) == get_loaded_blocks()
 
-func init(world_image : Image, _chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size : Vector2):
+func init(_world_image : Image, _chunk_position : Vector2, _block_count  : Vector2, _block_pixel_size : Vector2):
 	"""
 	Chunks require a constructor to pass in all the data. Unfortunately this means
 	that you cannot mark this script as a tool and visually see the chunk. This
@@ -77,15 +84,15 @@ func init(world_image : Image, _chunk_position : Vector2, _block_count  : Vector
 	The method initialise a Chunk to contain all the block data inside the 'blocks'
 	dictionary. It uses the world image to retrieve the colour of the block.
 	"""
+	self.world_image = _world_image
 	self.chunk_position = _chunk_position
 	self.block_count = _block_count
 	self.block_pixel_size = _block_pixel_size
-	self.position = block_pixel_size * chunk_position * block_count
+	self.position = _block_pixel_size * _chunk_position * _block_count
 	
 	self.streaming = true
 	
 	world_image.lock()
-	
 	for i in range(block_count.x):
 		for j in range(block_count.y):
 			var block_position = Vector2(i, j)
@@ -102,8 +109,9 @@ func init(world_image : Image, _chunk_position : Vector2, _block_count  : Vector
 #				abs(sin((200 - (i * 2)) / 255.0)),
 #				abs(sin((200 - (j * 3)) / 255.0)),
 #				0.2
-##				abs(sin(randi()) - 0.5)
+#				abs(sin(randi()) - 0.5)
 #			)
+	
 	world_image.unlock()
 
 
@@ -137,10 +145,11 @@ func draw_chunk():
 		for j in range(block_count.y):
 			var block_position = Vector2(i, j)
 			if blocks.has(block_position) && blocks[block_position]["id"]:
-				var rectangle_position = Vector2(i * block_pixel_size.x, j * block_pixel_size.y)
+				var rectangle_position = block_position * block_pixel_size
 				var rectangle_to_draw = Rect2(rectangle_position, block_pixel_size)
 				var rectangle_colour = blocks[block_position]["colour"]
 				draw_rect(rectangle_to_draw, rectangle_colour)
+	
 
 func stream_chunk():
 	var finish_streaming_index = self.streaming_index + self.streaming_draw_calls
@@ -179,4 +188,7 @@ func set_block_colour(block_position : Vector2, colour : Color):
 
 func _draw():
 	draw_chunk()
+
+	draw_circle(Vector2.ZERO, 2, Color.aquamarine)
+#	print(position)
 #	stream_chunk()

@@ -64,7 +64,7 @@ func _input(event):
 	camera.zoom.x = clamp(camera.zoom.x, 0.5, 10)
 	camera.zoom.y = clamp(camera.zoom.y, 0.5, 10)
 
-func get_visibility_points() -> Array:
+func get_visibility_points(margin=0) -> Array:
 	"""
 	This method returns a list of integer Vector2's that represent the indexes of
 	chunks that should be loaded for the player. This takes into account where
@@ -110,8 +110,8 @@ func get_visibility_points() -> Array:
 	# list. +1 is there so that the right and bottom edge are forced to be
 	# included. Remove it if you don't know what I mean an then you'll see.
 	var visibility_points = []
-	for i in range(top_left.x - 1, bottom_right.x + 2):
-		for j in range(top_left.y - 1, bottom_right.y + 2):
+	for i in range(top_left.x - 1 - margin, bottom_right.x + 2 + margin):
+		for j in range(top_left.y - 1 - margin, bottom_right.y + 2 + margin):
 			var visible_point = Vector2(i, j)
 			visibility_points.append(visible_point)
 

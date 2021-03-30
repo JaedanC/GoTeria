@@ -28,12 +28,12 @@ loaded in right away. The drawing can happen later though
 `loaded_chunks`
 - These chunks are fully drawn and visible to the player.
 """
+var loaded_chunks = {}
 var loading_chunks = {}
 var lightly_loading_blocks_chunks = {}
 var lightly_loaded_blocks_chunks = {}
 var lightly_loading_drawing_chunks = {}
 var urgently_loading_blocks_chunks = {}
-var loaded_chunks = {}
 
 var player = null
 
@@ -44,6 +44,10 @@ func _ready():
 	player = get_tree().get_root().find_node("Player", true, false)
 	
 	var world_texture = load("res://blocks.png")
+#	var world_texture = load("res://solid.png")
+#	var world_texture = load("res://small.png")
+#	var world_texture = load("res://medium.png")
+#	var world_texture = load("res://hd.png")
 	world_image = world_texture.get_data()
 	chunk_pixel_dimensions = block_pixel_size * chunk_block_count
 #	generate_world()
@@ -55,18 +59,75 @@ func _process(_delta):
 		for chunk in get_children():
 			chunk.save_chunk()
 		print("Finished Saving to file")
-	free_all_invisible_chunks()
-	create_visible_chunks()
+#	free_all_invisible_chunks()
+	new_free_invisible_chunks()
+#	create_visible_chunks()
 	
 	
-	
+#	loaded_chunks.clear()
 	loading_chunks.clear()
 	lightly_loading_blocks_chunks.clear()
 	lightly_loaded_blocks_chunks.clear()
 	lightly_loading_drawing_chunks.clear()
 	urgently_loading_blocks_chunks.clear()
-	new_continue_loading_chunks()
+	new_create_loading_regions()
+	old_create_chunks()
+#	new_create_null_chunks()
+#	new_continue_loading_regions()
 	update()
+
+func old_create_chunks():
+	for point in lightly_loading_blocks_chunks.keys() + lightly_loading_drawing_chunks.keys() + urgently_loading_blocks_chunks.keys():
+		var world_image_in_chunks = world_image.get_size() / chunk_block_count
+		if (point.x < 0 || point.y < 0 || point.x >= world_image_in_chunks.x || point.y >= world_image_in_chunks.y):
+			continue
+		
+#		print(world_image, point, chunk_block_count, chunk_pixel_dimensions)
+
+		if !loaded_chunks.has(point):
+			var chunk = chunk_scene.instance()
+			add_child(chunk)
+			chunk.init(
+				world_image,
+				point,
+				chunk_block_count,
+				block_pixel_size
+			)
+#			chunk.stream_all()
+#			chunk.update()
+			loaded_chunks[point] = chunk
+
+func new_free_invisible_chunks():
+	"""
+	This method uses the visibility points to determine which chunks should be
+	unloaded from memory.
+	"""
+	
+	# First we grab a set the world_positions that should be loaded in the game 
+	var visibility_points = player.get_visibility_points(2)
+	
+	# Create a temporary dictionary to store chunks that are already loaded
+	# and should stay loaded
+	var visible_chunks = {}
+	
+	# Loop through the loaded chunks and store the ones that we should keep in
+	# visible_chunks while erasing them from the old loaded_chunks dictionary. 
+	for visible_point in visibility_points:
+		if loaded_chunks.has(visible_point):
+			visible_chunks[visible_point] = loaded_chunks[visible_point]
+			loaded_chunks.erase(visible_point)
+	
+	# Now the remaining chunks in loaded_chunks are invisible to the player
+	# and can be deleted from memory. The delete_chunk method will handle this
+	# for us.
+	for invisible_point in loaded_chunks.keys():
+		loaded_chunks[invisible_point].queue_free()
+		loaded_chunks.erase(invisible_point)
+	
+	# Finally, our new visible chunks dictionary becomes the loaded chunks
+	# dictionary
+	loaded_chunks = visible_chunks
+	
 
 func _draw():
 	for point in lightly_loading_blocks_chunks.keys():
@@ -84,7 +145,7 @@ func _draw():
 		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, 10, false)
 #		draw_circle(point, 10, Color.red)
 
-func new_continue_loading_chunks():
+func new_create_loading_regions():
 	var player_visibility_points = player.get_visibility_points()
 	
 	# TODO: This requires the implementation to be very specific. Find a better
@@ -100,27 +161,100 @@ func new_continue_loading_chunks():
 	for i in range(light_loading_block_top_left.x, light_loading_block_bottom_right.x):
 		for j in range(light_loading_block_top_left.y, light_loading_block_bottom_right.y):
 			var point = Vector2(i, j)
-#			var chunk
-			var chunk = point
-#			if !loading_chunks.has(point):
-#				chunk = chunk_scene.instance()
-#				add_child(chunk)
-			
+			if point.x < 0 or point.y < 0:
+				continue
+				
 			if (i == light_loading_block_top_left.x ||
 				i == light_loading_block_bottom_right.x - 1 ||
 				j == light_loading_block_top_left.y ||
 				j == light_loading_block_bottom_right.y - 1):
-				lightly_loading_blocks_chunks[point] = chunk
+				lightly_loading_blocks_chunks[point] = null
 				continue
 				
 			if (i == light_loading_block_top_left.x + 1 ||
 				i == light_loading_block_bottom_right.x - 2 ||
 				j == light_loading_block_top_left.y + 1 ||
 				j == light_loading_block_bottom_right.y - 2):
-				lightly_loading_drawing_chunks[point] = chunk
+				lightly_loading_drawing_chunks[point] = null
 				continue
 			
+			urgently_loading_blocks_chunks[point] = null
+
+func new_create_null_chunks():
+	for point in lightly_loading_blocks_chunks.keys():
+		var chunk = lightly_loading_blocks_chunks[point]
+		
+		if (chunk == null):
+			chunk = chunk_scene.instance()
+			lightly_loading_blocks_chunks[point] = chunk
+			add_child(chunk)
+			chunk.init_stream(
+				world_image,
+				point,
+				chunk_block_count,
+				chunk_pixel_dimensions
+			)
+		loaded_chunks[point] = chunk
+	
+	for point in lightly_loading_drawing_chunks.keys():
+		var chunk = lightly_loading_drawing_chunks[point]
+		
+		if (chunk == null):
+			chunk = chunk_scene.instance()
+			lightly_loading_drawing_chunks[point] = chunk
+			add_child(chunk)
+			chunk.init_stream(
+				world_image,
+				point,
+				chunk_block_count,
+				chunk_pixel_dimensions
+			)
+			chunk.stream_all()
+		loaded_chunks[point] = chunk
+	
+	for point in urgently_loading_blocks_chunks.keys():
+		var chunk = urgently_loading_blocks_chunks[point]
+		
+		if (chunk == null):
+			chunk = chunk_scene.instance()
 			urgently_loading_blocks_chunks[point] = chunk
+			add_child(chunk)
+			chunk.init_stream(
+				world_image,
+				point,
+				chunk_block_count,
+				chunk_pixel_dimensions
+			)
+			chunk.stream_all()
+			chunk.update()
+		loaded_chunks[point] = chunk
+
+func new_continue_loading_regions():
+	# These are the lightly loaded block chunks
+	var blocks_to_load = 1000
+	for point in lightly_loading_blocks_chunks.keys():
+		var chunk = lightly_loading_blocks_chunks[point]
+		
+		var is_loaded = chunk.stream(blocks_to_load)
+		blocks_to_load = blocks_to_load - chunk.get_loaded_blocks()
+		if is_loaded:
+			lightly_loading_drawing_chunks[point] = chunk
+			lightly_loading_blocks_chunks.erase(point)
+		if blocks_to_load <= 0:
+			break
+	
+	# These are the blocks ready to be drawn
+	var blocks_to_draw = 1
+	for point in lightly_loading_drawing_chunks.keys():
+		if (blocks_to_draw == 0):
+			break
+		
+		var chunk = lightly_loading_drawing_chunks[point]
+		
+		chunk.update() # Let the chunk draw
+		lightly_loading_drawing_chunks.erase(point)
+		loaded_chunks[point] = chunk
+		blocks_to_draw -= 1
 
 func free_all_invisible_chunks():
 	"""
@@ -195,11 +329,11 @@ func create_chunk(chunk_position : Vector2) -> bool:
 	# Input checks. TODO: World Boundaries
 	if chunk_position.x < 0 or chunk_position.y < 0:
 		return false
-	
+
 	# Check if it's already loaded
 	if loaded_chunks.has(chunk_position):
 		return true
-	
+
 	# Instance a chunk
 	var chunk = chunk_scene.instance()
 	add_child(chunk)
@@ -220,7 +354,8 @@ func get_chunk_pixel_dimensions() -> Vector2:
 	return chunk_pixel_dimensions
 
 func get_chunk_from_chunk_position(chunk_position : Vector2):
-	if create_chunk(chunk_position):
+#	if create_chunk(chunk_position):
+	if loaded_chunks.has(chunk_position):
 		return loaded_chunks[chunk_position]
 	return null
 
