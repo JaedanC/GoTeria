@@ -96,15 +96,19 @@ func get_visibility_points(margin=0) -> Array:
 	viewport_rectangle = viewport_rectangle.expand(smoothed_position + (get_viewport_rect().size / 2) * camera.zoom)
 	
 	# Use this to temporarily reduce the size of the viewport loading rectangle
-	# to watch the chunks be streamed in
-	viewport_rectangle = Rect2(viewport_rectangle.position + viewport_rectangle.size/4, viewport_rectangle.size / 2)
+	# to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
+	var viewport_modifier = 0.3
+	var size = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
+	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)
+#	viewport_rectangle = Rect2(viewport_rectangle.position + viewport_rectangle.size/4, viewport_rectangle.size / 2)
+#	viewport_rectangle = Rect2(viewport_rectangle.position + (viewport_rectangle.size * (viewport_modifier/2)), viewport_rectangle.size * viewport_modifier)
 	
 	# Convert the top left and bottom right points of the Rect2 into an integer
 	# that we can loop through to get the points for the visible chunks. This
 	# takes into account the size of each chunk.
 	var chunk_dimensions = terrain.get_chunk_pixel_dimensions()
-	var top_left = (viewport_rectangle.position / chunk_dimensions).round()
-	var bottom_right = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).round()
+	var top_left = (viewport_rectangle.position / chunk_dimensions).floor()
+	var bottom_right = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).floor()
 	
 	# Loop through these two values and include them in the visibility point
 	# list. +1 is there so that the right and bottom edge are forced to be
