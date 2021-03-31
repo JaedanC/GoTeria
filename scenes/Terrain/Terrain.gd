@@ -30,8 +30,8 @@ var lightly_loading_blocks_chunks = {}
 var lightly_loading_drawing_chunks = {}
 var urgently_loading_blocks_chunks = {}
 
-var load_margin = 2
-var draw_margin = 2
+var load_margin = 1
+var draw_margin = 1
 
 var player = null
 
@@ -67,7 +67,6 @@ func _process(_delta):
 	# Draw the chunk borders
 	update()
 
-
 func _draw():
 	"""
 	This currently colours the chunks with a border donoting the kind of chunk it
@@ -78,11 +77,11 @@ func _draw():
 	for point in lightly_loading_blocks_chunks.keys():
 		point *= chunk_pixel_dimensions
 		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.green, false, thickness, false)
-	
+
 	for point in lightly_loading_drawing_chunks.keys():
 		point *= chunk_pixel_dimensions
 		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.orange, false, thickness, false)
-	
+
 	for point in urgently_loading_blocks_chunks.keys():
 		point *= chunk_pixel_dimensions
 		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, thickness, false)
@@ -202,8 +201,8 @@ func continue_streaming_regions():
 	performance. Maybe I'll make them editable in a configuration file in the
 	future...
 	"""
-	var blocks_to_load = 1024
-	var chunks_to_draw = 2
+	var blocks_to_load = 512
+	var chunks_to_draw = 1
 	
 	for point in loaded_chunks.keys():
 		if urgently_loading_blocks_chunks.has(point):

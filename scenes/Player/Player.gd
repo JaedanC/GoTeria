@@ -61,6 +61,9 @@ func _input(event):
 	if event.is_action_pressed("zoom_out"):
 		camera.zoom -= Vector2(0.25, 0.25)
 	
+	if event.is_action_pressed("quit"):
+		get_tree().quit()
+	
 	camera.zoom.x = clamp(camera.zoom.x, 0.5, 10)
 	camera.zoom.y = clamp(camera.zoom.y, 0.5, 10)
 
@@ -97,7 +100,8 @@ func get_visibility_points(margin=0) -> Array:
 	
 	# Use this to temporarily reduce the size of the viewport loading rectangle
 	# to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-	var viewport_modifier = 0.3
+#	var viewport_modifier = 0.4
+	var viewport_modifier = 0
 	var size = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
 	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)
 	

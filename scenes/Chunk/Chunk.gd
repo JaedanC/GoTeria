@@ -14,10 +14,10 @@ var drawn = false
 func _ready():
 	terrain = get_tree().get_root().find_node("Terrain", true, false)
 
-func _process(_delta):
+#func _process(_delta):
 	# Turn this on to see the chunk be streamed in
 #	update()
-	pass
+#	pass
 
 func init_stream(_world_image : Image, _chunk_position : Vector2, _block_count : Vector2, _block_pixel_size : Vector2):
 	"""
@@ -46,7 +46,7 @@ func stream_all():
 	This method streams in the entire chunk at once. This is usually because the
 	game needs to draw this chunk urgently.
 	"""
-	stream(block_count.x * block_count.y)
+	stream(floor(block_count.x * block_count.y))
 #
 func stream(maximum_blocks_to_load : int):
 	"""
