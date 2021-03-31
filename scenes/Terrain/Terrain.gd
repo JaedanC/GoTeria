@@ -30,7 +30,7 @@ var lightly_loading_blocks_chunks = {}
 var lightly_loading_drawing_chunks = {}
 var urgently_loading_blocks_chunks = {}
 
-var load_margin = 1
+var load_margin = 2
 var draw_margin = 1
 
 var player = null
@@ -41,9 +41,10 @@ var chunk_pixel_dimensions = null
 func _ready():
 	player = get_tree().get_root().find_node("Player", true, false)
 	
-	var world_texture = load("res://blocks.png")
+#	var world_texture = load("res://blocks.png")
+#	var world_texture = load("res://big_noise.png")
 #	var world_texture = load("res://solid.png")
-#	var world_texture = load("res://small.png")
+	var world_texture = load("res://small.png")
 #	var world_texture = load("res://medium.png")
 #	var world_texture = load("res://hd.png")
 	self.world_image = world_texture.get_data()
@@ -59,10 +60,10 @@ func _process(_delta):
 		print("Finished Saving to file")
 	
 	
-	delete_invisible_chunks()
-	create_chunk_streaming_regions()
-	create_chunks()
-	continue_streaming_regions()
+#	delete_invisible_chunks()
+#	create_chunk_streaming_regions()
+#	create_chunks()
+#	continue_streaming_regions()
 	
 	# Draw the chunk borders
 	update()
