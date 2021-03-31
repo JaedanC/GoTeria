@@ -100,8 +100,6 @@ func get_visibility_points(margin=0) -> Array:
 	var viewport_modifier = 0.3
 	var size = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
 	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)
-#	viewport_rectangle = Rect2(viewport_rectangle.position + viewport_rectangle.size/4, viewport_rectangle.size / 2)
-#	viewport_rectangle = Rect2(viewport_rectangle.position + (viewport_rectangle.size * (viewport_modifier/2)), viewport_rectangle.size * viewport_modifier)
 	
 	# Convert the top left and bottom right points of the Rect2 into an integer
 	# that we can loop through to get the points for the visible chunks. This
