@@ -1,18 +1,15 @@
 extends Node2D
 
-var rigidbody = null
-var camera = null
-var smoothing = null
-var terrain = null
+onready var terrain = get_tree().get_root().find_node("Terrain", true, false)
+onready var rigidbody = find_node("Rigidbody")
+onready var smoothing = find_node("Smoothing")
+onready var camera = find_node("Camera")
 
 var velocity := Vector2(0, 0)
 
 func _ready():
-	self.camera = find_node("Camera")
-	self.rigidbody = find_node("Rigidbody")
-	self.smoothing = find_node("Smoothing")
-	self.terrain = get_tree().get_root().find_node("Terrain", true, false)
-
+	pass
+	
 func _process(_delta):
 	assert(self.position == Vector2(0, 0))
 	if InputLayering.pop_action("zoom_reset"):
@@ -20,7 +17,7 @@ func _process(_delta):
 	
 	if InputLayering.pop_action("click"):
 		var world_position: Vector2 = screen_to_world_position(get_viewport().get_mouse_position())
-		var block: Dictionary = terrain.get_block_from_world_position(world_position)
+		var block = terrain.get_block_from_world_position(world_position)
 		if block:
 			block["id"] = 1
 			block["colour"] = Color(randf(), randf(), randf(), 0.6)
@@ -28,7 +25,7 @@ func _process(_delta):
 	
 	if InputLayering.pop_action("dig"):
 		var world_position: Vector2 = screen_to_world_position(get_viewport().get_mouse_position())
-		var block: Dictionary = terrain.get_block_from_world_position(world_position)
+		var block = terrain.get_block_from_world_position(world_position)
 		if block:
 			block["id"] = 0
 			terrain.set_block_at_world_position(world_position, block)

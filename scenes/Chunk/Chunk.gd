@@ -1,7 +1,7 @@
 extends Node2D
 class_name Chunk
 
-var terrain = null
+onready var terrain = get_tree().get_root().find_node("Terrain", true, false)
 var world_image: Image
 var chunk_position: Vector2
 var block_count: Vector2
@@ -10,9 +10,6 @@ var block_pixel_size: Vector2
 var blocks: Dictionary = {}
 var blocks_loaded: int = 0
 var drawn: bool = false
-
-func _ready():
-	terrain = get_tree().get_root().find_node("Terrain", true, false)
 
 #func _process(_delta):
 	# Turn this on to see the chunk be streamed in
@@ -63,9 +60,9 @@ func stream(maximum_blocks_to_load: int) -> int:
 	# The image needs to be unlocked before its contents can be read (lock after).
 	self.world_image.lock()
 	for element in range(self.blocks_loaded, self.blocks_loaded + blocks_to_load):
-		var i: int = element / int(block_count.x)
-		var j: int = element % int(block_count.y) # Integer division
-		var block_position = Vector2(i, j)
+		var i := element / int(block_count.x)
+		var j := element % int(block_count.y) # Integer division
+		var block_position := Vector2(i, j)
 		if !blocks.has(block_position):
 			blocks[block_position] = {}
 
