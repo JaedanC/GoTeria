@@ -1,15 +1,15 @@
 extends Node2D
+class_name Chunk
 
-var world_image : Image
-var chunk_position : Vector2
-var block_count : Vector2
-var block_pixel_size : Vector2
 var terrain = null
+var world_image: Image
+var chunk_position: Vector2
+var block_count: Vector2
+var block_pixel_size: Vector2
 
-
-var blocks = {}
-var blocks_loaded = 0
-var drawn = false
+var blocks: Dictionary = {}
+var blocks_loaded: int = 0
+var drawn: bool = false
 
 func _ready():
 	terrain = get_tree().get_root().find_node("Terrain", true, false)
@@ -19,7 +19,7 @@ func _ready():
 #	update()
 #	pass
 
-func init_stream(_world_image : Image, _chunk_position : Vector2, _block_count : Vector2, _block_pixel_size : Vector2):
+func init_stream(_world_image: Image, _chunk_position: Vector2, _block_count: Vector2, _block_pixel_size: Vector2):
 	"""
 	Treat this method like a constructor. It initialises the chunk with all the
 	data it requires to begin streaming in the blocks.
@@ -48,7 +48,7 @@ func stream_all():
 	"""
 	stream(floor(block_count.x * block_count.y))
 #
-func stream(maximum_blocks_to_load : int):
+func stream(maximum_blocks_to_load: int) -> int:
 	"""
 	This method takes in an integer which is the desired number of blocks to stream
 	in. Eventually this data will be retrieved from the chunk. If it cannot stream
@@ -57,24 +57,24 @@ func stream(maximum_blocks_to_load : int):
 	
 	0 <= Return value <= maximum_blocks_to_load
 	"""
-	var blocks_available_to_load = block_count.x * block_count.y - self.blocks_loaded
-	var blocks_to_load = min(blocks_available_to_load, maximum_blocks_to_load)
+	var blocks_available_to_load: int = block_count.x * block_count.y - self.blocks_loaded
+	var blocks_to_load: int = min(blocks_available_to_load, maximum_blocks_to_load)
 	
 	# The image needs to be unlocked before its contents can be read (lock after).
 	self.world_image.lock()
 	for element in range(self.blocks_loaded, self.blocks_loaded + blocks_to_load):
-		var i = element / int(block_count.x)
-		var j = element % int(block_count.y) # Integer division
+		var i: int = element / int(block_count.x)
+		var j: int = element % int(block_count.y) # Integer division
 		var block_position = Vector2(i, j)
 		if !blocks.has(block_position):
 			blocks[block_position] = {}
 
-		var block_pixel_position = self.chunk_position * block_count + block_position
+		var block_pixel_position: Vector2 = self.chunk_position * block_count + block_position
 		
 		# Grab the colour for the pixel from the world image. If the pixel
 		# goes out of bounds then just draw Red. This happens when the image is
 		# not a multiple of the chunk size.
-		var pixel : Color
+		var pixel: Color
 		if (block_pixel_position.x < 0 ||
 			block_pixel_position.y < 0 ||
 			block_pixel_position.x >= self.world_image.get_size().x ||
@@ -157,19 +157,19 @@ func stream_chunk():
 		
 	self.streaming_index = finish_streaming_index
 
-func get_block_from_block_position(block_position : Vector2):
+func get_block_from_block_position(block_position: Vector2):
 	if blocks.has(block_position):
 		return blocks[block_position]
 	return null
 
-func set_block_from_block_position(block_position : Vector2, new_block : Dictionary):
+func set_block_from_block_position(block_position: Vector2, new_block: Dictionary):
 	blocks[block_position] = new_block
 	update()
 
-func set_block_colour_from_int(i : int, j : int, colour : Color):
+func set_block_colour_from_int(i: int, j: int, colour: Color):
 	set_block_colour(Vector2(i, j), colour)
 
-func set_block_colour(block_position : Vector2, colour : Color):
+func set_block_colour(block_position: Vector2, colour: Color):
 	blocks[block_position]["colour"] = colour
 	update()
 

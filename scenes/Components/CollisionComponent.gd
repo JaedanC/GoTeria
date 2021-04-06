@@ -62,7 +62,7 @@ func delete_invisible_blocks_hitboxes():
 	
 	loaded_blocks = visible_blocks
 
-func get_hitbox_visibility_points(area : Rect2) -> Array:
+func get_hitbox_visibility_points(area: Rect2) -> Array:
 	var visibility_points = []
 	var top_left = (area.position / terrain.block_pixel_size).floor()
 	var bottom_right = ((area.position + area.size) / terrain.block_pixel_size).floor()
@@ -72,7 +72,7 @@ func get_hitbox_visibility_points(area : Rect2) -> Array:
 			visibility_points.append(visible_point)
 	return visibility_points
 
-func move(vector : Vector2, _delta):
+func move(vector: Vector2, _delta):
 #	self.parent_rigidbody.move_and_slide_with_snap(vector, Vector2(0, -1))
 #	self.parent.velocity = self.parent_rigidbody.move_and_slide(vector, Vector2(0, -1))
 	var horizontal_vector = Vector2(vector.x, 0)

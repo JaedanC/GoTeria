@@ -1,14 +1,9 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=2 format=2]
 
 [ext_resource path="res://scenes/Terrain/Terrain.gd" type="Script" id=1]
-[ext_resource path="res://big_noise.png" type="Texture" id=2]
 
 [node name="Terrain" type="Node2D"]
 script = ExtResource( 1 )
 block_pixel_size = Vector2( 16, 16 )
 world_size_in_chunks = Vector2( 10, 10 )
 chunk_block_count = Vector2( 24, 24 )
-
-[node name="big_noise2" type="Sprite" parent="."]
-position = Vector2( 5020, 5016 )
-texture = ExtResource( 2 )

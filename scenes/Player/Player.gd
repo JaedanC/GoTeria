@@ -5,7 +5,7 @@ var camera = null
 var smoothing = null
 var terrain = null
 
-var velocity = Vector2(0, 0)
+var velocity := Vector2(0, 0)
 
 func _ready():
 	self.camera = find_node("Camera")
@@ -19,16 +19,16 @@ func _process(_delta):
 		camera.zoom = Vector2(1, 1)
 	
 	if InputLayering.pop_action("click"):
-		var world_position = screen_to_world_position(get_viewport().get_mouse_position())
-		var block = terrain.get_block_from_world_position(world_position)
+		var world_position: Vector2 = screen_to_world_position(get_viewport().get_mouse_position())
+		var block: Dictionary = terrain.get_block_from_world_position(world_position)
 		if block:
 			block["id"] = 1
 			block["colour"] = Color(randf(), randf(), randf(), 0.6)
 			terrain.set_block_at_world_position(world_position, block)
 	
 	if InputLayering.pop_action("dig"):
-		var world_position = screen_to_world_position(get_viewport().get_mouse_position())
-		var block = terrain.get_block_from_world_position(world_position)
+		var world_position: Vector2 = screen_to_world_position(get_viewport().get_mouse_position())
+		var block: Dictionary = terrain.get_block_from_world_position(world_position)
 		if block:
 			block["id"] = 0
 			terrain.set_block_at_world_position(world_position, block)
@@ -84,8 +84,8 @@ func get_visibility_points(margin=0) -> Array:
 	]
 	"""
 	# Grab important data
-	var smoothed_position = find_node("Smoothing").position
-	var viewport_rectangle = get_viewport_rect()
+	var smoothed_position: Vector2 = find_node("Smoothing").position
+	var viewport_rectangle: Rect2 = get_viewport_rect()
 	
 	# Using the viewport rectangle as a base, centre a copy of it around the player.
 	# We used smoothed position because we want to take the interpolated position of
@@ -100,26 +100,25 @@ func get_visibility_points(margin=0) -> Array:
 	
 	# Use this to temporarily reduce the size of the viewport loading rectangle
 	# to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-#	var viewport_modifier = 0.4
-	var viewport_modifier = 0
-	var size = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
+#	var viewport_modifier := 0.4
+	var viewport_modifier := 0
+	var size: Vector2 = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
 	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)
 	
 	# Convert the top left and bottom right points of the Rect2 into an integer
 	# that we can loop through to get the points for the visible chunks. This
 	# takes into account the size of each chunk.
-	var chunk_dimensions = terrain.get_chunk_pixel_dimensions()
-	var top_left = (viewport_rectangle.position / chunk_dimensions).floor()
-	var bottom_right = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).floor()
+	var chunk_dimensions: Vector2 = terrain.get_chunk_pixel_dimensions()
+	var top_left: Vector2 = (viewport_rectangle.position / chunk_dimensions).floor()
+	var bottom_right: Vector2 = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).floor()
 	
 	# Loop through these two values and include them in the visibility point
 	# list. +1 is there so that the right and bottom edge are forced to be
 	# included. Remove it if you don't know what I mean an then you'll see.
-	var visibility_points = []
+	var visibility_points := []
 	for i in range(top_left.x - 1 - margin, bottom_right.x + 2 + margin):
 		for j in range(top_left.y - 1 - margin, bottom_right.y + 2 + margin):
-			var visible_point = Vector2(i, j)
-			visibility_points.append(visible_point)
+			visibility_points.append(Vector2(i, j))
 
 	return visibility_points
 
@@ -127,7 +126,7 @@ func get_rigidbody():
 	return rigidbody
 
 func screen_to_world_position(screen_position : Vector2) -> Vector2:
-	var world_position = self.smoothing.position + screen_position * camera.zoom
+	var world_position: Vector2 = self.smoothing.position + screen_position * camera.zoom
 	return world_position - camera.zoom * get_viewport_rect().size/2
 
 func _draw():

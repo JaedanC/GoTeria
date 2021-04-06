@@ -3,22 +3,22 @@ extends Node
 var mapping_data = {
 	"Keyboard": {
 		"binds": {},
-		"get_int" : "get_key_int",
+		"get_int": "get_key_int",
 		"input_event_type": InputEventKey 
 	},
 	"Joystick": {
 		"binds": {},
-		"get_int" : "get_joy_int",
+		"get_int": "get_joy_int",
 		"input_event_type": InputEventJoypadButton
 	},
 	"Mouse": {
 		"binds": {},
-		"get_int" : "get_mouse_int",
+		"get_int": "get_mouse_int",
 		"input_event_type": InputEventMouseButton
 	},
 	"Axis": {
 		"binds": {},
-		"get_int" : "get_axis_int",
+		"get_int": "get_axis_int",
 		"input_event_type": InputEventJoypadMotion
 	}
 }
@@ -147,7 +147,7 @@ func setup_aliases():
 	axis_aliases["axis6"] = JOY_AXIS_6; axis_aliases["axis7"] = JOY_AXIS_7
 	axis_aliases["axis8"] = JOY_AXIS_8; axis_aliases["axis9"] = JOY_AXIS_9
 
-func _input(event : InputEvent):
+func _input(event: InputEvent):
 	
 #	var result = get_event_key(event)
 #	if result:
@@ -167,7 +167,7 @@ func _input(event : InputEvent):
 		get_node("../ConfigHandler").load_action_mappings_config()
 		print("Loaded Config")
 
-func add_action_mapping(action : String, keycode : int, type):
+func add_action_mapping(action: String, keycode: int, type):
 	"""
 	Binds a key to an action. You also need to pass it the type of event this
 	keycode is so that it can be stored correctly.
@@ -232,7 +232,7 @@ func get_action_mappings_as_saveable_dict():
 					)
 	return action_mappings_dict
 
-func key_int_to_string(key_int : int, input_type : String):
+func key_int_to_string(key_int: int, input_type: String):
 	"""
 	Converts KeyCode Enum values to readable string that can be stored in a file.
 	The strings are defined in setup_aliases().
@@ -242,7 +242,7 @@ func key_int_to_string(key_int : int, input_type : String):
 			return key_string
 	return null
 
-func key_string_to_int(key_string : String, input_type : String):
+func key_string_to_int(key_string: String, input_type: String):
 	"""
 	Converts readable string representations of keys into the godot KeyCode Enum
 	values. The strings are defined in setup_aliases().
@@ -251,7 +251,7 @@ func key_string_to_int(key_string : String, input_type : String):
 		return mapping_data[input_type]["binds"][key_string]
 	return null
 
-func set_event_key(event, keycode : int):
+func set_event_key(event, keycode: int):
 	if "scancode" in event:
 		event.set_scancode(keycode)
 	elif "button_index" in event:
