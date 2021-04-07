@@ -13,9 +13,21 @@ _global_script_classes=[ {
 "class": "Chunk",
 "language": "GDScript",
 "path": "res://scenes/Chunk/Chunk.gd"
+}, {
+"base": "Node",
+"class": "FutureThreadPool",
+"language": "GDScript",
+"path": "res://addons/thread_pool/future_thread_pool.gd"
+}, {
+"base": "Node",
+"class": "ThreadPool",
+"language": "GDScript",
+"path": "res://addons/thread_pool/thread_pool.gd"
 } ]
 _global_script_class_icons={
-"Chunk": ""
+"Chunk": "",
+"FutureThreadPool": "",
+"ThreadPool": ""
 }
 
 [application]
@@ -30,11 +42,12 @@ InputLayering="*res://scenes/Singletons/InputLayering.gd"
 
 [display]
 
+window/size/fullscreen=true
 window/vsync/use_vsync=false
 
 [editor_plugins]
 
-enabled=PoolStringArray( "smoothing" )
+enabled=PoolStringArray( "smoothing", "thread_pool" )
 
 [input]
 
@@ -51,4 +64,5 @@ ui_accept={
 
 quality/intended_usage/framebuffer_allocation=0
 quality/intended_usage/framebuffer_allocation.mobile=0
+threads/thread_model=2
 environment/default_environment="res://default_env.tres"

@@ -98,6 +98,7 @@ func get_visibility_points(margin=0) -> Array:
 	# Use this to temporarily reduce the size of the viewport loading rectangle
 	# to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
 #	var viewport_modifier := 0.4
+#	var viewport_modifier := 0.2
 	var viewport_modifier := 0
 	var size: Vector2 = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
 	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)

@@ -153,7 +153,8 @@ func _input(event: InputEvent):
 #	if result:
 #		print(result)
 	if event.is_action_pressed("jump"):
-		print("jumping")
+#		print("jumping")
+		pass
 	
 	if event.is_action_pressed("show_mappings"):
 		show_mappings()

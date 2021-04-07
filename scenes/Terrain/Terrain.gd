@@ -29,7 +29,7 @@ var lightly_loading_drawing_chunks := {}
 var urgently_loading_blocks_chunks := {}
 
 var load_margin := 2
-var draw_margin := 1
+var draw_margin := 2
 
 var player = null
 var world_image: Image
@@ -45,6 +45,10 @@ func _ready():
 #	var world_texture = load("res://medium.png")
 #	var world_texture = load("res://hd.png")
 	self.world_image = world_texture.get_data()
+	
+	# TODO: Uses no .unlock?
+	self.world_image.lock()
+	
 	self.chunk_pixel_dimensions = self.block_pixel_size * self.chunk_block_count
 #	generate_world()
 
@@ -63,26 +67,26 @@ func _process(_delta):
 	continue_streaming_regions()
 	
 	# Draw the chunk borders
-	update()
-
-func _draw():
-	"""
-	This currently colours the chunks with a border donoting the kind of chunk it
-	is and how it should be streamed in. Reducing the viewport_rectangle in the
-	Player.get_visibility_points method will allow you to see this process in action.
-	"""
-	var thickness := 10
-	for point in lightly_loading_blocks_chunks.keys():
-		point *= chunk_pixel_dimensions
-		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.green, false, thickness, false)
-
-	for point in lightly_loading_drawing_chunks.keys():
-		point *= chunk_pixel_dimensions
-		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.orange, false, thickness, false)
-
-	for point in urgently_loading_blocks_chunks.keys():
-		point *= chunk_pixel_dimensions
-		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, thickness, false)
+#	update()
+#
+#func _draw():
+#	"""
+#	This currently colours the chunks with a border donoting the kind of chunk it
+#	is and how it should be streamed in. Reducing the viewport_rectangle in the
+#	Player.get_visibility_points method will allow you to see this process in action.
+#	"""
+#	var thickness := 10
+#	for point in lightly_loading_blocks_chunks.keys():
+#		point *= chunk_pixel_dimensions
+#		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.green, false, thickness, false)
+#
+#	for point in lightly_loading_drawing_chunks.keys():
+#		point *= chunk_pixel_dimensions
+#		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.orange, false, thickness, false)
+#
+#	for point in urgently_loading_blocks_chunks.keys():
+#		point *= chunk_pixel_dimensions
+#		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, thickness, false)
 
 func create_chunks():
 	"""
@@ -210,7 +214,7 @@ func continue_streaming_regions():
 			var chunk: Chunk = loaded_chunks[point]
 			urgently_loading_blocks_chunks[point] = chunk
 			if !chunk.is_loaded():
-				chunk.stream_all()
+				chunk.create()
 			if !chunk.is_drawn():
 				chunk.update()
 		
@@ -219,7 +223,7 @@ func continue_streaming_regions():
 			lightly_loading_drawing_chunks[point] = chunk
 			
 			if !chunk.is_loaded():
-				chunk.stream_all()
+				chunk.create()
 			if !chunk.is_drawn() && chunks_to_draw > 0:
 				chunks_to_draw -= 1
 				chunk.update()
@@ -228,9 +232,13 @@ func continue_streaming_regions():
 			var chunk: Chunk = loaded_chunks[point]
 			lightly_loading_blocks_chunks[point] = chunk
 			
-			if !chunk.is_loaded() && blocks_to_load > 0:
-				var actual_loaded := chunk.stream(blocks_to_load)
-				blocks_to_load -= actual_loaded
+			if !chunk.is_locked() && !chunk.is_loaded():
+				chunk.lock()
+				$ThreadPool.submit_task_unparameterized(chunk, "create")
+			
+#			if !chunk.is_loaded() && blocks_to_load > 0:
+#				var actual_loaded := chunk.stream(blocks_to_load)
+#				blocks_to_load -= actual_loaded
 
 func get_chunk_pixel_dimensions() -> Vector2:
 	"""
