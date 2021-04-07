@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://scenes/Terrain/TerrainGenerator.gd" type="Script" id=1]
+
+[node name="TerrainGenerator" type="Node2D"]
+script = ExtResource( 1 )
+world_size = Vector2( 512, 512 )
+octaves = 4
+period = 20.0
+persistence = 0.8
+drunkards = 20
+steps = 2983
+iterations = 5

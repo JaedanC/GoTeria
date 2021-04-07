@@ -38,9 +38,8 @@ var chunk_pixel_dimensions: Vector2
 func _ready():
 	player = get_tree().get_root().find_node("Player", true, false)
 	
-	var world_texture = load("res://blocks.png")
-#	var world_texture = load("res://big_noise.png")
-#	var world_texture = load("res://solid.png")
+#	var world_texture = load("res://blocks.png")
+	var world_texture = load("res://solid.png")
 #	var world_texture = load("res://small.png")
 #	var world_texture = load("res://medium.png")
 #	var world_texture = load("res://hd.png")
@@ -206,7 +205,7 @@ func continue_streaming_regions():
 	performance. Maybe I'll make them editable in a configuration file in the
 	future...
 	"""
-	var blocks_to_load := 512
+#	var blocks_to_load := 512
 	var chunks_to_draw := 1
 	
 	for point in loaded_chunks.keys():

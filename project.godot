@@ -42,7 +42,6 @@ InputLayering="*res://scenes/Singletons/InputLayering.gd"
 
 [display]
 
-window/size/fullscreen=true
 window/vsync/use_vsync=false
 
 [editor_plugins]
@@ -64,5 +63,4 @@ ui_accept={
 
 quality/intended_usage/framebuffer_allocation=0
 quality/intended_usage/framebuffer_allocation.mobile=0
-threads/thread_model=2
 environment/default_environment="res://default_env.tres"
