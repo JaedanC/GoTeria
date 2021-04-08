@@ -40,6 +40,11 @@ config/icon="res://icon.png"
 
 InputLayering="*res://scenes/Singletons/InputLayering.gd"
 
+[debug]
+
+gdscript/warnings/narrowing_conversion=false
+gdscript/warnings/integer_division=false
+
 [display]
 
 window/vsync/use_vsync=false

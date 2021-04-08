@@ -39,7 +39,8 @@ func _ready():
 	player = get_tree().get_root().find_node("Player", true, false)
 	
 #	var world_texture = load("res://blocks.png")
-	var world_texture = load("res://solid.png")
+#	var world_texture = load("res://solid.png")
+	var world_texture = load("res://skinny.png")
 #	var world_texture = load("res://small.png")
 #	var world_texture = load("res://medium.png")
 #	var world_texture = load("res://hd.png")

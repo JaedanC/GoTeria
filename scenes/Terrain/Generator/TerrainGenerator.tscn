@@ -1,0 +1,36 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://scenes/Terrain/Generator/TerrainGenerator.gd" type="Script" id=1]
+[ext_resource path="res://scenes/Terrain/Generator/ImageTools.gd" type="Script" id=3]
+[ext_resource path="res://scenes/Terrain/Generator/DrunkardWalk.gd" type="Script" id=4]
+[ext_resource path="res://scenes/Terrain/Generator/IslandFinder.gd" type="Script" id=5]
+[ext_resource path="res://scenes/Terrain/Generator/SimplexNoise.gd" type="Script" id=6]
+[ext_resource path="res://scenes/Terrain/Generator/CellularAutomator.gd" type="Script" id=7]
+
+[node name="TerrainGenerator" type="Node2D"]
+script = ExtResource( 1 )
+world_seed = 1
+world_size = Vector2( 500, 500 )
+octaves = 4
+period = 20.0
+persistence = 0.8
+drunkards = 385
+steps = 150
+scale_factor = 1.0
+largest_island = 1
+include_diagonal = true
+
+[node name="ImageTools" type="Node" parent="."]
+script = ExtResource( 3 )
+
+[node name="CellularAutomator" type="Node" parent="."]
+script = ExtResource( 7 )
+
+[node name="DrunkardWalk" type="Node" parent="."]
+script = ExtResource( 4 )
+
+[node name="IslandFinder" type="Node" parent="."]
+script = ExtResource( 5 )
+
+[node name="SimplexNoise" type="Node" parent="."]
+script = ExtResource( 6 )
