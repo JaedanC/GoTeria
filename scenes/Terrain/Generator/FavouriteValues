@@ -1,0 +1,34 @@
+Simplex Line:
+	1:
+		px: 2000x300
+		Octaves: 5
+		Period: 550
+		Persistence: 0.5
+		Height: 200
+		Offset: -135
+		Comment: This provides very nice macro overworld heightmap that can be used
+			as the basis for more world generation in the future
+		Time: <500ms
+	2:
+		Octaves: 6
+		Period: 20
+		Height: 40
+		Comment: This wave is a good basis for the top of the underworld
+
+Black And White(Overlay(Gradient Down, Simplex Noise))
+	1:
+		px: 1000x200
+		Gradient Down:
+			Top Threshold: 60
+			Bottom Threshold: 150
+		Simplex Noise:
+			Octaves: 4
+			Period: 50
+			Persistence: 0.5
+		Black And White:
+			Threshold: 0.5
+		Comment: This is an overworld function that creates realistic overhangs.
+			This could be combined with a more macro overworld shape to produce
+			a final result.
+		Time: <500ms
+		

@@ -9,18 +9,23 @@
 
 [node name="TerrainGenerator" type="Node2D"]
 script = ExtResource( 1 )
-world_seed = 1
+world_seed = 2225
 world_size = Vector2( 500, 500 )
-octaves = 4
-period = 20.0
-persistence = 0.8
-drunkards = 385
-steps = 309
-iterations = 1
+octaves = 2
+period = 5.0
+persistence = 0.51
+threshold = 0.5
+drunkards = 32
+steps = 3772
 scale_factor = 1.0
-largest_island = 550
-smallest_island = 15
-include_diagonal = true
+largest_island = 15
+height = 40
+offset = -135
+gradient_point = Vector2( 250.137, 250 )
+gradient_radius = 87
+gradient_falloff = 163
+top_threshold = -13
+bottom_threshold = 116
 
 [node name="ImageTools" type="Node" parent="."]
 script = ExtResource( 3 )

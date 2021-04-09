@@ -42,6 +42,7 @@ InputLayering="*res://scenes/Singletons/InputLayering.gd"
 
 [debug]
 
+settings/fps/force_fps=30
 gdscript/warnings/narrowing_conversion=false
 gdscript/warnings/integer_division=false
 
