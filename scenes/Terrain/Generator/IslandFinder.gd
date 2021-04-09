@@ -126,18 +126,14 @@ func get_islands(image: Image, smallest_island: int, largest_island: int, includ
 				
 				explored_cells[root] = null
 				
-				var current_fringe = {}
+				var current_fringe = []
 				
 				# Now continue the DFS
-				for neighbour in root.get_neighbours():
-					current_fringe[neighbour] = null
+				current_fringe = root.get_neighbours()
 					
 				while current_fringe.size() > 0:
 					# Expand the next node
-					var cell: Cell = current_fringe.keys()[0]
-					
-					# Remove from the Fringe
-					current_fringe.erase(cell)
+					var cell: Cell = current_fringe.pop_back()
 					
 					# Check if we're already been explored
 					if explored_cells.has(cell):
@@ -149,14 +145,8 @@ func get_islands(image: Image, smallest_island: int, largest_island: int, includ
 					
 					# Add all neighbours to the fringe
 					for neighbour in cell.get_neighbours():
-						if explored_cells.has(neighbour):
-							continue
-						
-						if current_fringe.has(neighbour):
-							continue
-						
-						# Add to the fringe
-						current_fringe[neighbour] = null
+						if not explored_cells.has(neighbour):
+							current_fringe.append(neighbour)
 	
 	# We now have a Dictionary of lists of cells
 	# Extract the pixel positions
@@ -250,6 +240,16 @@ func get_islands_faster(image: Image, smallest_island: int, largest_island: int,
 				if colour == my_colour:
 					neighbours[Vector2(top_right_i, top_right_j)] = labels[top_right_i][top_right_j]
 			
+			# Top left
+			var top_left_i = i - 1
+			var top_left_j = j - 1
+			if top_left_i < 0 or top_left_j < 0:
+				pass
+			else:
+				var colour: Color = image.get_pixel(top_left_i, top_left_j)
+				if colour == my_colour:
+					neighbours[Vector2(top_left_i, top_left_j)] = labels[top_left_i][top_left_j]
+				
 			# Top
 			var top_i = i
 			var top_j = j - 1
@@ -269,16 +269,6 @@ func get_islands_faster(image: Image, smallest_island: int, largest_island: int,
 				var colour: Color = image.get_pixel(left_i, left_j)
 				if colour == my_colour:
 					neighbours[Vector2(left_i, left_j)] = labels[left_i][left_j]
-				
-			# Top left
-			var top_left_i = i - 1
-			var top_left_j = j - 1
-			if top_left_i < 0 or top_left_j < 0:
-				pass
-			else:
-				var colour: Color = image.get_pixel(top_left_i, top_left_j)
-				if colour == my_colour:
-					neighbours[Vector2(top_left_i, top_left_j)] = labels[top_left_i][top_left_j]
 			
 			if neighbours.size() == 0:
 				linked[next_label] = Set.new(next_label, my_colour)
@@ -316,13 +306,106 @@ func get_islands_faster(image: Image, smallest_island: int, largest_island: int,
 			new_image.set_pixelv(pixel, colour)
 	new_image.unlock()
 	
-	print("Linked size", linked.size())
-	for key in regions.keys():
-		var region_size = regions[key].size()
-		if region_size > 10:
-			print("Region size", regions[key].size())
+#	print("Linked size", linked.size())
+#	for key in regions.keys():
+#		var region_size = regions[key].size()
+#		if region_size > 10:
+#			print("Region size", regions[key].size())
 	
 	return new_image
+
+func get_islands_naive_fastest(image: Image, smallest_island: int, largest_island: int, include_diagonal: bool):
+	var new_image: Image = Image.new()
+	new_image.create(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	
+	if (smallest_island <= 0 and largest_island <= 0):
+		# Do nothing
+		return new_image
+	
+	var ray_percentage = 0.01
+	print(image.get_width() * image.get_height())
+	var rays = image.get_width() * image.get_height() * ray_percentage
+	print(rays)
+	
+	image.lock()
+	# Create the cell grid
+	var cells: Array = []
+	for i in range(image.get_width()):
+		for j in range(image.get_height()):
+			cells.append(Cell.new(Vector2(i, j), image.get_pixel(i, j)))
+	
+	var cell_grid: CellGrid = CellGrid.new(image.get_size(), cells)
+	
+	# Link them together
+	for index in range(cells.size()):
+		var cell: Cell = cell_grid.get_cell(index)
+		var cell_position: Vector2 = cell.get_position()
+		var colour: Color = cell.get_colour()
+		var i = cell_position.x
+		var j = cell_position.y
+		
+		if include_diagonal:
+			cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i - 1, j - 1)))
+			cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i - 1, j + 1)))
+			cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i + 1, j - 1)))
+			cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i + 1, j + 1)))
+		
+		cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i - 1, j)))
+		cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i, j - 1)))
+		cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i, j + 1)))
+		cell.add_neighbour(cell_grid.get_cellv_if_match(colour, Vector2(i + 1, j)))
+	
+	var explored_roots = {}
+	var explored_cells = {}
+	
+	# Only explore a random number of rays that hit the screen
+	for ray in range(rays):
+		var ray_location = Vector2(
+			randi() % image.get_width(),
+			randi() % image.get_height()
+		)
+		
+		var root: Cell = cell_grid.get_cellv(ray_location)
+		
+		if explored_cells.has(root):
+			continue
+			
+		# Found a new starting point
+		explored_roots[root] = [root]
+		explored_cells[root] = null
+		
+		# Add neighbours to fringe
+		var fringe = root.get_neighbours()
+		
+		while fringe.size() > 0:
+			var current_cell = fringe.pop_back()
+			
+			# Add to the explored cells
+			explored_roots[root].append(current_cell)
+			explored_cells[current_cell] = null
+			
+			# Add neighbours that haven't been expanded
+			for neighbour in current_cell.get_neighbours():
+				if not explored_cells.has(neighbour):
+					fringe.append(neighbour)
+	
+	new_image.lock()
+	for region in explored_roots.values():
+		if ((largest_island > 0 and region.size() > largest_island) or
+				(smallest_island > 0 and region.size() < smallest_island)):
+			continue
+		
+		for cell in region:
+			new_image.set_pixelv(cell.get_position(), cell.get_colour())
+	new_image.unlock()
+	
+	image.unlock()
+	return new_image
+
+
+
+
+
 
 
 

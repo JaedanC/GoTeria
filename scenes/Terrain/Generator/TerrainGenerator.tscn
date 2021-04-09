@@ -15,9 +15,11 @@ octaves = 4
 period = 20.0
 persistence = 0.8
 drunkards = 385
-steps = 150
+steps = 309
+iterations = 1
 scale_factor = 1.0
-largest_island = 1
+largest_island = 550
+smallest_island = 15
 include_diagonal = true
 
 [node name="ImageTools" type="Node" parent="."]

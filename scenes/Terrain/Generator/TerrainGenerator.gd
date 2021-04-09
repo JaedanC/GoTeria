@@ -1,4 +1,4 @@
- tool
+# tool
 extends Node2D
 
 export(int) var world_seed: int setget set_world_seed
@@ -15,7 +15,11 @@ export(int) var largest_island: int setget set_largest_island
 export(int) var smallest_island: int setget set_smallest_island
 export(bool) var include_diagonal: bool setget set_include_diagonal
 
+var refresh = false
+
 var textures: Array
+var images: Dictionary 
+
 
 """
 This script is responsible for creating the underlying .png that will eventually
@@ -25,67 +29,67 @@ become the basis for the world generation algorithm.
 func set_world_size(_world_size: Vector2):
 	if _world_size != world_size:
 		world_size = _world_size
-		update()
+		refresh = true
 
 func set_world_seed(_world_seed: int):
 	if _world_seed != world_seed:
 		world_seed = _world_seed
-		update()
+		refresh = true
 
 func set_octaves(_octaves: int):
 	if _octaves != octaves:
 		octaves = _octaves
-		update()
+		refresh = true
 
 func set_period(_period: float):
 	if _period != period:
 		period = _period
-		update()
+		refresh = true
 
 func set_persistence(_persistence: float):
 	if _persistence != persistence:
 		persistence = _persistence
-		update()
+		refresh = true
 
 func set_threshold(_threshold: float):
 	if _threshold != threshold:
 		threshold = _threshold
-		update()
+		refresh = true
 
 func set_drunkards(_drunkards: int):
 	if _drunkards != drunkards:
 		drunkards = _drunkards
-		update()
+		refresh = true
 
 func set_steps(_steps: int):
 	if _steps != steps:
 		steps = _steps
-		update()
+		refresh = true
 
 func set_iterations(_iterations: int):
 	if _iterations != iterations:
 		iterations = _iterations
-		update()
+		refresh = true
 
 func set_scale_factor(_scale_factor: float):
 	if _scale_factor != scale_factor:
 		scale_factor = _scale_factor
-		update()
+		refresh = true
 		
 func set_largest_island(_largest_island: int):
 	if _largest_island != largest_island:
 		largest_island = _largest_island
-		update()
+		refresh = true
 
 func set_smallest_island(_smallest_island: int):
 	if _smallest_island != smallest_island:
 		smallest_island = _smallest_island
-		update()
+		refresh = true
 
 func set_include_diagonal(_include_diagonal: bool):
 	if _include_diagonal != include_diagonal:
 		include_diagonal = _include_diagonal
-		update()
+		refresh = true
 
 func _ready():
 	self.textures.append(ImageTexture.new())
@@ -94,12 +98,19 @@ func _ready():
 	self.textures.append(ImageTexture.new())
 	self.textures.append(ImageTexture.new())
 	self.textures.append(ImageTexture.new())
-	update()
+	
+	self.refresh = true
 
 func _process(_delta):
 	OS.set_window_title("Teria | FPS: " + str(Engine.get_frames_per_second()))
-
-func _draw():
+	
+	if not refresh:
+		return
+	
+	refresh = false
+	update()
+	
+	
 	print("Updating World")
 	var image: Image
 	
@@ -118,6 +129,7 @@ func _draw():
 	# Remove the islands based on these parameters
 #	var new_image = $IslandFinder.get_islands_faster(image, self.smallest_island, self.largest_island, self.include_diagonal)
 	var new_image = $IslandFinder.get_islands(image, self.smallest_island, self.largest_island, self.include_diagonal)
+#	var new_image = $IslandFinder.get_islands_naive_fastest(image, self.smallest_island, self.largest_island, self.include_diagonal)
 	new_image = $ImageTools.invert_image(new_image)
 	image = $ImageTools.merge_images(image, new_image, $ImageTools.MERGE_TYPE.MERGE)
 	
@@ -133,16 +145,21 @@ func _draw():
 #		Image.INTERPOLATE_TRILINEAR
 #	)
 #
-#	image = $CellularAutomator.cellular_auto(image, self.iterations)
+	image = $CellularAutomator.cellular_auto(image, self.iterations)
 #
+#	draw_image(image_islands_two, Vector2(image_islands.get_size().x * 2, 0))
 	draw_image(image)
 	draw_image(new_image, Vector2(image.get_size().x, 0))
-#	draw_image(image_islands_two, Vector2(image_islands.get_size().x * 2, 0))
 
-var i = 0
 func draw_image(image: Image, location=Vector2.ZERO):
-	var texture = self.textures[i % self.textures.size()]
-	texture.create_from_image(image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
-	draw_texture(texture, location)
-	
-	i += 1
+	self.images[image] = location
+
+func _draw():
+	var i = 0
+	for image in self.images.keys():
+		var location = images[image]
+		var texture = self.textures[i % self.textures.size()]
+		texture.create_from_image(image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
+		draw_texture(texture, location)
+		i += 1
+
