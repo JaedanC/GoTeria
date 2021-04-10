@@ -160,6 +160,7 @@ func _process(_delta):
 	simplex_noise.persistence = self.persistence
 	
 	print("Updating World")
+#	var texture_image = load("res://dollar_sign.png").get_data()
 	var image: Image
 #	var gradient_image: Image
 	var simplex_image: Image
@@ -180,7 +181,7 @@ func _process(_delta):
 #	for carve_point in carve_points:
 #		image = $ImageTools.dig_circle(image, carve_point.get_location(), carve_point.get_radius(), Color.white)
 	
-	image = $DrunkardWalk.drunkard_walk(image, self.world_seed, self.drunkards, self.steps)
+#	image = $DrunkardWalk.drunkard_walk(image, self.world_seed, self.drunkards, self.steps)
 #	image = $DrunkardWalk.drunkard_walk(image, self.world_seed, self.drunkards, self.steps, Vector2(image.get_width()/2, image.get_height()/2))
 	
 	# Create a noisey world
@@ -191,8 +192,11 @@ func _process(_delta):
 #	simplex_image = $SimplexNoise.simplex_line(self.world_size, self.simplex_noise, self.height, self.offset)
 	
 	# Add Drunkards
-#	image = $DrunkardWalk.drunkard_walk(image, self.world_seed, self.drunkards, self.steps)
+	image = $DrunkardWalk.drunkard_walk(simplex_noise, image, self.world_seed, self.drunkards, self.steps)
 #	image = $DrunkardWalk.simplex_drunkard_carver(image)
+	
+	# Cave Bombing Technique
+#	image = $CaveBombing.cave_bomb(image)
 	
 	# Remove the islands based on these parameters
 #	var new_image = $IslandFinder.get_islands_faster(image, self.smallest_island, self.largest_island, self.include_diagonal)
@@ -203,7 +207,7 @@ func _process(_delta):
 #	var blended_image: Image = $ImageTools.blend_images(gradient_image, simplex_image, $ImageTools.BLEND_TYPE.OVERLAY)
 #	var blended_image: Image = $ImageTools.blend_images(simplex_image, gradient_image, $ImageTools.BLEND_TYPE.OVERLAY)
 	
-#	blended_image = $ImageTools.black_and_white(blended_image, self.threshold)
+#	simplex_image = $ImageTools.black_and_white(simplex_image, self.threshold)
 	
 	# Resize the image
 #	image.resize(
@@ -231,3 +235,28 @@ func _draw():
 		draw_texture(texture, location)
 		i += 1
 
+
+class DataImage:
+	var data: Array
+	var size: Vector2
+	
+	func _init(size: Vector2):
+		self.size = size
+		self.data = []
+		for i in range(size.x * size.y):
+			self.data.append(0)
+	
+	func get_width():
+		return self.size.x
+	
+	func get_height():
+		return self.size.y
+	
+	func set_pixel(x: int, y: int, value):
+		data[x * size.y + y] = value
+	
+	func get_pixel(x: int, y: int):
+		return data[x * size.y + y]
+	
+	func get_data():
+		return self.data

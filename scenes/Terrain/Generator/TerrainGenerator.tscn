@@ -1,6 +1,7 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://scenes/Terrain/Generator/TerrainGenerator.gd" type="Script" id=1]
+[ext_resource path="res://scenes/Terrain/Generator/CaveBombing.gd" type="Script" id=2]
 [ext_resource path="res://scenes/Terrain/Generator/ImageTools.gd" type="Script" id=3]
 [ext_resource path="res://scenes/Terrain/Generator/DrunkardWalk.gd" type="Script" id=4]
 [ext_resource path="res://scenes/Terrain/Generator/IslandFinder.gd" type="Script" id=5]
@@ -9,14 +10,13 @@
 
 [node name="TerrainGenerator" type="Node2D"]
 script = ExtResource( 1 )
-world_seed = 2225
-world_size = Vector2( 500, 500 )
-octaves = 2
-period = 5.0
-persistence = 0.51
+world_seed = 508
+world_size = Vector2( 1000, 1000 )
+period = 1.0
+persistence = 0.4
 threshold = 0.5
-drunkards = 32
-steps = 3772
+drunkards = 25
+steps = 1000
 scale_factor = 1.0
 largest_island = 15
 height = 40
@@ -41,3 +41,6 @@ script = ExtResource( 5 )
 
 [node name="SimplexNoise" type="Node" parent="."]
 script = ExtResource( 6 )
+
+[node name="CaveBombing" type="Node" parent="."]
+script = ExtResource( 2 )

@@ -29,7 +29,7 @@ func simplex_noise(world_size: Vector2, noise: OpenSimplexNoise) -> Image:
 	
 	for i in range(world_size.x):
 		for j in range(world_size.y):
-			var value = (noise.get_noise_2d(i, j) + 1) / 2
+			var value = (noise.get_noise_2d(i, j * 2) + 1) / 2
 			var colour = Color(value, value, value)
 			
 			image.set_pixel(i, j, colour)

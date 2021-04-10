@@ -126,7 +126,7 @@ func blend_images(image_base: Image, top_layer: Image, type) -> Image:
 	new_image.unlock()
 	return new_image
 
-func dig_circle(image: Image, location: Vector2, radius: int, colour: Color) -> Image:
+func dig_circle(image, location: Vector2, radius: int, colour: Color):
 	image.lock()
 	
 	for i in range(location.x - radius, location.x + radius + 1):
@@ -250,8 +250,8 @@ func black_and_white(image: Image, threshold: float) -> Image:
 #			var gray_value = image.get_pixel(i, j).gray()
 			var gray_value = image.get_pixel(i, j).v
 			
-			var new_threshold = (noise.get_noise_1d(i) + 1) / 2 * threshold
-#			var new_threshold = threshold
+#			var new_threshold = (noise.get_noise_1d(i) + 1) / 2 * threshold
+			var new_threshold = threshold
 			
 			if gray_value < new_threshold:
 				image.set_pixel(i, j, Color.black)

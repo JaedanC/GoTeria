@@ -1,7 +1,7 @@
 tool
 extends Node
 
-func drunkard_walk(image: Image, world_seed: int, drunkards: int, steps: int, starting_point=null) -> Image:
+func drunkard_walk(noise: OpenSimplexNoise, image, world_seed: int, drunkards: int, steps: int, starting_point=null) -> Image:
 	"""
 	This algorithm spawns a number of drunkards (starting pixels) and then walks
 	them the desired number of steps in any random (8 point) direction. Whereever
@@ -10,27 +10,49 @@ func drunkard_walk(image: Image, world_seed: int, drunkards: int, steps: int, st
 	"""
 	seed(world_seed)
 	
+	var image_tools = get_parent().find_node("ImageTools")
+	
 	image.lock()
-	for _drunk_index in range(drunkards):
-		var starting_postiion: Vector2
+	for drunk_index in range(drunkards):
+		var current_position: Vector2
 		if starting_point == null:
-			starting_postiion = Vector2(
+			current_position = Vector2(
 				randi() % int(image.get_width()),
 				randi() % int(image.get_height())
 			)
 		else:
-			starting_postiion = starting_point
+			current_position = starting_point
 		
 		# Choose a random direction
-		for _step in range(steps + 1):
-			starting_postiion += Vector2(
-				randi() % 3 - 1,
-				randi() % 3 - 1
-			)
+		var possible_directions = [
+			Vector2(-1, 0),
+#			Vector2(-1, -1),
+			Vector2(0, -1),
+#			Vector2(1, -1),
+			Vector2(1, 0),
+#			Vector2(1, 1),
+			Vector2(0, 1),
+#			Vector2(-1, 1)
+		]
+		var reverse_direction_offset = possible_directions.size() / 2
+		var prev_direction = -1
+		
+		for step in range(steps + 1):
+			"""
+			Vector list implementation.
+			"""
+			# A number in this range [1, possible_directions.size()]
+			var random_direction = randi()
+			var safe_offset = int(random_direction) % (possible_directions.size() - 1) + 1
+			var next_direction = (prev_direction + safe_offset) % possible_directions.size()
+			current_position += possible_directions[next_direction]
+			
+			# Treat the previous direction as the reversed Vector2
+			prev_direction = (next_direction + reverse_direction_offset) % possible_directions.size()
 			
 			# Dig gone out of bounds
-			if not (starting_postiion.x >= 0 and starting_postiion.x < image.get_width() and
-					starting_postiion.y >= 0 and starting_postiion.y < image.get_height()):
+			if not (current_position.x >= 0 and current_position.x < image.get_width() and
+					current_position.y >= 0 and current_position.y < image.get_height()):
 				continue
 			
 			var colour: Color = Color()
@@ -43,27 +65,11 @@ func drunkard_walk(image: Image, world_seed: int, drunkards: int, steps: int, st
 			# White draw
 			colour = Color(1, 1, 1)
 			
-			image.set_pixelv(starting_postiion, colour)
+#			image.set_pixelv(current_position, colour)
 			
-			# left
-			if (starting_postiion.x - 1 >= 0 and starting_postiion.x < image.get_width() and
-					starting_postiion.y >= 0 and starting_postiion.y < image.get_height()):
-				image.set_pixel(starting_postiion.x - 1, starting_postiion.y, colour)
-			
-			# top
-			if (starting_postiion.x >= 0 and starting_postiion.x < image.get_width() and
-					starting_postiion.y - 1 >= 0 and starting_postiion.y < image.get_height()):
-				image.set_pixel(starting_postiion.x, starting_postiion.y - 1, colour)
-			
-			# right
-			if (starting_postiion.x >= 0 and starting_postiion.x + 1 < image.get_width() and
-					starting_postiion.y >= 0 and starting_postiion.y < image.get_height()):
-				image.set_pixel(starting_postiion.x + 1, starting_postiion.y, colour)
-			
-			# down
-			if (starting_postiion.x >= 0 and starting_postiion.x < image.get_width() and
-					starting_postiion.y >= 0 and starting_postiion.y + 1 < image.get_height()):
-				image.set_pixel(starting_postiion.x, starting_postiion.y + 1, colour)
+			# [-1, 1] -> [1, 2]
+			var random_radius = ((noise.get_noise_1d(step) + 1) / 2) * 2.5
+			image_tools.dig_circle(image, current_position, random_radius, Color.white)
 	
 	image.unlock()
 	return image
