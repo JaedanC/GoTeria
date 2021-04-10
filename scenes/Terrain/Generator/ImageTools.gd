@@ -259,3 +259,113 @@ func black_and_white(image: Image, threshold: float) -> Image:
 				image.set_pixel(i, j, Color.white)
 	image.unlock()
 	return image
+
+func flood_fill(image: Image, location: Vector2, desired_colour: Color) -> Image:
+	image.lock()
+	var base_colour: Color = image.get_pixelv(location)
+	var fringe: Array = [location]
+	var explored: Dictionary = {}
+	
+	while fringe.size() > 0:
+		var current_node: Vector2 = fringe.pop_back()
+		var i = current_node.x
+		var j = current_node.y
+		
+		# Add to explored
+		explored[current_node] = null
+		
+		if (i < 0 or j < 0 or i >= image.get_width() or j >= image.get_height()):
+			continue
+		
+		var current_node_colour: Color = image.get_pixelv(current_node)
+		if current_node_colour == base_colour:
+			image.set_pixelv(current_node, desired_colour)
+			
+			var neighbours = [
+				Vector2(i - 1, j),
+				Vector2(i + 1, j),
+				Vector2(i, j - 1),
+				Vector2(i, j + 1),
+			]
+			
+			for neighbour in neighbours:
+				if explored.has(neighbour):
+					continue
+				fringe.append(neighbour)
+	
+	image.unlock()
+	return image
+
+func rotate_image(image: Image, degrees: int) -> Image:
+	"""Rotate clockwise"""
+	degrees %= 360
+	if degrees == 0:
+		return image
+	
+	image.lock()
+	
+	var new_image: Image
+	if degrees == 90:
+		var new_size = Vector2(
+			image.get_height(),
+			image.get_width()
+		)
+		new_image = blank_image(new_size)
+		
+		new_image.lock()
+		for i in range(image.get_width()):
+			for j in range(image.get_height()):
+				var pixel_colour = image.get_pixel(i, j)
+				var x = image.get_height() - 1 - j
+				var y = i
+				new_image.set_pixel(x, y, pixel_colour)
+		new_image.unlock()
+	elif degrees == 180:
+		new_image = blank_image(image.get_size())
+		new_image.lock()
+		for i in range(image.get_width()):
+			for j in range(image.get_height()):
+				var pixel_colour = image.get_pixel(i, j)
+				var x = image.get_width() - 1 - i
+				var y = image.get_height() - 1 - j
+				new_image.set_pixel(x, y, pixel_colour)
+		new_image.unlock()
+	elif degrees == 270:
+		var new_size = Vector2(
+			image.get_height(),
+			image.get_width()
+		)
+		new_image = blank_image(new_size)
+		
+		new_image.lock()
+		for i in range(image.get_width()):
+			for j in range(image.get_height()):
+				var pixel_colour = image.get_pixel(i, j)
+				var x = j
+				var y = image.get_width() - 1 - i
+				new_image.set_pixel(x, y, pixel_colour)
+		new_image.unlock()
+	else:
+		assert(false)
+	
+	image.unlock()
+	return new_image
+
+func add_border(image: Image, border: int, colour=Color.white) -> Image:
+	assert(border > 0)
+	var new_image: Image = blank_image(Vector2(
+		image.get_width() + 2 * border,
+		image.get_height() + 2 * border
+	))
+	new_image.fill(colour)
+	
+	image.lock()
+	new_image.lock()
+	for i in range(image.get_width()):
+		for j in range(image.get_height()):
+			var pixel_colour = image.get_pixel(i , j)
+			new_image.set_pixel(i + border, j + border, pixel_colour)
+	image.unlock()
+	new_image.unlock()
+	
+	return new_image

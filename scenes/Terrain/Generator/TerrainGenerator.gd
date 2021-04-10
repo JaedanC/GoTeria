@@ -140,6 +140,8 @@ func _ready():
 	self.textures.append(ImageTexture.new())
 	self.textures.append(ImageTexture.new())
 	self.textures.append(ImageTexture.new())
+	self.textures.append(ImageTexture.new())
+	self.textures.append(ImageTexture.new())
 	
 	self.refresh = true
 	simplex_noise = OpenSimplexNoise.new()
@@ -163,7 +165,7 @@ func _process(_delta):
 #	var texture_image = load("res://dollar_sign.png").get_data()
 	var image: Image
 #	var gradient_image: Image
-	var simplex_image: Image
+#	var simplex_image: Image
 	
 	# Create a blank world
 	image = $ImageTools.blank_image(self.world_size)
@@ -208,6 +210,17 @@ func _process(_delta):
 #	var blended_image: Image = $ImageTools.blend_images(simplex_image, gradient_image, $ImageTools.BLEND_TYPE.OVERLAY)
 	
 #	simplex_image = $ImageTools.black_and_white(simplex_image, self.threshold)
+
+#	image = $ImageTools.flood_fill(image, Vector2.ZERO, Color.aqua)
+	
+	var rotated_image_1: Image = $ImageTools.rotate_image(image, 90)
+	var rotated_image_2: Image = $ImageTools.rotate_image(image, 180)
+	var rotated_image_3: Image = $ImageTools.rotate_image(image, 270)
+	
+	image = $ImageTools.add_border(image, 10, Color.black)
+	image = $ImageTools.flood_fill(image, Vector2.ZERO, Color.pink)
+	
+#	var flipped_image = rotated_image_1.flip_x()
 	
 	# Resize the image
 #	image.resize(
@@ -219,6 +232,9 @@ func _process(_delta):
 #	image = $CellularAutomator.cellular_auto(image, self.iterations)
 #
 	draw_image(image)
+	draw_image(rotated_image_1, Vector2(image.get_width(), 0))
+	draw_image(rotated_image_2, Vector2(image.get_width(), image.get_height()))
+	draw_image(rotated_image_3, Vector2(0, image.get_height()))
 #	draw_image(blended_image)
 #	draw_image(gradient_image, Vector2(0, blended_image.get_height()))
 #	draw_image(simplex_image)
@@ -253,6 +269,9 @@ class DataImage:
 		return self.size.y
 	
 	func set_pixel(x: int, y: int, value):
+		if x < 0 or y < 0 or x >= size.x or y >= size.y:
+			return
+		
 		data[x * size.y + y] = value
 	
 	func get_pixel(x: int, y: int):
