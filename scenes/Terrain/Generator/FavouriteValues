@@ -31,4 +31,51 @@ Black And White(Overlay(Gradient Down, Simplex Noise))
 			This could be combined with a more macro overworld shape to produce
 			a final result.
 		Time: <500ms
+
+Cave Sticker Algorithm
+	1:
+		px: 500x500
+		Octaves: 0
+		Period: 1
+		Persistence: 0.4
+		DrunkardWalk:
+			Drunkards: 1 (or 2)
+			Steps: 1000
+		GeneratedCaveStickers: 170
+		NumCaveStickers: GeneratedCaveStickers
+		Comment: This generates caves by simulating 'GeneratedCaveStickers'
+			drunkard walks. Then, they are copied to the final image in a
+			random location. The current algorithm places cave stickers favoured
+			away from x=0 and y=0 so that will need to be changed. Also, the
+			place_cave_stickers algorithm does not randomly choose stickers
+			which it can do. Consider changing this also. The generation of cave
+			stickers could be done using a threadpool.
+		Time: ~4s
+
+Merge(Black And White(Simplex Noise), Cave Sticker Algorithm #1)
+	1:
+		px: 500x500
+		Simplex Noise:
+			Octaves: 4
+			Period: 50
+			Persistence: 0.5
+		Black And White:
+			Threshold: 0.65
+		Cave Sticker Algorithm #1:
+			GeneratedCaveStickers: 100
+		Comment: This introduces additional random caves that are much smoother
+			to the eye in random locations. The amount of Cave sticker is
+			reduced to account for the additional caves.
+		Time: ~2.5s
 		
+
+
+
+
+
+
+
+
+
+
+

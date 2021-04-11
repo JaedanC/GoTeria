@@ -24,9 +24,9 @@ export(int) var bottom_threshold: int setget set_bottom_threshold
 
 var refresh = false
 
+var num_textures = 40
 var textures: Array
-var images: Dictionary 
-var simplex_noise: OpenSimplexNoise
+var images: Array
 
 """
 This script is responsible for creating the underlying .png that will eventually
@@ -134,17 +134,12 @@ func set_top_threshold(_top_threshold: int):
 		refresh = true
 
 func _ready():
-	self.textures.append(ImageTexture.new())
-	self.textures.append(ImageTexture.new())
-	self.textures.append(ImageTexture.new())
-	self.textures.append(ImageTexture.new())
-	self.textures.append(ImageTexture.new())
-	self.textures.append(ImageTexture.new())
-	self.textures.append(ImageTexture.new())
-	self.textures.append(ImageTexture.new())
+	self.images = []
+	self.textures = []
+	for _i in range(num_textures):
+		self.textures.append(ImageTexture.new())
 	
 	self.refresh = true
-	simplex_noise = OpenSimplexNoise.new()
 
 func _process(_delta):
 	OS.set_window_title("Teria | FPS: " + str(Engine.get_frames_per_second()))
@@ -154,21 +149,23 @@ func _process(_delta):
 	
 	refresh = false
 	update()
+	self.images.clear()
 	
+	var simplex_noise = OpenSimplexNoise.new()
 	# Configure Simplex Noise
 	simplex_noise.set_seed(self.world_seed)
 	simplex_noise.octaves = self.octaves
 	simplex_noise.period = self.period
 	simplex_noise.persistence = self.persistence
 	
-	print("Updating World")
+#	print("Updating World")
 #	var texture_image = load("res://dollar_sign.png").get_data()
 	var image: Image
 #	var gradient_image: Image
-#	var simplex_image: Image
+	var simplex_image: Image
 	
 	# Create a blank world
-	image = $ImageTools.blank_image(self.world_size)
+#	image = $ImageTools.blank_image(self.world_size, Color.black)
 #	image = $ImageTools.gradient_point(self.world_size, self.gradient_point, self.gradient_radius, self.gradient_falloff)
 #	gradient_image = $ImageTools.gradient_down(self.world_size, self.bottom_threshold, self.top_threshold)
 #	var reduce: float = 3
@@ -190,11 +187,11 @@ func _process(_delta):
 #	image = $ImageTools.random_image(self.world_size, self.world_seed)
 	
 	# Create a simplex world
-#	simplex_image = $SimplexNoise.simplex_noise(self.world_size, self.simplex_noise)
-#	simplex_image = $SimplexNoise.simplex_line(self.world_size, self.simplex_noise, self.height, self.offset)
+#	simplex_image = $SimplexNoise.simplex_noise(self.world_size, simplex_noise)
+	simplex_image = $SimplexNoise.simplex_line(self.world_size, simplex_noise, self.height, self.offset)
 	
 	# Add Drunkards
-	image = $DrunkardWalk.drunkard_walk(simplex_noise, image, self.world_seed, self.drunkards, self.steps)
+#	image = $DrunkardWalk.drunkard_walk(simplex_noise, image, self.drunkards, self.steps, image.get_size() / 2, Color.white)
 #	image = $DrunkardWalk.simplex_drunkard_carver(image)
 	
 	# Cave Bombing Technique
@@ -213,12 +210,9 @@ func _process(_delta):
 
 #	image = $ImageTools.flood_fill(image, Vector2.ZERO, Color.aqua)
 	
-	var rotated_image_1: Image = $ImageTools.rotate_image(image, 90)
-	var rotated_image_2: Image = $ImageTools.rotate_image(image, 180)
-	var rotated_image_3: Image = $ImageTools.rotate_image(image, 270)
-	
-	image = $ImageTools.add_border(image, 10, Color.black)
-	image = $ImageTools.flood_fill(image, Vector2.ZERO, Color.pink)
+#
+#	image = $ImageTools.add_border(image, 1, Color(0, 0, 0, 0))
+#	image = $ImageTools.flood_fill(image, Vector2.ZERO, Color.pink)
 	
 #	var flipped_image = rotated_image_1.flip_x()
 	
@@ -230,52 +224,57 @@ func _process(_delta):
 #	)
 #
 #	image = $CellularAutomator.cellular_auto(image, self.iterations)
-#
-	draw_image(image)
-	draw_image(rotated_image_1, Vector2(image.get_width(), 0))
-	draw_image(rotated_image_2, Vector2(image.get_width(), image.get_height()))
-	draw_image(rotated_image_3, Vector2(0, image.get_height()))
+	
+#	image = cave_stickers_algorithm()
+	
+#	simplex_image = $ImageTools.change_colour(simplex_image, Color.black, Color(0, 0, 0, 0))
+	
+#	var new_image: Image = $ImageTools.blend_images(image, simplex_image, $ImageTools.BLEND_TYPE.MERGE)
+	
+#	draw_image(image)
+	draw_image(simplex_image)
+#	draw_image(new_image)
+#	draw_images(cave_stickers)
+#	draw_image(rotated_image_3)
 #	draw_image(blended_image)
-#	draw_image(gradient_image, Vector2(0, blended_image.get_height()))
-#	draw_image(simplex_image)
+#	draw_image(gradient_image)
 
-func draw_image(image: Image, location=Vector2.ZERO):
-	self.images[image] = location
+func cave_stickers_algorithm() -> Image:
+	var simplex_noise = OpenSimplexNoise.new()
+	simplex_noise.set_seed(self.world_seed)
+	simplex_noise.octaves = 0
+	simplex_noise.period = 1
+	simplex_noise.persistence = 0.4
+	
+	var image: Image = $ImageTools.blank_image(self.world_size, Color.black)
+	var cave_stickers = []
+	for i in range(max(1, self.iterations)):
+		cave_stickers.append($CompleteAlgorithms.generate_cave_sticker(self.world_seed + i, simplex_noise, self.world_size, self.drunkards, self.steps))
+	
+	return $CompleteAlgorithms.place_cave_stickers(self.world_seed, image, cave_stickers, self.drunkards)
+
+func draw_image(image: Image):
+	self.images.append(image)
+
+func draw_images(multiple_images: Array):
+	for image in multiple_images:
+		self.images.append(image)
 
 func _draw():
-	var i = 0
-	for image in self.images.keys():
-		var location = images[image]
-		var texture = self.textures[i % self.textures.size()]
-		texture.create_from_image(image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
-		draw_texture(texture, location)
-		i += 1
-
-
-class DataImage:
-	var data: Array
-	var size: Vector2
+	var largest_image = Vector2.ZERO
+	for image in self.images:
+		largest_image.x = max(image.get_width(), largest_image.x)
+		largest_image.y = max(image.get_height(), largest_image.y)
 	
-	func _init(size: Vector2):
-		self.size = size
-		self.data = []
-		for i in range(size.x * size.y):
-			self.data.append(0)
-	
-	func get_width():
-		return self.size.x
-	
-	func get_height():
-		return self.size.y
-	
-	func set_pixel(x: int, y: int, value):
-		if x < 0 or y < 0 or x >= size.x or y >= size.y:
-			return
+	var per_column: int = 2
+	for i in range(self.images.size()):
+		if i >= self.textures.size():
+			break
+		var texture = self.textures[i]
+		var image = self.images[i]
 		
-		data[x * size.y + y] = value
-	
-	func get_pixel(x: int, y: int):
-		return data[x * size.y + y]
-	
-	func get_data():
-		return self.data
+		# Draw image
+		texture.create_from_image(image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
+		var x = (i / per_column) * largest_image.x
+		var y = (i % per_column) * largest_image.y
+		draw_texture(texture, Vector2(x, y))

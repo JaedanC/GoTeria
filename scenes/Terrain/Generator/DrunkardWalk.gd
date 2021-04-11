@@ -1,15 +1,18 @@
 tool
 extends Node
 
-func drunkard_walk(noise: OpenSimplexNoise, image, world_seed: int, drunkards: int, steps: int, starting_point=null) -> Image:
+func drunkard_walk(noise: OpenSimplexNoise, image, drunkards: int, steps: int, starting_point=null, colour: Color=Color.white) -> Image:
 	"""
 	This algorithm spawns a number of drunkards (starting pixels) and then walks
-	them the desired number of steps in any random (8 point) direction. Whereever
-	drunkards walk they turn the pixels to white. The original image is changed
-	and then returned.
-	"""
-	seed(world_seed)
+	them the desired number of steps in any random (8 point) direction. Where ever
+	drunkards walk they turn the pixels to the input colour. The resulting image
+	is cropped to only include the drunkard. The original image is modified then
+	returned.
 	
+	This algorithm will stop when the drunkard goes out of bounds so it is advised
+	to make the starting position the centre of the image. The noise parameter
+	is used to fluctuate to radius of the dig when carving out random holes.
+	"""
 	var image_tools = get_parent().find_node("ImageTools")
 	
 	image.lock()
@@ -26,20 +29,26 @@ func drunkard_walk(noise: OpenSimplexNoise, image, world_seed: int, drunkards: i
 		# Choose a random direction
 		var possible_directions = [
 			Vector2(-1, 0),
-#			Vector2(-1, -1),
+			Vector2(-1, -1),
 			Vector2(0, -1),
-#			Vector2(1, -1),
+			Vector2(1, -1),
 			Vector2(1, 0),
-#			Vector2(1, 1),
+			Vector2(1, 1),
 			Vector2(0, 1),
-#			Vector2(-1, 1)
+			Vector2(-1, 1)
 		]
 		var reverse_direction_offset = possible_directions.size() / 2
-		var prev_direction = -1
+		var prev_direction = randi() % possible_directions.size()
 		
+		var min_x = current_position.x
+		var max_x = current_position.x
+		var min_y = current_position.y
+		var max_y = current_position.y
 		for step in range(steps + 1):
 			"""
-			Vector list implementation.
+			Only let the next direction go in 7 directions -> not backward. This
+			makes caves look more narrow as the algorithm will much more rarily
+			turn back on itself.
 			"""
 			# A number in this range [1, possible_directions.size()]
 			var random_direction = randi()
@@ -50,92 +59,37 @@ func drunkard_walk(noise: OpenSimplexNoise, image, world_seed: int, drunkards: i
 			# Treat the previous direction as the reversed Vector2
 			prev_direction = (next_direction + reverse_direction_offset) % possible_directions.size()
 			
-			# Dig gone out of bounds
+			# Dig gone out of bounds so ignore it
 			if not (current_position.x >= 0 and current_position.x < image.get_width() and
 					current_position.y >= 0 and current_position.y < image.get_height()):
 				continue
 			
-			var colour: Color = Color()
+			# Fluctuate the size of the dig to be a radius between 0 and the value
+			# below. This makes caves look less algorithmic.
+			var max_radius = 2.2
+			var random_radius = ((noise.get_noise_1d(step) + 1) / 2) * max_radius
 			
-			# Colourful dig
-#			colour.v = 0.4
-#			colour.s = 1
-#			colour.h = float(_step) / steps
+			# Keep track of the size of the image
+			min_x = min(current_position.x, min_x)
+			max_x = max(current_position.x, max_x)
+			min_y = min(current_position.y, min_y)
+			max_y = max(current_position.y, max_y)
 			
-			# White draw
-			colour = Color(1, 1, 1)
+			# We're about the write outside the bounds of the map so stop
+			if (min_x - random_radius < 0 or max_x + random_radius > image.get_width() or 
+					min_y - random_radius < 0 or max_y + random_radius > image.get_height()):
+				break
 			
+			# 1 Pixel dig
 #			image.set_pixelv(current_position, colour)
-			
-			# [-1, 1] -> [1, 2]
-			var random_radius = ((noise.get_noise_1d(step) + 1) / 2) * 2.5
+
+			# Multi-pixel dig
 			image_tools.dig_circle(image, current_position, random_radius, Color.white)
+	
+	# Crop out the excess pixels
+	var used_rect: Rect2 = image.get_used_rect()
+	image.blit_rect(image, used_rect, Vector2.ZERO)
+	image.crop(used_rect.size.x, used_rect.size.y)
 	
 	image.unlock()
 	return image
-
-class CarvePoint:
-	var location: Vector2
-	var radius: float
-	func _init(_location: Vector2, _radius: float):
-		self.location = _location
-		self.radius = _radius
-	
-	func get_location() -> Vector2:
-		return self.location
-	
-	func get_radius() -> float:
-		return self.radius
-
-func simplex_drunkard_carver(image: Image) -> CarvePoint:
-	var radius_values := []
-	var reduction = 0
-	var maximum_steps = 50
-	var beginning_value = randi() % 10 + 5 # [5, 10]
-	var current_step = 0
-	
-	var new_noise = OpenSimplexNoise.new()
-	new_noise.seed = 0
-	new_noise.octaves = 2
-	new_noise.period = 5
-	new_noise.persistence = 0.5
-	
-	while true:
-		var next_radius = beginning_value - reduction + new_noise.get_noise_1d(current_step) * 5
-		
-		if next_radius < 0:
-			break
-		
-		radius_values.append(next_radius)
-#		reduction += int(randi() % 2 > 0.5)
-		
-		current_step += 1
-		if current_step > maximum_steps:
-			break
-	
-#	print(radius_values)
-	
-	var current_point: Vector2 = Vector2(
-		randi() % image.get_width(),
-		randi() % image.get_height()
-	)
-	
-	var random_direction = Vector2(1, 0).rotated(deg2rad(360 * randf()))
-	var carving_points = []
-	
-	current_step = 0
-	var variable_new_direction = deg2rad(90) # degrees
-	var direction_hop = 10
-	for radius in radius_values:
-		random_direction = random_direction.rotated(variable_new_direction * new_noise.get_noise_1d(current_step + maximum_steps))
-#		print(random_direction)
-		current_point = current_point + random_direction * direction_hop
-		carving_points.append(current_point)
-		current_step += 1
-#	print(carving_points)
-	
-	var carving_point_objects = []
-	for i in range(carving_points.size()):
-		carving_point_objects.append(CarvePoint.new(carving_points[i], radius_values[i]))
-	
-	return carving_point_objects

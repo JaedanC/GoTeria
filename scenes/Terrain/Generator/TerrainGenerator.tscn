@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=2]
+[gd_scene load_steps=9 format=2]
 
 [ext_resource path="res://scenes/Terrain/Generator/TerrainGenerator.gd" type="Script" id=1]
 [ext_resource path="res://scenes/Terrain/Generator/CaveBombing.gd" type="Script" id=2]
@@ -7,25 +7,31 @@
 [ext_resource path="res://scenes/Terrain/Generator/IslandFinder.gd" type="Script" id=5]
 [ext_resource path="res://scenes/Terrain/Generator/SimplexNoise.gd" type="Script" id=6]
 [ext_resource path="res://scenes/Terrain/Generator/CellularAutomator.gd" type="Script" id=7]
+[ext_resource path="res://scenes/Terrain/Generator/CompleteAlgorithms.gd" type="Script" id=8]
 
 [node name="TerrainGenerator" type="Node2D"]
 script = ExtResource( 1 )
-world_seed = 830
-world_size = Vector2( 100, 100 )
-period = 1.0
-persistence = 0.4
-threshold = 0.5
-drunkards = 23
-steps = 220
+world_seed = 9
+world_size = Vector2( 500, 500 )
+octaves = 4
+period = 50.0
+persistence = 0.5
+threshold = 0.7
+drunkards = 1
+steps = 1000
+iterations = 100
 scale_factor = 1.0
 largest_island = 15
-height = 40
-offset = -135
+height = 50
+offset = 273
 gradient_point = Vector2( 250.137, 250 )
 gradient_radius = 87
 gradient_falloff = 163
 top_threshold = -13
 bottom_threshold = 116
+
+[node name="CompleteAlgorithms" type="Node" parent="."]
+script = ExtResource( 8 )
 
 [node name="ImageTools" type="Node" parent="."]
 script = ExtResource( 3 )

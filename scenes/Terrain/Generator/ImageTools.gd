@@ -1,13 +1,13 @@
 tool
 extends Node
 
-func blank_image(image_size: Vector2) -> Image:
+func blank_image(image_size: Vector2, colour: Color=Color.black) -> Image:
 	"""
 	This method returns a blank (black) image of the specified size
 	"""
 	var image: Image = Image.new()
 	image.create(image_size.x, image_size.y, false, Image.FORMAT_RGBA8)
-	image.fill(Color.black)
+	image.fill(colour)
 	
 	return image
 
@@ -55,51 +55,55 @@ enum BLEND_TYPE {
 	OVERLAY = 4,
 }
 
-func blend_images(image_base: Image, top_layer: Image, type) -> Image:
+func blend_images(image_base: Image, top_layer: Image, type, offset: Vector2=Vector2.ZERO) -> Image:
 	"""
-	This method merges the top_layer image onto the bottom image like in paint.
-	Any pixels in the top layer with an alpha==0 are ignored. The base image
-	is changed and also returned.
+	This method blends the top_layer image onto the bottom image like in paint.
+	Select the correct mode using the 'type' parameter. The 'image_base' is
+	modified in-place and returned.
+	
+	A specified offset can be applied to the top layer so that it blends starting
+	at a different spot. All other pixels in the 'image_base' are ignored.
 	"""
-	if (image_base.get_width() != top_layer.get_width() or
-		image_base.get_height() != top_layer.get_height()):
-		return image_base
-	
-	var new_image: Image = blank_image(image_base.get_size())
-	
-	new_image.lock()
 	image_base.lock()
 	top_layer.lock()
-	for i in range(image_base.get_width()):
-		for j in range(image_base.get_height()):
+	for i in range(top_layer.get_width()):
+		for j in range(top_layer.get_height()):
+			# Calculate the offset for where to read from the image_base
+			# If reading outside the bounds of the image_base, continue
+			var bottom_offset = Vector2(i, j) + offset
+			if (bottom_offset.x < 0 or bottom_offset.x >= image_base.get_width() or
+					bottom_offset.y < 0 or bottom_offset.y >= image_base.get_height()):
+				continue
+			
+			# Retrieve each colour for blending
 			var top_colour: Color = top_layer.get_pixel(i, j)
-			var bottom_colour: Color = image_base.get_pixel(i, j)
+			var bottom_colour: Color = image_base.get_pixelv(bottom_offset)
 			
 			match type:
 				BLEND_TYPE.MERGE:
 					if top_colour.a != 0:
-						new_image.set_pixel(i, j, top_colour)
+						image_base.set_pixelv(bottom_offset, top_colour)
 				BLEND_TYPE.ADD:
 					var new_colour: Color = Color(
 							top_colour.r + bottom_colour.r,
 							top_colour.g + bottom_colour.g,
 							top_colour.b + bottom_colour.b
 					)
-					new_image.set_pixel(i, j, new_colour)
+					image_base.set_pixelv(bottom_offset, new_colour)
 				BLEND_TYPE.SUBTRACT:
 					var new_colour: Color = Color(
 							top_colour.r - bottom_colour.r,
 							top_colour.g - bottom_colour.g,
 							top_colour.b - bottom_colour.b
 					)
-					new_image.set_pixel(i, j, new_colour)
+					image_base.set_pixelv(bottom_offset, new_colour)
 				BLEND_TYPE.MULTIPLY:
 					var new_colour: Color = Color(
 							top_colour.r * bottom_colour.r,
 							top_colour.g * bottom_colour.g,
 							top_colour.b * bottom_colour.b
 					)
-					new_image.set_pixel(i, j, new_colour)
+					image_base.set_pixelv(bottom_offset, new_colour)
 				BLEND_TYPE.OVERLAY:
 					# From https://en.wikipedia.org/wiki/Blend_modes#Overlay
 					var a = bottom_colour
@@ -120,11 +124,10 @@ func blend_images(image_base: Image, top_layer: Image, type) -> Image:
 						new_colour.b = 2 * a.b * b.b
 					else:
 						new_colour.b = 1 - 2 * (1 - a.b) * (1 - b.b)
-					new_image.set_pixel(i, j, new_colour)
+					image_base.set_pixelv(bottom_offset, new_colour)
 	image_base.unlock()
 	top_layer.unlock()
-	new_image.unlock()
-	return new_image
+	return image_base
 
 func dig_circle(image, location: Vector2, radius: int, colour: Color):
 	image.lock()
@@ -142,46 +145,52 @@ func dig_circle(image, location: Vector2, radius: int, colour: Color):
 	return image
 
 func gradient_point(world_size: Vector2, point: Vector2, gradient_radius: int, gradient_falloff: int) -> Image:
+	"""
+	This function returns a new image with a 'gradient point'. All pixels within
+	the 'gradient_falloff' are white. Pixels inside the secondary radius of
+	'gradient_radius' have a decreasing chance of being white. All pixel outside
+	the 'gradient_radius' are black. A new image with this gradient_point is
+	returned.
+	"""
 	assert(gradient_radius != 0)
-	var image: Image = Image.new()
-	image.create(world_size.x, world_size.y, false, Image.FORMAT_RGBA8)
-	image.fill(Color.black)
+	
+	# Create a new image and make it black
+	var image: Image = blank_image(world_size, Color.black)
 	
 	image.lock()
 	for i in range(world_size.x):
 		for j in range(world_size.y):
 			var pixel_location = Vector2(i, j)
-			var distance_to_point = pixel_location.distance_to(point) - gradient_falloff
+			var distance_to_point = max(pixel_location.distance_to(point) - gradient_falloff, 0)
 			
 			var draw_pixel: bool
 			if distance_to_point == 0:
+				# Values inside the gradient_radius are always white
 				draw_pixel = true
 			else:
 				# We need the random number generator to beat this value
 				var random_cutoff = distance_to_point / gradient_radius # Value [0, 1]
 				var random_value = randf() + 1 / 2 # Between 0 and 1
-				draw_pixel = random_value < random_cutoff
 				
+				# Did the random generator beat the value?
+				draw_pixel = random_value < random_cutoff
+			
 			if draw_pixel:
 				image.set_pixel(i, j, Color.white)
 	image.unlock()
 	return image
 
 func gradient_down(world_size: Vector2, bottom_threshold: int, top_threshold: int) -> Image:
-	var image: Image = Image.new()
-	image.create(world_size.x, world_size.y, false, Image.FORMAT_RGBA8)
-	image.fill(Color.black)
+	"""
+	This function returns an image that is a gradual vertical gradient. The
+	top_threshold and the bottom_threshold control where the gradient starts
+	and ends.
+	"""
+	var image: Image = blank_image(world_size, Color.black)
 	
-	image.lock()
+	# Colour for each y value
 	var colours := []
 	for j in range(image.get_height()):
-#		if j < top_threshold:
-#			colours.append(Color.black)
-#			continue
-#		if j > bottom_threshold:
-#			colours.append(Color.white)
-#			continue
-		
 		var gradient = (j - bottom_threshold) / float(top_threshold - bottom_threshold)
 		colours.append(Color(
 			gradient,
@@ -189,6 +198,7 @@ func gradient_down(world_size: Vector2, bottom_threshold: int, top_threshold: in
 			gradient
 		))
 			
+	image.lock()
 	for i in range(image.get_width()):
 		for j in range(image.get_height()):
 			image.set_pixel(i, j, colours[j])
@@ -205,8 +215,7 @@ func generate_voronoi_diagram(world_size : Vector2, num_cells: int) -> Image:
 	on the time by a lot, for sacrificing a bit of pixel perfect detail.
 
 	"""
-	var image = Image.new()
-	image.create(world_size.x, world_size.y, false, Image.FORMAT_RGBH)
+	var image = blank_image(world_size)
 
 	var points = []
 	var colors = []
@@ -214,10 +223,10 @@ func generate_voronoi_diagram(world_size : Vector2, num_cells: int) -> Image:
 	for _i in range(num_cells):
 		points.push_back(Vector2(int(randf()*image.get_size().x), int(randf()*image.get_size().y)))
 		
-#		randomize()
+		# Push back a random colour
 #		var colorPossibilities = [ Color.blue, Color.red, Color.green, Color.purple, Color.yellow, Color.orange]
 #		colors.push_back(colorPossibilities[randi()%colorPossibilities.size()])
-		colors.push_back(Color(
+		colors.append(Color(
 			randf() + 1 / 2,
 			randf() + 1 / 2,
 			randf() + 1 / 2
@@ -238,6 +247,14 @@ func generate_voronoi_diagram(world_size : Vector2, num_cells: int) -> Image:
 	return image
 
 func black_and_white(image: Image, threshold: float) -> Image:
+	"""
+	This function takes in an image and maps all pixels to black or white depending
+	on the supplied threshold value. If the colour is above the threshold it is
+	white. If it is below, the colour is black.
+	
+	In future it may be cool to use Simplex noise to modify the threshold over
+	time. That feature can be enabled or disabled.
+	"""
 	var noise := OpenSimplexNoise.new()
 	noise.seed = 5
 	noise.octaves = 2
@@ -250,6 +267,7 @@ func black_and_white(image: Image, threshold: float) -> Image:
 #			var gray_value = image.get_pixel(i, j).gray()
 			var gray_value = image.get_pixel(i, j).v
 			
+			# Modify the threshold using Simlpex Noise?
 #			var new_threshold = (noise.get_noise_1d(i) + 1) / 2 * threshold
 			var new_threshold = threshold
 			
@@ -261,6 +279,12 @@ func black_and_white(image: Image, threshold: float) -> Image:
 	return image
 
 func flood_fill(image: Image, location: Vector2, desired_colour: Color) -> Image:
+	"""
+	This algorithm will flood fill the image from the starting location and
+	change the colour to be the desired colour. There is no tolerance. The
+	colours must match exactly. This uses a naive algorithm of a DFS to find
+	connected pixels of the same colour.
+	"""
 	image.lock()
 	var base_colour: Color = image.get_pixelv(location)
 	var fringe: Array = [location]
@@ -274,6 +298,7 @@ func flood_fill(image: Image, location: Vector2, desired_colour: Color) -> Image
 		# Add to explored
 		explored[current_node] = null
 		
+		# This location is out of bounds
 		if (i < 0 or j < 0 or i >= image.get_width() or j >= image.get_height()):
 			continue
 		
@@ -288,6 +313,7 @@ func flood_fill(image: Image, location: Vector2, desired_colour: Color) -> Image
 				Vector2(i, j + 1),
 			]
 			
+			# Add unexplored neighbours
 			for neighbour in neighbours:
 				if explored.has(neighbour):
 					continue
@@ -297,7 +323,11 @@ func flood_fill(image: Image, location: Vector2, desired_colour: Color) -> Image
 	return image
 
 func rotate_image(image: Image, degrees: int) -> Image:
-	"""Rotate clockwise"""
+	"""
+	This function will rotate the image 'degrees' amount CLOCKWISE. Note: only
+	values that are a multiple of 90 are currently supported. A new image is
+	returned.
+	"""
 	degrees %= 360
 	if degrees == 0:
 		return image
@@ -352,6 +382,10 @@ func rotate_image(image: Image, degrees: int) -> Image:
 	return new_image
 
 func add_border(image: Image, border: int, colour=Color.white) -> Image:
+	"""
+	This function will add a 'border' thick pixel border to the image and set those
+	pixels to be the supplied colour. A new image is returned.
+	"""
 	assert(border > 0)
 	var new_image: Image = blank_image(Vector2(
 		image.get_width() + 2 * border,
@@ -369,3 +403,18 @@ func add_border(image: Image, border: int, colour=Color.white) -> Image:
 	new_image.unlock()
 	
 	return new_image
+
+func change_colour(image, look_for: Color, change_to: Color):
+	"""
+	This function will change all pixel in the input image that are of the colour
+	'look_for' and change them to 'change_to'.
+	"""
+	image.lock()
+	for i in range(image.get_width()):
+		for j in range(image.get_height()):
+			var colour: Color = image.get_pixel(i, j)
+			if colour == look_for:
+				image.set_pixel(i, j, change_to)
+	
+	image.unlock()
+	return image

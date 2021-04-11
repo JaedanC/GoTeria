@@ -2,9 +2,11 @@ tool
 extends Node
 
 func cave_bomb(image: Image, use_borders: bool=true) -> Image:
-	# From https://www.reddit.com/r/roguelikedev/comments/81prau/contour_bombing_cave_generation/
-	# http://www.darkgnosis.com/2018/03/03/contour-bombing-cave-generation-algorithm
-	# This algorithm is low and behold too slow
+	"""
+	From https://www.reddit.com/r/roguelikedev/comments/81prau/contour_bombing_cave_generation/
+	http://www.darkgnosis.com/2018/03/03/contour-bombing-cave-generation-algorithm
+	This algorithm is low and behold too slow
+	"""
 	image.lock()
 	var min_x = 0
 	var min_y = 0
@@ -84,4 +86,3 @@ func cave_bomb(image: Image, use_borders: bool=true) -> Image:
 		candidates.erase(random_offset)
 	image.unlock()
 	return image
-

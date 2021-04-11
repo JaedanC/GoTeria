@@ -29,7 +29,7 @@ func simplex_noise(world_size: Vector2, noise: OpenSimplexNoise) -> Image:
 	
 	for i in range(world_size.x):
 		for j in range(world_size.y):
-			var value = (noise.get_noise_2d(i, j * 2) + 1) / 2
+			var value = (noise.get_noise_2d(i, j) + 1) / 2
 			var colour = Color(value, value, value)
 			
 			image.set_pixel(i, j, colour)
@@ -37,9 +37,17 @@ func simplex_noise(world_size: Vector2, noise: OpenSimplexNoise) -> Image:
 	return image
 
 func simplex_line(world_size: Vector2, noise: OpenSimplexNoise, height: float, offset: int) -> Image:
+	"""
+	This function takes in an OpenSimplexNoise and draws the resultant 1d noise
+	to the screen as a line. Height is the amplitude of the wave. Offset is the
+	y value for the midpoint of the simplex line to render. A new image
+	is returned. This can be used to visualise a 1d OpenSimplexNoise value for
+	use elsewhere.
+	"""
 	var image: Image = Image.new()
 	image.create(world_size.x, world_size.y, false, Image.FORMAT_RGBA8)
 	
+	# Find the height of each x value.
 	var height_line = []
 	for i in range(world_size.x):
 		height_line.append(noise.get_noise_1d(i) * height)
@@ -47,7 +55,7 @@ func simplex_line(world_size: Vector2, noise: OpenSimplexNoise, height: float, o
 	image.lock()
 	for i in range(world_size.x):
 		for j in range(world_size.y):
-			if j + offset > height_line[i]:
+			if j - offset > height_line[i]:
 				image.set_pixel(i, j, Color.white)
 			else:
 				image.set_pixel(i, j, Color.black)
