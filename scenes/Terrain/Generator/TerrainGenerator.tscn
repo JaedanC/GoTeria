@@ -11,15 +11,14 @@
 
 [node name="TerrainGenerator" type="Node2D"]
 script = ExtResource( 1 )
-world_seed = 9
+world_seed = 315
 world_size = Vector2( 500, 500 )
-octaves = 4
-period = 50.0
-persistence = 0.5
-threshold = 0.7
+period = 30.0
+persistence = 0.54
+threshold = 1.0
 drunkards = 1
-steps = 1000
-iterations = 100
+steps = 16
+iterations = 15
 scale_factor = 1.0
 largest_island = 15
 height = 50

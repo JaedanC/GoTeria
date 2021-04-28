@@ -1,9 +1,23 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://scenes/Terrain/Terrain.gd" type="Script" id=1]
+[ext_resource path="res://pixel_1x1.png" type="Texture" id=2]
+[ext_resource path="res://scenes/Terrain/Lighting.gd" type="Script" id=3]
+[ext_resource path="res://scenes/Terrain/Lighting.shader" type="Shader" id=4]
+
+[sub_resource type="ShaderMaterial" id=1]
+shader = ExtResource( 4 )
+shader_param/block_pixel_size = null
 
 [node name="Terrain" type="Node2D"]
 script = ExtResource( 1 )
 block_pixel_size = Vector2( 16, 16 )
-world_size_in_chunks = Vector2( 10, 10 )
 chunk_block_count = Vector2( 24, 24 )
+
+[node name="Lighting" type="Sprite" parent="."]
+material = SubResource( 1 )
+scale = Vector2( 1920, 1080 )
+z_index = 1
+texture = ExtResource( 2 )
+centered = false
+script = ExtResource( 3 )

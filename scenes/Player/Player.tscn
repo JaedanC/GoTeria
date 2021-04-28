@@ -38,5 +38,6 @@ drag_margin_bottom = 0.0
 script = ExtResource( 2 )
 
 [node name="GravityComponent" parent="." instance=ExtResource( 3 )]
+enabled = false
 
 [node name="CollisionComponent" parent="." instance=ExtResource( 6 )]

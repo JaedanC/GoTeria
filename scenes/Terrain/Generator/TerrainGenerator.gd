@@ -1,4 +1,4 @@
-tool
+ tool
 extends Node2D
 
 export(int) var world_seed: int setget set_world_seed
@@ -24,7 +24,7 @@ export(int) var bottom_threshold: int setget set_bottom_threshold
 
 var refresh = false
 
-var num_textures = 40
+var num_textures = 100
 var textures: Array
 var images: Array
 
@@ -187,8 +187,8 @@ func _process(_delta):
 #	image = $ImageTools.random_image(self.world_size, self.world_seed)
 	
 	# Create a simplex world
-#	simplex_image = $SimplexNoise.simplex_noise(self.world_size, simplex_noise)
-	simplex_image = $SimplexNoise.simplex_line(self.world_size, simplex_noise, self.height, self.offset)
+	simplex_image = $SimplexNoise.simplex_noise(self.world_size, simplex_noise)
+#	simplex_image = $SimplexNoise.simplex_line(self.world_size, simplex_noise, self.height, self.offset)
 	
 	# Add Drunkards
 #	image = $DrunkardWalk.drunkard_walk(simplex_noise, image, self.drunkards, self.steps, image.get_size() / 2, Color.white)
@@ -206,7 +206,7 @@ func _process(_delta):
 #	var blended_image: Image = $ImageTools.blend_images(gradient_image, simplex_image, $ImageTools.BLEND_TYPE.OVERLAY)
 #	var blended_image: Image = $ImageTools.blend_images(simplex_image, gradient_image, $ImageTools.BLEND_TYPE.OVERLAY)
 	
-#	simplex_image = $ImageTools.black_and_white(simplex_image, self.threshold)
+	simplex_image = $ImageTools.black_and_white(simplex_image, self.threshold)
 
 #	image = $ImageTools.flood_fill(image, Vector2.ZERO, Color.aqua)
 	
@@ -225,13 +225,13 @@ func _process(_delta):
 #
 #	image = $CellularAutomator.cellular_auto(image, self.iterations)
 	
-#	image = cave_stickers_algorithm()
+	image = cave_stickers_algorithm()
 	
-#	simplex_image = $ImageTools.change_colour(simplex_image, Color.black, Color(0, 0, 0, 0))
+	simplex_image = $ImageTools.change_colour(simplex_image, Color.black, Color(0, 0, 0, 0))
 	
-#	var new_image: Image = $ImageTools.blend_images(image, simplex_image, $ImageTools.BLEND_TYPE.MERGE)
+	var new_image: Image = $ImageTools.blend_images(image, simplex_image, $ImageTools.BLEND_TYPE.MERGE)
 	
-#	draw_image(image)
+	draw_image(image)
 	draw_image(simplex_image)
 #	draw_image(new_image)
 #	draw_images(cave_stickers)
@@ -266,7 +266,7 @@ func _draw():
 		largest_image.x = max(image.get_width(), largest_image.x)
 		largest_image.y = max(image.get_height(), largest_image.y)
 	
-	var per_column: int = 2
+	var per_column: int = 5
 	for i in range(self.images.size()):
 		if i >= self.textures.size():
 			break

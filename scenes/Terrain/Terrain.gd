@@ -1,7 +1,7 @@
 extends Node2D
 
 export(Vector2) var block_pixel_size: Vector2
-export(Vector2) var world_size_in_chunks: Vector2
+#export(Vector2) var world_size_in_chunks: Vector2
 export(Vector2) var chunk_block_count: Vector2
 
 """
@@ -35,12 +35,14 @@ var player = null
 var world_image: Image
 var chunk_pixel_dimensions: Vector2
 
+var world_image_luminance: Image
+
 func _ready():
 	player = get_tree().get_root().find_node("Player", true, false)
 	
-#	var world_texture = load("res://blocks.png")
+	var world_texture = load("res://blocks.png")
 #	var world_texture = load("res://solid.png")
-	var world_texture = load("res://skinny.png")
+#	var world_texture = load("res://skinny.png")
 #	var world_texture = load("res://small.png")
 #	var world_texture = load("res://medium.png")
 #	var world_texture = load("res://hd.png")
@@ -50,6 +52,19 @@ func _ready():
 	self.world_image.lock()
 	
 	self.chunk_pixel_dimensions = self.block_pixel_size * self.chunk_block_count
+	
+	self.world_image_luminance = Image.new()
+	self.world_image_luminance.create(self.world_image.get_width(), self.world_image.get_height(), false, Image.FORMAT_RGBA8)
+	self.world_image_luminance.fill(Color.red)
+	self.world_image_luminance.lock()
+	for i in range(self.world_image_luminance.get_width()):
+		for j in range(self.world_image_luminance.get_height()):
+			if self.world_image.get_pixel(i, j).a == 0:
+				self.world_image_luminance.set_pixel(i, j, Color(0, 0, 0, 0))
+			else:
+				self.world_image_luminance.set_pixel(i, j, Color(1, 1, 1, 0))
+#	world_image_luminance.unlock()
+	
 #	generate_world()
 
 
@@ -67,26 +82,26 @@ func _process(_delta):
 	continue_streaming_regions()
 	
 	# Draw the chunk borders
-#	update()
-#
-#func _draw():
-#	"""
-#	This currently colours the chunks with a border donoting the kind of chunk it
-#	is and how it should be streamed in. Reducing the viewport_rectangle in the
-#	Player.get_visibility_points method will allow you to see this process in action.
-#	"""
-#	var thickness := 10
-#	for point in lightly_loading_blocks_chunks.keys():
-#		point *= chunk_pixel_dimensions
-#		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.green, false, thickness, false)
-#
-#	for point in lightly_loading_drawing_chunks.keys():
-#		point *= chunk_pixel_dimensions
-#		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.orange, false, thickness, false)
-#
-#	for point in urgently_loading_blocks_chunks.keys():
-#		point *= chunk_pixel_dimensions
-#		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, thickness, false)
+	update()
+
+func _draw():
+	"""
+	This currently colours the chunks with a border donoting the kind of chunk it
+	is and how it should be streamed in. Reducing the viewport_rectangle in the
+	Player.get_visibility_points method will allow you to see this process in action.
+	"""
+	var thickness := 10
+	for point in lightly_loading_blocks_chunks.keys():
+		point *= chunk_pixel_dimensions
+		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.green, false, thickness, false)
+
+	for point in lightly_loading_drawing_chunks.keys():
+		point *= chunk_pixel_dimensions
+		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.orange, false, thickness, false)
+
+	for point in urgently_loading_blocks_chunks.keys():
+		point *= chunk_pixel_dimensions
+		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, thickness, false)
 
 func create_chunks():
 	"""
@@ -245,6 +260,16 @@ func get_chunk_pixel_dimensions() -> Vector2:
 	Returns the size of a chunk in pixels as a Vector2
 	"""
 	return chunk_pixel_dimensions
+
+func get_world_size() -> Vector2:
+	return self.world_image.get_size()
+#	return world_size_in_chunks
+
+func get_chunk_block_count() -> Vector2:
+	return chunk_block_count
+
+func get_block_pixel_size() -> Vector2:
+	return block_pixel_size
 
 func get_chunk_from_chunk_position(chunk_position: Vector2) -> Chunk:
 #	if create_chunk(chunk_position):
