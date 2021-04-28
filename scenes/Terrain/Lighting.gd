@@ -9,11 +9,16 @@ func _ready():
 	self.light_image = Image.new()
 
 func _physics_process(_delta):
-	set_size()
+	refresh_shader_canvas_size()
 	
 	# Absolute machine killer this function
 	create_light_image(Color.aqua)
-	get_light_data()
+	refresh_light_image_from_terrain_luminance()
+	
+	var light_texture = ImageTexture.new()
+	light_texture.create_from_image(light_image, 0) # Flag 0. No texture filtering
+	material.set_shader_param("block_pixel_size", terrain.block_pixel_size)
+	material.set_shader_param("light_values", light_texture)
 
 func create_light_image(fill_colour: Color = Color.red):
 	var light_size = self.scale / terrain.get_block_pixel_size()
@@ -21,12 +26,12 @@ func create_light_image(fill_colour: Color = Color.red):
 	var lazy_load = self.light_image == null or light_size.x != self.light_image.get_width() or light_size.y != self.light_image.get_height()
 	
 	# TODO: Could change this back to lazy load.
-	if true and lazy_load:
+	if true or lazy_load:
 		self.light_image.create(light_size.x, light_size.y, false, Image.FORMAT_RGBA8)
 		self.light_image.fill(fill_colour)
 #		print("Recreating luminance image of size: " + str(light_size) + " for screen scale: " + str(self.scale))
 
-func set_size():
+func refresh_shader_canvas_size():
 	var points = player.get_visibility_points()
 	
 	# TODO: Change this. Too Hacky
@@ -45,7 +50,7 @@ func min_vector2(first: Vector2, second: Vector2) -> Vector2:
 		min(first.y, second.y)
 	)
 
-func get_light_data():
+func refresh_light_image_from_terrain_luminance():
 	var points = player.get_visibility_points()
 	
 	var blocks_on_screen = self.scale / terrain.get_block_pixel_size()
@@ -78,5 +83,6 @@ func get_light_data():
 	
 	var light_texture = ImageTexture.new()
 	light_texture.create_from_image(light_image, 0) # Flag 0. No texture filtering
-	material.set_shader_param("block_pixel_size", terrain.block_pixel_size)
 	material.set_shader_param("light_values", light_texture)
+
+

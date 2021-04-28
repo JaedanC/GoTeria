@@ -84,12 +84,12 @@ func _process(_delta):
 	# Draw the chunk borders
 	update()
 
+"""
+This currently colours the chunks with a border donoting the kind of chunk it
+is and how it should be streamed in. Reducing the viewport_rectangle in the
+Player.get_visibility_points method will allow you to see this process in action.
+"""
 func _draw():
-	"""
-	This currently colours the chunks with a border donoting the kind of chunk it
-	is and how it should be streamed in. Reducing the viewport_rectangle in the
-	Player.get_visibility_points method will allow you to see this process in action.
-	"""
 	var thickness := 10
 	for point in lightly_loading_blocks_chunks.keys():
 		point *= chunk_pixel_dimensions
@@ -103,11 +103,11 @@ func _draw():
 		point *= chunk_pixel_dimensions
 		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.red, false, thickness, false)
 
+"""
+This method creates and initialises all the chunks the player can see such
+that they are ready to have their blocks streamed in.
+"""
 func create_chunks():
-	"""
-	This method creates and initialises all the chunks the player can see such
-	that they are ready to have their blocks streamed in.
-	"""
 	for point in player.get_visibility_points(load_margin + draw_margin):
 		var world_image_in_chunks := world_image.get_size() / chunk_block_count
 		if (point.x < 0 || point.y < 0 || point.x >= world_image_in_chunks.x || point.y >= world_image_in_chunks.y):
@@ -129,11 +129,11 @@ func create_chunks():
 			)
 			loaded_chunks[point] = chunk
 
+"""
+This method uses the visibility points to determine which chunks should be
+unloaded from memory.
+"""
 func delete_invisible_chunks():
-	"""
-	This method uses the visibility points to determine which chunks should be
-	unloaded from memory.
-	"""
 	
 	# First we grab a set the world_positions that should be loaded in the game 
 	var visibility_points: Array = player.get_visibility_points(load_margin + draw_margin)
@@ -168,13 +168,13 @@ func delete_invisible_chunks():
 	lightly_loading_drawing_chunks.clear()
 	urgently_loading_blocks_chunks.clear()
 	
+"""
+Create the three regions and populate them with null values. At the moment,
+they do not have chunk instances. They can be retrieved later from the
+loaded_chunks dictionary instead. This method just create the appropriate
+keys for each dictionary.
+"""
 func create_chunk_streaming_regions():
-	"""
-	Create the three regions and populate them with null values. At the moment,
-	they do not have chunk instances. They can be retrieved later from the
-	loaded_chunks dictionary instead. This method just create the appropriate
-	keys for each dictionary.
-	"""
 	var load_visibility_points: Array = player.get_visibility_points(load_margin + draw_margin)
 	var draw_visibility_points: Array = player.get_visibility_points(draw_margin)
 	var urgent_visibility_points: Array = player.get_visibility_points()
@@ -195,32 +195,32 @@ func create_chunk_streaming_regions():
 	for point in load_visibility_points:
 		lightly_loading_blocks_chunks[point] = null
 
+"""
+This method continues to load in the chunks based on the three regions
+outlined at the top of this script. To tweak performance consider changing
+these variables:
+- blocks_to_load
+	- Blocks to stream in every frame. Should be ~around the number of blocks
+	in a chunk.
+- chunks_to_draw
+	- The number of chunks to draw every frame. Set to 0 and no chunks will
+	be streamed. This should be set 1 but experiment with more values.
+- draw_margin
+	- This is the number of extra chunk layers outside the view of screen
+	that will drawn (by streaming) such that a player moving into new chunks
+	won't experience lag spikes
+- load_margin
+	- This is the number of extra chunk layers past the draw_margin that will
+	only stream in blocks.
+- 'Chunk Block Count'
+	- This is the number of blocks in each chunk. This should be set to a
+	reasonable value like (16, 16) or (32, 32). Experiment with others.
+
+Tweaking these values on different computers will result in better
+performance. Maybe I'll make them editable in a configuration file in the
+future...
+"""
 func continue_streaming_regions():
-	"""
-	This method continues to load in the chunks based on the three regions
-	outlined at the top of this script. To tweak performance consider changing
-	these variables:
-	- blocks_to_load
-		- Blocks to stream in every frame. Should be ~around the number of blocks
-		in a chunk.
-	- chunks_to_draw
-		- The number of chunks to draw every frame. Set to 0 and no chunks will
-		be streamed. This should be set 1 but experiment with more values.
-	- draw_margin
-		- This is the number of extra chunk layers outside the view of screen
-		that will drawn (by streaming) such that a player moving into new chunks
-		won't experience lag spikes
-	- load_margin
-		- This is the number of extra chunk layers past the draw_margin that will
-		only stream in blocks.
-	- 'Chunk Block Count'
-		- This is the number of blocks in each chunk. This should be set to a
-		reasonable value like (16, 16) or (32, 32). Experiment with others.
-	
-	Tweaking these values on different computers will result in better
-	performance. Maybe I'll make them editable in a configuration file in the
-	future...
-	"""
 #	var blocks_to_load := 512
 	var chunks_to_draw := 1
 	
@@ -250,59 +250,159 @@ func continue_streaming_regions():
 			if !chunk.is_locked() && !chunk.is_loaded():
 				chunk.lock()
 				$ThreadPool.submit_task_unparameterized(chunk, "create")
-			
-#			if !chunk.is_loaded() && blocks_to_load > 0:
-#				var actual_loaded := chunk.stream(blocks_to_load)
-#				blocks_to_load -= actual_loaded
 
+"""
+Returns the size of a chunk in pixels as a Vector2
+"""
 func get_chunk_pixel_dimensions() -> Vector2:
-	"""
-	Returns the size of a chunk in pixels as a Vector2
-	"""
 	return chunk_pixel_dimensions
 
+"""
+Returns the size of the world in blocks as a Vector2. TODO: Change to use the
+world_size_in_chunks variable when we create our own world.
+"""
 func get_world_size() -> Vector2:
+# 	return world_size_in_chunks
 	return self.world_image.get_size()
-#	return world_size_in_chunks
 
+"""
+Returns the size of a chunk in blocks as a Vector2
+"""
 func get_chunk_block_count() -> Vector2:
 	return chunk_block_count
 
+"""
+Returns the size of a block in pixels as a Vector2
+"""
 func get_block_pixel_size() -> Vector2:
 	return block_pixel_size
 
+"""
+Returns a Chunk if it exists at the given chunk_position in the world.
+	- Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
+	index in the world.
+
+Fastest function to get chunks.
+"""
 func get_chunk_from_chunk_position(chunk_position: Vector2) -> Chunk:
 #	if create_chunk(chunk_position):
 	if loaded_chunks.has(chunk_position):
 		return loaded_chunks[chunk_position]
 	return null
 
-func get_chunk_from_world_position(world_position: Vector2) -> Chunk:
-	return get_chunk_from_chunk_position(get_chunk_position_from_world_position(world_position))
+"""
+Returns a Chunk if it exists at the given world_position in the world.
+World positions are locations represented by pixels. Entities in the world
+are stored using this value.
 
+Slowest function to get chunks.
+"""
+func get_chunk_from_world_position(world_position: Vector2) -> Chunk:
+	var chunk_position = get_chunk_position_from_world_position(world_position)
+	return get_chunk_from_chunk_position(chunk_position)
+	
+"""
+Returns a chunk position from the given world_position.
+	- World positions are locations represented by pixels. Entities in the world
+	are stored using this value.
+Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
+index in the world.
+
+Fastest function to get chunk positions.
+"""
+func get_chunk_position_from_world_position(world_position: Vector2) -> Vector2:
+	return (world_position / get_chunk_pixel_dimensions()).floor()
+
+"""
+Returns a block if it exists using the given chunk_position and block_position
+values.
+	- Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
+	index in the world.
+	- Block positions are the position of the block relative to the chunk it is
+	in. It cannot be larger than the chunk's block_size.
+Blocks are Dictionaries containing a set of standard variables. See the Block
+documentation in the Chunk scene.
+
+Fastest function to get blocks.
+"""
+func get_block_from_chunk_position_and_block_position(chunk_position: Vector2, block_position: Vector2):
+	var chunk = get_chunk_from_chunk_position(chunk_position)
+	if chunk == null or not chunk.blocks.has(block_position):
+		return null
+	return chunk.blocks[block_position]
+
+"""
+Returns a block if it exists using the given world_position.
+	- World positions are locations represented by pixels. Entities in the world
+	are stored using this value.
+Blocks are Dictionaries containing a set of standard variables. See the Block
+documentation in the Chunk scene.
+
+Slowest function to get blocks.
+"""
 func get_block_from_world_position(world_position: Vector2) -> Dictionary:
 	var chunk_position: Vector2 = get_chunk_position_from_world_position(world_position)
 	var block_position: Vector2 = get_block_position_from_world_position(world_position)
 	return get_block_from_chunk_position_and_block_position(chunk_position, block_position)
+	
+"""
+Returns a block position using the given world_position and chunk_position
+values.
+	- World positions are locations represented by pixels. Entities in the world
+	are stored using this value.
+	- Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
+	index in the world.
+Block positions are the position of the block relative to the chunk it is in. It
+cannot be larger than the chunk's block_size.
 
-func get_block_from_chunk_position_and_block_position(chunk_position: Vector2, block_position: Vector2):
-	var chunk: Chunk = get_chunk_from_chunk_position(chunk_position)
-	if !chunk:
-		return null
-	if chunk.blocks.has(block_position):
-		return chunk.blocks[block_position]
-	return null
-
-func get_block_position_from_world_position(world_position: Vector2) -> Vector2:
-	var chunk_position = get_chunk_position_from_world_position(world_position)
+Fastest function to get block positions.
+"""
+func get_block_position_from_world_position_and_chunk_position(world_position: Vector2, chunk_position: Vector2):
 	var block_position = (world_position - chunk_position * get_chunk_pixel_dimensions()).floor()
 	return (block_position / block_pixel_size).floor()
+	
+"""
+Returns a block position using the given world_position.
+	- World positions are locations represented by pixels. Entities in the world
+	are stored using this value.
+Block positions are the position of the block relative to the chunk it is in. It
+cannot be larger than the chunk's block_size.
 
-func get_chunk_position_from_world_position(world_position: Vector2) -> Vector2:
-	return (world_position / get_chunk_pixel_dimensions()).floor()
+Slowest function to get block positions.
+"""
+func get_block_position_from_world_position(world_position: Vector2) -> Vector2:
+	var chunk_position = get_chunk_position_from_world_position(world_position)
+	return get_block_position_from_world_position_and_chunk_position(world_position, chunk_position)
 
+"""
+Sets a block at the given chunk_position and block_position to be the
+new_block if it exists.
+	- Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
+	index in the world.
+	- Block positions are the position of the block relative to the chunk it is
+	in. It cannot be larger than the chunk's block_size.
+	- Blocks are Dictionaries containing a set of standard variables. See the
+	Block documentation in the Chunk scene.
+
+Fastest function to set blocks.
+"""
+func set_block_from_chunk_position_and_block_position(chunk_position: Vector2, block_position: Vector2, new_block: Dictionary):
+	var chunk = get_chunk_from_chunk_position(chunk_position)
+	if chunk != null:
+		chunk.set_block_from_block_position(block_position, new_block)
+
+"""
+Sets a block at the given world_position to be the new_block if it exists.
+	- World positions are locations represented by pixels. Entities in the world
+	are stored using this value.
+	- Blocks are Dictionaries containing a set of standard variables. See the
+	Block documentation in the Chunk scene.
+
+Slowest function to set blocks.
+"""
 func set_block_at_world_position(world_position: Vector2, new_block: Dictionary):
-	var chunk = get_chunk_from_world_position(world_position)
-	if chunk:
-		var block_position: Vector2 = get_block_position_from_world_position(world_position)
+	var chunk_position = get_chunk_position_from_world_position(world_position)
+	var chunk = get_chunk_from_chunk_position(chunk_position)
+	if chunk != null:
+		var block_position = get_block_position_from_world_position_and_chunk_position(world_position, chunk_position)
 		chunk.set_block_from_block_position(block_position, new_block)
