@@ -21,11 +21,11 @@ var volatile_streaming := false
 #	update()
 #	pass
 
+"""
+Treat this method like a constructor. It initialises the chunk with all the
+data it requires to begin streaming in the blocks.
+"""
 func init_stream(_world_image: Image, _chunk_position: Vector2, _block_count: Vector2, _block_pixel_size: Vector2):
-	"""
-	Treat this method like a constructor. It initialises the chunk with all the
-	data it requires to begin streaming in the blocks.
-	"""
 	self.world_image = _world_image
 	self.chunk_position = _chunk_position
 	self.block_count = _block_count
@@ -43,12 +43,12 @@ func is_locked():
 func is_loaded():
 	return loaded
 
+"""
+This function is true only after a chunk has been fully loaded AND then drawn.
+This is so the chunks draw call is cached and the terrain knows not to try
+and draw this chunk to the screen again.
+"""
 func is_drawn():
-	"""
-	This function is true only after a chunk has been fully loaded AND then drawn.
-	This is so the chunks draw call is cached and the Terrain knows not to try
-	and draw this chunk to the screen again.
-	"""
 	return self.drawn
 
 func create():
@@ -98,14 +98,15 @@ func create():
 			blocks[block_position]["colour"] = pixel
 			
 	self.chunk_image.unlock()
+	self.chunk_texture.create_from_image(chunk_image, Texture.FLAG_MIPMAPS)
 	self.loaded = true
 
+"""
+This method will save all the data in a chunk to disk. Currently it is being
+done using compression, however this can be changed below. TODO: Change this
+to take in a parameter as a save destination. Currently it's hardcoded.
+"""
 func save_chunk():
-	"""
-	This method will save all the data in a chunk to disk. Currently it is being
-	done using compression, however this can be changed below. TODO: Change this
-	to take in a parameter as a save destination. Currently it's hardcoded.
-	"""
 	# Create the directory if it does not exist
 	var directory = Directory.new()
 	directory.make_dir("user://chunk_data")
@@ -122,18 +123,18 @@ func save_chunk():
 			chunk.store_16(floor(rand_range(0, 5)))
 	chunk.close()
 
+"""
+Draw the chunk to the screen using my special colour formula. This function
+Is run when a chunk is created however, we only want it to count as being
+run after all the blocks have been loaded.
+"""
 func draw_chunk():
-	"""
-	Draw the chunk to the screen using my special colour formula. This function
-	Is run when a chunk is created however, we only want it to count as being
-	run after all the blocks have been loaded.
-	"""
 	if self.is_loaded():
 		self.drawn = true
 	else:
 		return
 	
-	self.chunk_texture.create_from_image(chunk_image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
+#	self.chunk_texture.create_from_image(chunk_image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
 	draw_set_transform(Vector2.ZERO, 0, block_pixel_size)
 	draw_texture(self.chunk_texture, Vector2.ZERO)
 	draw_set_transform(Vector2.ZERO, 0, Vector2(1, 1))

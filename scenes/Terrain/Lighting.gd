@@ -32,14 +32,17 @@ func create_light_image(fill_colour: Color = Color.red):
 #		print("Recreating luminance image of size: " + str(light_size) + " for screen scale: " + str(self.scale))
 
 func refresh_shader_canvas_size():
-	var points = player.get_visibility_points()
+	var chunk_point_corners = player.get_visibility_chunk_position_corners()
 	
-	# TODO: Change this. Too Hacky
-	var min_point = points[0] * terrain.get_chunk_pixel_dimensions()
-	var max_point = (points[-1] + Vector2(1, 1)) * terrain.get_chunk_pixel_dimensions()
+	var chunk_point_top_left_in_pixels = chunk_point_corners[0] * terrain.get_chunk_pixel_dimensions()
+	var chunk_point_bottom_right_in_pixels = (chunk_point_corners[1] + Vector2.ONE) * terrain.get_chunk_pixel_dimensions()
 	
-	self.position = min_point
-	self.scale = max_point - min_point
+	
+#	var min_point = points[0] * terrain.get_chunk_pixel_dimensions()
+#	var max_point = (points[-1] + Vector2(1, 1)) * terrain.get_chunk_pixel_dimensions()
+	
+	self.position = chunk_point_top_left_in_pixels
+	self.scale = chunk_point_bottom_right_in_pixels - chunk_point_top_left_in_pixels
 
 func min_vector2(first: Vector2, second: Vector2) -> Vector2:
 	"""
@@ -51,13 +54,13 @@ func min_vector2(first: Vector2, second: Vector2) -> Vector2:
 	)
 
 func refresh_light_image_from_terrain_luminance():
-	var points = player.get_visibility_points()
+	var chunk_point_corners = player.get_visibility_chunk_position_corners()
 	
 	var blocks_on_screen = self.scale / terrain.get_block_pixel_size()
+	var top_left_block = chunk_point_corners[0] * terrain.get_chunk_block_count()
 	
 	# This makes sure we only copy from pixels inside the range of the world at 
 	# the negative x and y values
-	var top_left_block = points[0] * terrain.get_chunk_block_count()
 	var top_left_out_of_bounds_offset = Vector2.ZERO
 	if top_left_block.x < 0:
 		top_left_out_of_bounds_offset = Vector2(abs(top_left_block.x), top_left_out_of_bounds_offset.y)
@@ -79,10 +82,3 @@ func refresh_light_image_from_terrain_luminance():
 #	print("Copying from luminance: " + str(source_luminance_rectangle) + " to " + str(top_left_out_of_bounds_offset))
 	
 	self.light_image.blit_rect(terrain.world_image_luminance, source_luminance_rectangle, top_left_out_of_bounds_offset)
-	
-	
-	var light_texture = ImageTexture.new()
-	light_texture.create_from_image(light_image, 0) # Flag 0. No texture filtering
-	material.set_shader_param("light_values", light_texture)
-
-

@@ -108,7 +108,7 @@ This method creates and initialises all the chunks the player can see such
 that they are ready to have their blocks streamed in.
 """
 func create_chunks():
-	for point in player.get_visibility_points(load_margin + draw_margin):
+	for point in player.get_visibility_chunk_positions(load_margin + draw_margin):
 		var world_image_in_chunks := world_image.get_size() / chunk_block_count
 		if (point.x < 0 || point.y < 0 || point.x >= world_image_in_chunks.x || point.y >= world_image_in_chunks.y):
 			continue
@@ -136,7 +136,7 @@ unloaded from memory.
 func delete_invisible_chunks():
 	
 	# First we grab a set the world_positions that should be loaded in the game 
-	var visibility_points: Array = player.get_visibility_points(load_margin + draw_margin)
+	var visibility_points: Array = player.get_visibility_chunk_positions(load_margin + draw_margin)
 	
 	# Create a temporary dictionary to store chunks that are already loaded
 	# and should stay loaded
@@ -175,16 +175,12 @@ loaded_chunks dictionary instead. This method just create the appropriate
 keys for each dictionary.
 """
 func create_chunk_streaming_regions():
-	var load_visibility_points: Array = player.get_visibility_points(load_margin + draw_margin)
-	var draw_visibility_points: Array = player.get_visibility_points(draw_margin)
-	var urgent_visibility_points: Array = player.get_visibility_points()
+	var load_visibility_points: Array = player.get_visibility_chunk_positions(load_margin + draw_margin, true)
+	var draw_visibility_points: Array = player.get_visibility_chunk_positions(draw_margin, true)
+	var urgent_visibility_points: Array = player.get_visibility_chunk_positions()
 	
-	for point in urgent_visibility_points:
-		load_visibility_points.erase(point)
-		draw_visibility_points.erase(point)
-	
-	for point in draw_visibility_points:
-		load_visibility_points.erase(point)
+#	print("Urgent:", urgent_visibility_points)
+#	print("Load:", load_visibility_points)
 	
 	for point in urgent_visibility_points:
 		urgently_loading_blocks_chunks[point] = null
