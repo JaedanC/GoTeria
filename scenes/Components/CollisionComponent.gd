@@ -53,7 +53,8 @@ func delete_invisible_blocks_hitboxes():
 			if existing_block_data["id"] == 0: # Don't add collision for air. TODO: use a future is_solid() method
 				continue
 			visible_blocks[visible_block_point] = loaded_blocks[visible_block_point]
-			loaded_blocks.erase(visible_block_point)
+			var erased = loaded_blocks.erase(visible_block_point)
+			assert(erased == true)
 	
 	for invisible_blocks in loaded_blocks.keys():
 		loaded_blocks[invisible_blocks].queue_free()

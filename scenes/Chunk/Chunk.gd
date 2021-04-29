@@ -2,19 +2,23 @@ extends Node2D
 class_name Chunk
 
 onready var terrain = get_tree().get_root().find_node("Terrain", true, false)
+onready var thread_pool = get_tree().get_root().find_node("ThreadPool", true, false)
+
 var world_image: Image
 var chunk_image: Image
 var chunk_texture: ImageTexture
+var volatile_streaming: int
+var multiple_thread_create_mutex: Mutex
 
 var chunk_position: Vector2
 var block_count: Vector2
 var block_pixel_size: Vector2
 
-var blocks: Dictionary = {}
-var loaded := false
-var drawn := false
+var blocks: Dictionary
+var loaded: bool
+var drawn: bool
+var calls: int
 
-var volatile_streaming := false
 
 #func _process(_delta):
 	# Turn this on to see the chunk be streamed in
@@ -22,26 +26,50 @@ var volatile_streaming := false
 #	pass
 
 """
-Treat this method like a constructor. It initialises the chunk with all the
-data it requires to begin streaming in the blocks.
+This function is the real constructor of the chunk. Remember, since chunks are
+going to be reused, the variables that need to be set once should be placed in
+here. For example, the Mutex should not be changed in the event that the
+previous Mutex had not opened up yet. self.blocks is in here because these will
+be changed in the stream method anyway. Assigning the variable a new Dictionary
+is an expensive operation because all its blocks are dellocated on the main
+thread.
 """
-func init_stream(_world_image: Image, _chunk_position: Vector2, _block_count: Vector2, _block_pixel_size: Vector2):
+func _init(_world_image: Image, _block_count: Vector2, _block_pixel_size: Vector2):
 	self.world_image = _world_image
-	self.chunk_position = _chunk_position
 	self.block_count = _block_count
 	self.block_pixel_size = _block_pixel_size
-	self.position = _block_pixel_size * _chunk_position * _block_count
-	
+	self.blocks = {}
+	self.multiple_thread_create_mutex = Mutex.new()
+	reset()
 
+"""
+This is the method that is called when a chunk is reset before it is reused.
+"""
+func reset():
+	self.volatile_streaming = 0
+	self.loaded = false
+	self.drawn = false
+	self.calls = 0
+
+"""
+This method sets up the chunk with values that it requires to be streamed.
+"""
+func init_stream(_chunk_position: Vector2):
+	self.chunk_position = _chunk_position
+	self.position = self.block_pixel_size * self.chunk_position * self.block_count
+
+"""
+This method marks the chunk as 'locked'. 
+"""
 func lock():
-	assert(volatile_streaming == false)
-	volatile_streaming = true
+	assert(self.volatile_streaming == 0)
+	self.volatile_streaming += 1
 
 func is_locked():
-	return volatile_streaming
+	return self.volatile_streaming > 0
 
 func is_loaded():
-	return loaded
+	return self.loaded
 
 """
 This function is true only after a chunk has been fully loaded AND then drawn.
@@ -51,11 +79,42 @@ and draw this chunk to the screen again.
 func is_drawn():
 	return self.drawn
 
+"""
+This method begins the streaming in of blocks if chunk is not locked or if it
+has been already loaded. The streaming in of blocks is sent to a ThreadPool to
+increase performance.
+"""
+func stream():
+	if is_locked() or is_loaded():
+		return
+	lock()
+	thread_pool.submit_task_unparameterized(self, "create")
+
+"""
+This method loads the corresponing blocks from the world image into the blocks
+Dictionary. This section of code is a critical section, so it is therefore
+guarded by a Mutex. This method may be run twice if a chunk has not finished
+streaming in before it becomes too close to the player. This does not affect
+the loading but something the texture may throw an error.
+"""
 func create():
-	if self.is_loaded():
+	calls += 1
+	if calls != 1:
+		print("Calls: ", calls)
+		return
+		
+	multiple_thread_create_mutex.lock()
+	
+	
+	# This is to check if the next thread that could have been waiting is
+	# accidentally about to do work a second time.
+	if self.loaded:
+		multiple_thread_create_mutex.unlock()
 		return
 	
-	self.chunk_texture = ImageTexture.new()
+	
+	# Create a local image so multiple threads don't race to write to the
+	# instance variable chunk_image.
 	self.chunk_image = Image.new()
 	self.chunk_image.create(self.block_count.x, self.block_count.y, false, Image.FORMAT_RGBA8)
 #	self.chunk_image.resize(
@@ -66,8 +125,7 @@ func create():
 	for i in range(self.block_count.x):
 		for j in range(self.block_count.y):
 			var block_position := Vector2(i, j)
-			if !blocks.has(block_position):
-				blocks[block_position] = {}
+			blocks[block_position] = {}
 	
 			var block_pixel_position: Vector2 = self.chunk_position * block_count + block_position
 			
@@ -98,8 +156,19 @@ func create():
 			blocks[block_position]["colour"] = pixel
 			
 	self.chunk_image.unlock()
-	self.chunk_texture.create_from_image(chunk_image, Texture.FLAG_MIPMAPS)
+	
+	# The texture must always keep scope. If it doesn't, errors are thrown all
+	# over the shop. In the special case where a thread and main are running
+	# this method, we only want to keep one of them when the instance variables
+	# are being written to, otherwise they may get out of sync. It's better to
+	# be safe than sorry.
+	self.chunk_texture = ImageTexture.new()
+	self.chunk_texture.create_from_image(self.chunk_image, Texture.FLAG_MIPMAPS)
+	
+	# So since this method is run on a thread, it is very important that we
+	# the loaded variable to true after everything has actually been loaded.
 	self.loaded = true
+	multiple_thread_create_mutex.unlock()
 
 """
 This method will save all the data in a chunk to disk. Currently it is being
@@ -129,16 +198,14 @@ Is run when a chunk is created however, we only want it to count as being
 run after all the blocks have been loaded.
 """
 func draw_chunk():
-	if self.is_loaded():
-		self.drawn = true
-	else:
+	if not self.is_loaded():
 		return
+	self.drawn = true
 	
-#	self.chunk_texture.create_from_image(chunk_image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
+	self.chunk_texture.create_from_image(chunk_image, Texture.FLAG_MIPMAPS | Texture.FLAG_ANISOTROPIC_FILTER)
 	draw_set_transform(Vector2.ZERO, 0, block_pixel_size)
 	draw_texture(self.chunk_texture, Vector2.ZERO)
 	draw_set_transform(Vector2.ZERO, 0, Vector2(1, 1))
-	return
 
 func get_block_from_block_position(block_position: Vector2):
 	if blocks.has(block_position):
@@ -171,6 +238,5 @@ func set_block_colour(block_position: Vector2, colour: Color):
 	update()
 
 func _draw():
-	draw_chunk()
-
 #	draw_circle(Vector2.ZERO, 2, Color.aquamarine)
+	draw_chunk()

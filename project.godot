@@ -42,12 +42,12 @@ InputLayering="*res://scenes/Singletons/InputLayering.gd"
 
 [debug]
 
-settings/fps/force_fps=30
 gdscript/warnings/narrowing_conversion=false
 gdscript/warnings/integer_division=false
 
 [display]
 
+window/size/fullscreen=true
 window/vsync/use_vsync=false
 
 [editor_plugins]

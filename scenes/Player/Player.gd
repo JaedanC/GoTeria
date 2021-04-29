@@ -64,22 +64,22 @@ func _input(event):
 	camera.zoom.x = clamp(camera.zoom.x, 0.5, 10)
 	camera.zoom.y = clamp(camera.zoom.y, 0.5, 10)
 
-func get_visibility_world_position_corners() -> Array:
-	"""
-	This method returns a list of integer Vector2's that represent the indexes of
-	chunks that should be loaded for the player. This takes into account where
-	the player is and the camera zoom by performing some neat mathematical
-	tricks on the viewport, player and camera, position vectors.
-	
-	Example Output:
+"""
+This method returns an Array containing two Vector2 representing the world
+position of the player's visibility on the screen. This value is in pixels
+relative to the top-left of the world.
+
+For example. Window is 1920x1080, and the player is at [10000, 10000] in the
+world. This function would then return something like:
 	[
-		Vector2(0, 0),
-		Vector2(0, 1),
-		Vector2(1, 0),
-		Vector2(1, 1),
-		...
+		Vector2(9040, 9040),
+		Vector2(10960, 10960
 	]
-	"""
+This is an oversimplification because this function also takes into account the
+camera's zoom. The first Vector2 is the top-left visibility world position. The
+second Vector2 is the bottom-right visibility world position. 
+"""
+func get_visibility_world_position_corners() -> Array:
 	# Grab important data
 	var smoothed_position: Vector2 = smoothing.position
 	var viewport_rectangle: Rect2 = get_viewport_rect()
@@ -97,9 +97,9 @@ func get_visibility_world_position_corners() -> Array:
 	
 	# Use this to temporarily reduce the size of the viewport loading rectangle
 	# to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-	var viewport_modifier := 0.4
+#	var viewport_modifier := 0.4
 #	var viewport_modifier := 0.2
-#	var viewport_modifier := 0
+	var viewport_modifier := 0
 	var size: Vector2 = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
 	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)
 	
@@ -112,6 +112,12 @@ func get_visibility_world_position_corners() -> Array:
 	
 	return [top_left, bottom_right]
 
+"""
+This function is similar to get_visibility_world_position_corners() but this
+returns the two vectors divided by the block size. This then returns two
+Vector2's which represent the corners of block indices in the world that can be
+seen by the player.
+"""
 func get_visibility_world_block_position_corners() -> Array:
 	var corners = get_visibility_world_position_corners()
 	var world_block_position_corners = [
@@ -120,6 +126,11 @@ func get_visibility_world_block_position_corners() -> Array:
 	]
 	return world_block_position_corners
 
+"""
+This function is similar to get_visibility_world_position_corners but instead it
+returns the two Vector2's which represent the chunk indices that can be seen by
+the player.
+"""
 func get_visibility_chunk_position_corners() -> Array:
 	var world_position_corners = get_visibility_world_position_corners()
 	var chunk_position_top_left = (world_position_corners[0] / terrain.get_chunk_pixel_dimensions()).floor()
@@ -129,7 +140,25 @@ func get_visibility_chunk_position_corners() -> Array:
 		chunk_position_bottom_right
 	]
 
-func get_visibility_chunk_positions(margin=0, border_only=false) -> Array:
+"""
+This function returns a. Array of chunk positions that are contained by the
+function get_visibility_chunk_position_corners().
+	- The margin parameter extends the radius of the visibility by the 'margin'
+	chunks. This can be used to include chunks are slightly off screen.
+	- The border only parameter is only relevant if the margin parameter is
+	used. If border_only is true, then only the chunk indices that the
+	(non-zero) margin added are returned in the Array.
+
+Example Return:
+[
+	Vector2(0, 0),
+	Vector2(0, 1),
+	Vector2(1, 0),
+	Vector2(1, 1),
+	...
+]
+"""
+func get_visibility_chunk_positions(margin=0, border_only=false, border_ignore=0) -> Array:
 	var chunk_corners = get_visibility_chunk_position_corners()
 	
 	# Now include the margin
@@ -140,8 +169,10 @@ func get_visibility_chunk_positions(margin=0, border_only=false) -> Array:
 	if border_only:
 		for i in range(top_left_margin.x, bottom_right_margin.x + 1):
 			for j in range(top_left_margin.y, bottom_right_margin.y + 1):
-				if (i < chunk_corners[0].x or j < chunk_corners[0].y or
-						i >= chunk_corners[1].x or j >= chunk_corners[1].y):
+				var ignore_top_left = chunk_corners[0] - Vector2.ONE * border_ignore
+				var ignore_bottom_right = chunk_corners[1] + Vector2.ONE * border_ignore
+				if (i < ignore_top_left.x or j < ignore_top_left.y or
+						i > ignore_bottom_right.x or j > ignore_bottom_right.y):
 					visibility_points.append(Vector2(i, j))
 	else:
 		for i in range(top_left_margin.x, bottom_right_margin.x + 1):
@@ -149,84 +180,29 @@ func get_visibility_chunk_positions(margin=0, border_only=false) -> Array:
 				visibility_points.append(Vector2(i, j))
 
 	return visibility_points
-	
-#func get_visibility_points(margin=0, border_only=false) -> Array:
-#	"""
-#	This method returns a list of integer Vector2's that represent the indexes of
-#	chunks that should be loaded for the player. This takes into account where
-#	the player is and the camera zoom by performing some neat mathematical
-#	tricks on the viewport, player and camera, position vectors.
-#
-#	Example Output:
-#	[
-#		Vector2(0, 0),
-#		Vector2(0, 1),
-#		Vector2(1, 0),
-#		Vector2(1, 1),
-#		...
-#	]
-#	"""
-#	# Grab important data
-#	var smoothed_position: Vector2 = smoothing.position
-#	var viewport_rectangle: Rect2 = get_viewport_rect()
-#
-#	# Using the viewport rectangle as a base, centre a copy of it around the player.
-#	# We used smoothed position because we want to take the interpolated position of
-#	# the player so visibility still works at high speeds.
-#	viewport_rectangle.position = smoothed_position - viewport_rectangle.size/2
-#
-#	# Expand this Rectangle to take into account camera zooming by using two
-#	# Vector2's the point the the corners of the screen and using the Rect2.expand
-#	# method.
-#	viewport_rectangle = viewport_rectangle.expand(smoothed_position - (get_viewport_rect().size / 2) * camera.zoom)
-#	viewport_rectangle = viewport_rectangle.expand(smoothed_position + (get_viewport_rect().size / 2) * camera.zoom)
-#
-#	# Use this to temporarily reduce the size of the viewport loading rectangle
-#	# to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-#	var viewport_modifier := 0.4
-##	var viewport_modifier := 0.2
-##	var viewport_modifier := 0
-#	var size: Vector2 = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
-#	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)
-#
-#	# Convert the top left and bottom right points of the Rect2 into an integer
-#	# that we can loop through to get the points for the visible chunks. This
-#	# takes into account the size of each chunk.
-#	var chunk_dimensions: Vector2 = terrain.get_chunk_pixel_dimensions()
-#	var top_left: Vector2 = (viewport_rectangle.position / chunk_dimensions).floor()
-#	var bottom_right: Vector2 = ((viewport_rectangle.position + viewport_rectangle.size) / chunk_dimensions).floor()
-#
-#	# Loop through these two values and include them in the visibility point
-#	# list. +1 is there so that the right and bottom edge are forced to be
-#	# included. Remove it if you don't know what I mean an then you'll see.
-#	var visibility_points := []
-#	if border_only:
-#		top_left -= Vector2.ONE * 1
-#		bottom_right += Vector2.ONE * 2
-#		var top_left_margin = top_left - Vector2.ONE * margin
-#		var bottom_right_margin = bottom_right + Vector2.ONE * margin
-#		for i in range(top_left_margin.x, bottom_right_margin.x):
-#			for j in range(top_left_margin.y, bottom_right_margin.y):
-#				if i < top_left.x or j < top_left.y or i >= bottom_right.x or j >= bottom_right.y:
-#					visibility_points.append(Vector2(i, j))
-#	else:
-#		top_left -= Vector2.ONE * (1 + margin)
-#		bottom_right += Vector2.ONE * (2 + margin)
-#		for i in range(top_left.x, bottom_right.x):
-#			for j in range(top_left.y, bottom_right.y):
-#				visibility_points.append(Vector2(i, j))
-#
-#	return visibility_points
 
 func get_rigidbody():
 	return rigidbody
 
+"""
+This returns the player's position, which is actually the smoothing sprite's
+location if you want the player's position on any frame other than a physics
+call.
+"""
 func get_player_position():
 	return smoothing.position
 
+"""
+This function returns the zoom factor of the player's camera.
+"""
 func get_camera_zoom() -> float:
 	return camera.zoom
 
+"""
+This function converts a screen position to a world position.
+	- A screen position is a location inside the window. The location of the
+	mouse is supplied to Godot as a screen position.
+"""
 func screen_to_world_position(screen_position : Vector2) -> Vector2:
 	var world_position: Vector2 = self.smoothing.position + screen_position * camera.zoom
 	return world_position - camera.zoom * get_viewport_rect().size/2
