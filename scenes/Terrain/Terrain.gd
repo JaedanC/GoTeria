@@ -17,14 +17,16 @@ var lightly_loading_drawing_chunks := {}
 var urgently_loading_blocks_chunks := {}
 
 var load_margin := 1
-var draw_margin := 1
+var draw_margin := 0
 
 var deactivated_and_reusable_chunks: Array = []
-var maximum_deactivated_and_reusable_chunks : int = 100
+#var maximum_deactivated_and_reusable_chunks : int = 100
 
 
 func _ready():
-	var world_texture = load("res://blocks.png")
+#	var world_texture = load("res://blocks.png")
+#	var world_texture = load("res://LargeWorld.png")
+	var world_texture = load("res://LargeWorldAlpha.png")
 #	var world_texture = load("res://solid.png")
 #	var world_texture = load("res://skinny.png")
 #	var world_texture = load("res://small.png")
@@ -57,8 +59,8 @@ func _process(_delta):
 		print("Finished Saving to file")
 	
 	delete_invisible_chunks()
-	create_chunk_streaming_regions()
 	load_visible_chunks()
+	create_chunk_streaming_regions()
 	continue_streaming_regions()
 	
 	# Draw the chunk borders
@@ -78,6 +80,7 @@ func _draw():
 	for point in lightly_loading_drawing_chunks.keys():
 		point *= chunk_pixel_dimensions
 		draw_rect(Rect2(point, chunk_pixel_dimensions), Color.orange, false, thickness, false)
+			
 
 	for point in urgently_loading_blocks_chunks.keys():
 		point *= chunk_pixel_dimensions
@@ -95,12 +98,61 @@ func free_chunk(chunk: Chunk):
 	remove_child(chunk)
 	# Don't free the chunk yet. Try to reset it and store it to save on 
 	# memory allocations
-	if self.deactivated_and_reusable_chunks.size() + 1 > self.maximum_deactivated_and_reusable_chunks:
-		print("Freeing chunk:")
-		chunk.queue_free()
-	else:
+#	if self.deactivated_and_reusable_chunks.size() + 1 > self.maximum_deactivated_and_reusable_chunks:
+#		print("Freeing chunk:")
+#		chunk.queue_free()
+#	else:
 #		thread_pool.submit_task_unparameterized(chunk, "reset")
-		self.deactivated_and_reusable_chunks.append(chunk)
+#		chunk.reset()
+	self.deactivated_and_reusable_chunks.append(chunk)
+
+func get_chunk_data(data):
+	var chunk_position: Vector2 = data[0]
+	var chunk: Chunk = data[1]
+	var blocks = []
+	
+	# This is to check if the next thread that could have been waiting is
+	# accidentally about to do work a second time.
+	var chunk_image
+	
+	# Create a local image so multiple threads don't race to write to the
+	# instance variable chunk_image.
+	chunk_image = Image.new()
+	chunk_image.create(chunk_block_count.x, chunk_block_count.y, false, Image.FORMAT_RGBA8)
+	chunk_image.fill(Color.firebrick)
+#	chunk_image.resize(
+#		block_count.x * block_pixel_size.x,
+#		block_count.y * block_pixel_size.y,
+#	)
+	chunk_image.lock()
+	for j in range(chunk_block_count.y):
+		for i in range(chunk_block_count.x):
+			var block_position := Vector2(i, j)
+			var block_pixel_position: Vector2 = chunk_position * chunk_block_count + block_position
+			
+			# Grab the colour for the pixel from the world image. If the pixel
+			# goes out of bounds then just draw Red. This happens when the image is
+			# not a multiple of the chunk size.
+			var pixel: Color
+			if (block_pixel_position.x < 0 ||
+				block_pixel_position.y < 0 ||
+				block_pixel_position.x >= self.world_image.get_size().x ||
+				block_pixel_position.y >= self.world_image.get_size().y):
+				pixel = Color.red
+			else:
+				pixel = Color(self.world_image.get_pixelv(block_pixel_position))
+			chunk_image.set_pixelv(block_position, pixel)
+			
+			var block = {}
+			block["id"] = pixel.a
+			block["colour"] = pixel
+			blocks.append(block)
+			
+	chunk_image.unlock()
+	
+	chunk.obtain_chunk_data([blocks, chunk_image])
+	
+	return [blocks, chunk_image]
 
 """
 This method returns a new chunk at the given chunk position. The new chunk is
@@ -115,14 +167,13 @@ func create_chunk(chunk_position: Vector2) -> Chunk:
 	if self.deactivated_and_reusable_chunks.size() != 0:
 #		print("Reusing: ", chunk_position)
 		chunk = self.deactivated_and_reusable_chunks.pop_back()
+		# Reset the chunk
+		chunk.reset(chunk_position)
 	else:
-		chunk = Chunk.new(world_image, chunk_block_count, block_pixel_size)
+		chunk = Chunk.new(world_image, chunk_position, chunk_block_count, block_pixel_size)
 	# Don't forget to add this chunk as a child so it has access to
 	# the root of the project.
 	add_child(chunk)
-	chunk.reset()
-	# Initialise the chunk for streaming
-	chunk.init_stream(chunk_position)
 	return chunk
 
 """
@@ -197,13 +248,19 @@ func create_chunk_streaming_regions():
 #	print("Load:", load_visibility_points)
 	
 	for point in urgent_visibility_points:
-		urgently_loading_blocks_chunks[point] = null
+		var chunk = self.get_chunk_from_chunk_position(point)
+		if chunk != null:
+			self.urgently_loading_blocks_chunks[point] = chunk
 	
 	for point in draw_visibility_points:
-		lightly_loading_drawing_chunks[point] = null
+		var chunk = self.get_chunk_from_chunk_position(point)
+		if chunk != null:
+			self.lightly_loading_drawing_chunks[point] = self.get_chunk_from_chunk_position(point)
 	
 	for point in load_visibility_points:
-		lightly_loading_blocks_chunks[point] = null
+		var chunk = self.get_chunk_from_chunk_position(point)
+		if chunk != null:
+			self.lightly_loading_blocks_chunks[point] = self.get_chunk_from_chunk_position(point)
 
 """
 This method continues to load in the chunks based on the three regions
@@ -239,35 +296,68 @@ Tweaking these values on different computers may result in better performance.
 TODO: Make them editable in a configuration file in the future.
 """
 func continue_streaming_regions():
-	var chunks_to_draw := 1
+	var force_load = []
 	
-	for point in loaded_chunks.keys():
-		if urgently_loading_blocks_chunks.has(point):
-			var chunk: Chunk = loaded_chunks[point]
-			urgently_loading_blocks_chunks[point] = chunk
-			if !chunk.is_loaded():
-				chunk.create()
-			if !chunk.is_drawn():
-				chunk.update()
+	# First we check if the chunks need to be forced to load their blocks
+	var chunk_points = urgently_loading_blocks_chunks.keys() + lightly_loading_drawing_chunks.keys()
+	for chunk_point in chunk_points:
+		var chunk: Chunk = loaded_chunks[chunk_point]
+		if not chunk.is_loaded():
+			force_load.append(chunk_point)
+	
+	# Next we check the draw conditions
+	var chunks_to_draw = 1
+	for chunk in urgently_loading_blocks_chunks.values():
+		if not chunk.is_drawn():
+			chunk.update()
+			chunks_to_draw -= 1
+	for chunk in lightly_loading_drawing_chunks.values():
+		if chunks_to_draw <= 0:
+			break
+		if not chunk.is_drawn():
+			chunk.update()
+			chunks_to_draw -= 1
+	
+	# Finally, start the thread pool with the next batch as long as they haven't
+	# been locked already. Don't start the chunks again that were found to have
+	# finished in the thread pool.
+	var chunks_to_load = lightly_loading_blocks_chunks.keys() + force_load
+	for chunk_point in chunks_to_load:
+		var chunk: Chunk = loaded_chunks[chunk_point]
+		if chunk.is_locked() or chunk.is_loaded():
+			continue
 		
-		if lightly_loading_drawing_chunks.has(point):
-			var chunk: Chunk = loaded_chunks[point]
-			lightly_loading_drawing_chunks[point] = chunk
-			
-			if !chunk.is_loaded():
-				chunk.create()
-			if !chunk.is_drawn() && chunks_to_draw > 0:
-				chunks_to_draw -= 1
-				chunk.update()
-				
-		if lightly_loading_blocks_chunks.has(point):
-			var chunk: Chunk = loaded_chunks[point]
-			lightly_loading_blocks_chunks[point] = chunk
-			
-			if chunk.is_locked() or chunk.is_loaded():
-				continue
-#			chunk.create()
-			chunk.stream()
+		chunk.lock()
+#		var chunk_data = get_chunk_data(point)
+#		chunk.obtain_chunk_data(chunk_data)
+		thread_pool.submit_task(self, "get_chunk_data", [chunk_point, chunk], "chunk", chunk_point)
+	
+	
+	# Next, we obtain the completed blocks that have loaded and start the
+	# next batch of block loads. During this process, wait until the force_load
+	# blocks have been done as they are required to be completed by now.
+	for chunk_position in force_load:
+		thread_pool.wait_for_task_specific(chunk_position)
+		# Now all tasks that need to be done should be ready
+	
+	# Obtain the tasks completed that has the chunks that are being
+	# loaded inside the thread pool. If they have completed, then we can send
+	# this data to the chunk to automatically mark it as completed.
+	var completed_chunk_tasks = thread_pool.fetch_finished_tasks_by_tag("chunk")
+	for completed_chunk_task in completed_chunk_tasks:
+		var chunk_point: Vector2 = completed_chunk_task.get_argument()[0]
+		# In the case that the chunk has already been freed, don't assign the
+		# chunk any data.
+		if not loaded_chunks.has(chunk_point):
+			continue
+		
+		# Give the chunk it's data
+#		var chunk_data: Array = completed_chunk_task.get_result()
+		var chunk: Chunk = loaded_chunks[chunk_point]
+#		chunk.obtain_chunk_data(chunk_data)
+		
+		chunk.update()
+	
 
 """
 Returns the size of a chunk in pixels as a Vector2
@@ -345,9 +435,12 @@ Fastest function to get blocks.
 """
 func get_block_from_chunk_position_and_block_position(chunk_position: Vector2, block_position: Vector2):
 	var chunk = get_chunk_from_chunk_position(chunk_position)
-	if chunk == null or not chunk.blocks.has(block_position):
+	if chunk == null:
 		return null
-	return chunk.blocks[block_position]
+	if not chunk.is_loaded():
+		return null
+	var block = chunk.get_block_from_block_position(block_position)
+	return block
 
 """
 Returns a block if it exists using the given world_position.
@@ -360,7 +453,7 @@ Slowest function to get blocks.
 """
 func get_block_from_world_position(world_position: Vector2) -> Dictionary:
 	var chunk_position: Vector2 = get_chunk_position_from_world_position(world_position)
-	var block_position: Vector2 = get_block_position_from_world_position(world_position)
+	var block_position: Vector2 = get_block_position_from_world_position_and_chunk_position(world_position, chunk_position)
 	return get_block_from_chunk_position_and_block_position(chunk_position, block_position)
 	
 """

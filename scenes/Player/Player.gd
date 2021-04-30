@@ -53,16 +53,18 @@ func _physics_process(_delta):
 
 func _input(event):
 	if event.is_action_pressed("zoom_in"):
-		camera.zoom += Vector2(0.25, 0.25)
+		camera.zoom += Vector2(0.5, 0.5)
 	
 	if event.is_action_pressed("zoom_out"):
-		camera.zoom -= Vector2(0.25, 0.25)
+		camera.zoom -= Vector2(0.5, 0.5)
 	
 	if event.is_action_pressed("quit"):
 		get_tree().quit()
 	
-	camera.zoom.x = clamp(camera.zoom.x, 0.5, 10)
-	camera.zoom.y = clamp(camera.zoom.y, 0.5, 10)
+#	camera.zoom.x = clamp(camera.zoom.x, 1, 20)
+#	camera.zoom.y = clamp(camera.zoom.y, 1, 20)
+	camera.zoom.x = clamp(camera.zoom.x, 1, 10)
+	camera.zoom.y = clamp(camera.zoom.y, 1, 10)
 
 """
 This method returns an Array containing two Vector2 representing the world

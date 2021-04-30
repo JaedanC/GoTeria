@@ -12,6 +12,7 @@ var merged_parent_hitbox_rect: Rect2
 var block_scene = preload("res://scenes/Block/Block.tscn")
 var loaded_blocks := {}
 
+
 func _ready():
 #	parent.velocity
 	pass
