@@ -2,25 +2,50 @@ extends Sprite
 
 onready var player = get_tree().get_root().find_node("Player", true, false)
 onready var terrain = get_parent()
+onready var thread_pool = get_tree().get_root().find_node("ThreadPool", true, false)
 
-var light_image = null 
+var light_image = null
+var light_filled = null
 var light_texture: ImageTexture
+
+var run_once = false
 
 func _ready():
 	self.light_image = Image.new()
 	self.light_texture = ImageTexture.new()
-
+	create_light_image(Color.aqua)
+	
 func _physics_process(_delta):
 	refresh_shader_canvas_size()
 	
-	# Absolute machine killer this function
 	create_light_image(Color.aqua)
 	refresh_light_image_from_terrain_luminance()
 	
-	self.light_texture.create_from_image(light_image, 0) # Flag 0. No texture filtering
-	material.set_shader_param("block_pixel_size", terrain.block_pixel_size)
+	# Absolute machine killer this function
+#	create_light_image(Color.aqua)
+#	refresh_light_image_from_terrain_luminance()
+	
+#	var tasks = thread_pool.fetch_finished_tasks_by_tag("light")
+#	if not run_once:
+#		thread_pool.submit_task_unparameterized(self, "light_emission", "light")
+#		run_once = true
+#	elif tasks.size() > 0:
+	
+#	light_emission()
+	var tasks = thread_pool.fetch_finished_tasks_by_tag("light")
+	if not run_once:
+		thread_pool.submit_task_unparameterized(self, "light_emission", "light")
+		run_once = true
+	elif tasks.size() > 0:
+		self.light_filled = tasks[0].get_result()
+		thread_pool.submit_task_unparameterized(self, "light_emission", "light")
+		
+	self.light_texture.create_from_image(self.light_filled, 0) # Flag 0. No texture filtering
+#	self.light_texture.create_from_image(light_image) # Use Texture filtering
+	material.set_shader_param("light_values_size", self.light_texture.get_size())
 	material.set_shader_param("light_values", self.light_texture)
 	assert(light_texture != null)
+	
 
 func create_light_image(fill_colour: Color = Color.red):
 	var light_size = self.scale / terrain.get_block_pixel_size()
@@ -79,3 +104,35 @@ func refresh_light_image_from_terrain_luminance():
 #	print("Copying from luminance: " + str(source_luminance_rectangle) + " to " + str(top_left_out_of_bounds_offset))
 	
 	self.light_image.blit_rect(terrain.world_image_luminance, source_luminance_rectangle, top_left_out_of_bounds_offset)
+
+func emit(image: Image, location: Vector2, level: Color):
+	if level.r <= 0:
+		return
+	if (location.x < 0 or location.y < 0 or
+			location.x >= image.get_width() or location.y >= image.get_height()):
+		return
+	
+	var existing_colour = image.get_pixelv(location)
+	if level.r < existing_colour.r:
+		return
+	
+	image.set_pixelv(location, level)
+	
+	var new_colour = Color(level.r - 0.1, level.g - 0.1, level.b - 0.1, 1)
+	emit(image, Vector2(location.x - 1, location.y), new_colour)
+	emit(image, Vector2(location.x, location.y - 1), new_colour)
+	emit(image, Vector2(location.x + 1, location.y), new_colour)
+	emit(image, Vector2(location.x, location.y + 1), new_colour)
+
+func light_emission():
+	var image = Image.new()
+	image.copy_from(self.light_image)
+	image.lock()
+	for i in range(self.light_image.get_width()):
+		for j in range(self.light_image.get_height()):
+			var image_position = Vector2(i, j)
+			var colour = image.get_pixelv(image_position)
+			
+			emit(image, image_position, colour)
+	image.unlock()
+	return image

@@ -83,7 +83,7 @@ func __enqueue_task(instance: Object, method: String, parameter = null, task_tag
 		return
 	__tasks_lock.lock()
 	__tasks.push_front(Task.new(instance, method, parameter, task_tag, task_tag_specific, no_argument, array_argument))
-#	print("Tasks size:" + str(__tasks.size()))
+	print("Tasks size:" + str(__tasks.size()))
 	__tasks_wait.post()
 	__start()
 	__tasks_lock.unlock()

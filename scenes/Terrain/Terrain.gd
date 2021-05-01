@@ -24,9 +24,9 @@ var deactivated_and_reusable_chunks: Array = []
 
 
 func _ready():
-#	var world_texture = load("res://blocks.png")
+	var world_texture = load("res://blocks.png")
 #	var world_texture = load("res://LargeWorld.png")
-	var world_texture = load("res://LargeWorldAlpha.png")
+#	var world_texture = load("res://LargeWorldAlpha.png")
 #	var world_texture = load("res://solid.png")
 #	var world_texture = load("res://skinny.png")
 #	var world_texture = load("res://small.png")
@@ -42,12 +42,12 @@ func _ready():
 	self.world_image_luminance.fill(Color.red)
 	self.world_image_luminance.lock()
 	for i in range(self.world_image_luminance.get_width()):
-		for j in range(self.world_image_luminance.get_height()):
-			if self.world_image.get_pixel(i, j).a == 0:
-				self.world_image_luminance.set_pixel(i, j, Color(0, 0, 0, 0))
+		for j in range(self.world_image.get_height()):
+			var colour = self.world_image.get_pixel(i, j)
+			if colour.a == 0:
+				self.world_image_luminance.set_pixel(i, j, Color.white)
 			else:
-				self.world_image_luminance.set_pixel(i, j, Color(1, 1, 1, 0))
-#	world_image_luminance.unlock()
+				self.world_image_luminance.set_pixel(i, j, Color.black)
 #	generate_world()
 	pass
 
@@ -58,10 +58,11 @@ func _process(_delta):
 			chunk.save_chunk()
 		print("Finished Saving to file")
 	
-	delete_invisible_chunks()
-	load_visible_chunks()
-	create_chunk_streaming_regions()
-	continue_streaming_regions()
+	self.delete_invisible_chunks()
+	self.load_visible_chunks()
+	self.create_chunk_streaming_regions()
+	self.continue_streaming_regions()
+	
 	
 	# Draw the chunk borders
 	update()
@@ -119,12 +120,12 @@ func get_chunk_data(data):
 	# instance variable chunk_image.
 	chunk_image = Image.new()
 	chunk_image.create(chunk_block_count.x, chunk_block_count.y, false, Image.FORMAT_RGBA8)
-	chunk_image.fill(Color.firebrick)
+#	chunk_image.fill(Color.firebrick)
 #	chunk_image.resize(
 #		block_count.x * block_pixel_size.x,
 #		block_count.y * block_pixel_size.y,
 #	)
-	chunk_image.lock()
+	chunk_image.blit_rect(self.world_image, Rect2(chunk_position * chunk_block_count, chunk_block_count), Vector2.ZERO)
 	for j in range(chunk_block_count.y):
 		for i in range(chunk_block_count.x):
 			var block_position := Vector2(i, j)
@@ -141,14 +142,12 @@ func get_chunk_data(data):
 				pixel = Color.red
 			else:
 				pixel = Color(self.world_image.get_pixelv(block_pixel_position))
-			chunk_image.set_pixelv(block_position, pixel)
 			
 			var block = {}
 			block["id"] = pixel.a
 			block["colour"] = pixel
 			blocks.append(block)
 			
-	chunk_image.unlock()
 	
 	chunk.obtain_chunk_data([blocks, chunk_image])
 	
@@ -499,8 +498,12 @@ Fastest function to set blocks.
 """
 func set_block_from_chunk_position_and_block_position(chunk_position: Vector2, block_position: Vector2, new_block: Dictionary):
 	var chunk = get_chunk_from_chunk_position(chunk_position)
-	if chunk != null:
-		chunk.set_block_from_block_position(block_position, new_block)
+	if chunk == null:
+		return
+	chunk.set_block_from_block_position(block_position, new_block)
+	
+	var world_block_position = chunk_position * chunk_block_count + block_position
+	self.set_world_image(world_block_position, new_block["colour"])
 
 """
 Sets a block at the given world_position to be the new_block if it exists.
@@ -512,8 +515,18 @@ Sets a block at the given world_position to be the new_block if it exists.
 Slowest function to set blocks.
 """
 func set_block_at_world_position(world_position: Vector2, new_block: Dictionary):
-	var chunk_position = get_chunk_position_from_world_position(world_position)
-	var chunk = get_chunk_from_chunk_position(chunk_position)
-	if chunk != null:
-		var block_position = get_block_position_from_world_position_and_chunk_position(world_position, chunk_position)
-		chunk.set_block_from_block_position(block_position, new_block)
+	var chunk_position = self.get_chunk_position_from_world_position(world_position)
+	var block_position = self.get_block_position_from_world_position_and_chunk_position(world_position, chunk_position)
+	self.set_block_from_chunk_position_and_block_position(chunk_position, block_position, new_block)
+
+func set_world_image(world_block_position: Vector2, colour: Color):
+	if (world_block_position.x < 0 or world_block_position.y < 0 or
+			world_block_position.x >= self.world_image.get_width() or
+			world_block_position.y >= self.world_image.get_height()):
+		return
+	
+	self.world_image.set_pixelv(world_block_position, colour)
+	if colour.a == 0:
+		self.world_image_luminance.set_pixelv(world_block_position, Color.white)
+	else:
+		self.world_image_luminance.set_pixelv(world_block_position, Color.black)

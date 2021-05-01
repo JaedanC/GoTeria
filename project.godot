@@ -32,7 +32,7 @@ _global_script_class_icons={
 
 [application]
 
-config/name="Testing"
+config/name="Teria"
 run/main_scene="res://scenes/WorldSpawn/WorldSpawn.tscn"
 config/icon="res://icon.png"
 
@@ -47,7 +47,6 @@ gdscript/warnings/integer_division=false
 
 [display]
 
-window/size/fullscreen=true
 window/vsync/use_vsync=false
 
 [editor_plugins]
@@ -69,4 +68,5 @@ ui_accept={
 
 quality/intended_usage/framebuffer_allocation=0
 quality/intended_usage/framebuffer_allocation.mobile=0
+environment/default_clear_color=Color( 0, 0.6, 1, 1 )
 environment/default_environment="res://default_env.tres"
