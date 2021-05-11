@@ -1,6 +1,7 @@
 using Godot;
 using Godot.Collections;
 using System;
+using System.Diagnostics;
 
 public class Player : Node2D
 {   
@@ -8,11 +9,10 @@ public class Player : Node2D
     private KinematicBody2D rigidbody;
 	private Godot.Object smoothing;
 	private Camera2D camera;
-	private Godot.Object inputLayering;
+	private InputLayering inputLayering;
 
 	private Vector2 velocity;
 
-    // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
 		Name = "Player";
@@ -21,23 +21,21 @@ public class Player : Node2D
         rigidbody = GetNode<KinematicBody2D>("Rigidbody");
         smoothing = GetNode<Godot.Object>("Smoothing");
         camera = GetNode<Camera2D>("Smoothing/Camera");
-		inputLayering = GetNode<Godot.Object>("/root/InputLayering");
+        inputLayering = GetNode<InputLayering>("/root/InputLayering");
 
 		velocity = Vector2.Zero;
     }
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(float delta)
 	{
-		if (!Position.Equals(Vector2.Zero))
-		{
-			throw new Exception("Player position must stay at (0, 0).");
-		}
+		// The 'player' node does not actually change. Rather the rigidbody and the smoothing
+		// sprite move.
+		Debug.Assert(Position == Vector2.Zero, "Player position must stay at (0, 0).");
 
-		if ((bool)inputLayering.Call("pop_action", "zoom_reset"))
-			camera.Set("zoom", Vector2.One);
+		if (inputLayering.PopAction("zoom_reset"))
+			camera.Zoom = Vector2.Zero;
 		
-		if ((bool)inputLayering.Call("pop_action", "click"))
+		if (inputLayering.PopAction("click"))
 		{
 			Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
 			Dictionary<String, object> block = terrain.GetBlockFromWorldPosition(worldPosition);
@@ -46,12 +44,11 @@ public class Player : Node2D
 				block["id"] = 1;
 				// block["colour"] = new Color(GD.Randf(), GD.Randf(), GD.Randf(), 1);
 				block["colour"] = new Color(1, 1, 0, 1);
-				// TODO: This is likely not required as it is returning a reference.
-				terrain.SetBlockAtWorldPosition(worldPosition, block);
 			}
+			terrain.SetBlockAtWorldPosition(worldPosition, block);
 		}
 
-		if ((bool)inputLayering.Call("pop_action", "dig"))
+		if (inputLayering.PopAction("dig"))
 		{
 			Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
 			Dictionary<String, object> block = terrain.GetBlockFromWorldPosition(worldPosition);
@@ -59,9 +56,8 @@ public class Player : Node2D
 			{
 				block["id"] = 0;
 				block["colour"] = new Color(0, 0, 0, 0);
-				// TODO: This is likely not required as it is returning a reference.
-				terrain.SetBlockAtWorldPosition(worldPosition, block);
 			}
+			terrain.SetBlockAtWorldPosition(worldPosition, block);
 		}
 
 		Update();
@@ -69,32 +65,33 @@ public class Player : Node2D
 
     public override void _PhysicsProcess(float delta)
     {
-		if ((bool)inputLayering.Call("pop_action", "move_left"))
+		if (inputLayering.PopAction("move_left"))
 		{
 			velocity.x -= 50;
 		}
-		if ((bool)inputLayering.Call("pop_action", "move_right"))
+		if (inputLayering.PopAction("move_right"))
 		{
 			velocity.x += 50;
 		}
-		if ((bool)inputLayering.Call("pop_action", "move_up"))
+		if (inputLayering.PopAction("move_up"))
 		{
 			velocity.y -= 50;
 		}
-		if ((bool)inputLayering.Call("pop_action", "move_down"))
+		if (inputLayering.PopAction("move_down"))
 		{
 			velocity.y += 50;
 		}
-		if ((bool)inputLayering.Call("pop_action", "jump"))
+		if (inputLayering.PopAction("jump"))
 		{
 			velocity.y = -1000;
 		}
-		if ((bool)inputLayering.Call("pop_action", "brake"))
+		if (inputLayering.PopAction("brake"))
 		{
 			velocity = Vector2.Zero;
 		}
-		if ((bool)inputLayering.Call("poll_action", "debug"))
+		if (inputLayering.PollActionPressed("debug"))
 		{
+			GD.Print("Printing Stray Nodes:");
 			PrintStrayNodes();
 		}
     }
@@ -102,24 +99,21 @@ public class Player : Node2D
     public override void _Input(InputEvent @event)
     {
         if (@event.IsActionPressed("zoom_in"))
-		{
-			camera.Set("zoom", GetCameraZoom() + new Vector2(0.5f, 0.5f));
-		}
+			camera.Zoom += new Vector2(0.5f, 0.5f);
+
 		if (@event.IsActionPressed("zoom_out"))
-		{
-			camera.Set("zoom", GetCameraZoom() - new Vector2(0.5f, 0.5f));
-		}
+			camera.Zoom -= new Vector2(0.5f, 0.5f);
+
 		if (@event.IsActionPressed("quit"))
-		{
 			GetTree().Quit();
-		}
-		camera.Set("zoom", new Vector2(
-			Mathf.Clamp((GetCameraZoom()).x, 1, 10),
-			Mathf.Clamp((GetCameraZoom()).y, 1, 10)
-		));
+		
+		camera.Zoom = new Vector2(
+			Mathf.Clamp(camera.Zoom.x, 1, 10),
+			Mathf.Clamp(camera.Zoom.y, 1, 10)
+		);
     }
 
-	/* This method returns an Array containing two Vector2 representing the world
+	/* This method returns an Array containing two Vector2's representing the world
 	position of the player's visibility on the screen. This value is in pixels
 	relative to the top-left of the world.
 
@@ -129,7 +123,7 @@ public class Player : Node2D
 			Vector2(9040, 9040),
 			Vector2(10960, 10960
 		]
-	This is an oversimplification because this function also takes into account the
+	This is an over simplification because this function also takes into account the
 	camera's zoom. The first Vector2 is the top-left visibility world position. The
 	second Vector2 is the bottom-right visibility world position. */
 	public Array<Vector2> GetVisibilityWorldPositionCorners()
@@ -151,9 +145,9 @@ public class Player : Node2D
 		
 		// Use this to temporarily reduce the size of the viewport loading rectangle
 		// to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-		float viewportModifier = 0.4f;
-		//float viewportModifier = 0.2f;
-		// float viewportModifier = 0f;
+		// float viewportModifier = 0.4f;
+		// float viewportModifier = 0.2f;
+		float viewportModifier = 0f;
 		Vector2 size = viewportRectangle.Size * new Vector2(viewportModifier, viewportModifier);
 		viewportRectangle = viewportRectangle.GrowIndividual(-size.x, -size.y, -size.x, -size.y);
 		
@@ -167,7 +161,7 @@ public class Player : Node2D
 		return corners;
 	}
 	
-	/* This function is similar to get_visibility_world_position_corners() but this
+	/* This function is similar to GetVisibilityWorldPositionCorners() but this
 	returns the two vectors divided by the block size. This then returns two
 	Vector2's which represent the corners of block indices in the world that can be
 	seen by the player. */
@@ -181,7 +175,7 @@ public class Player : Node2D
 		return worldBlockPositionCorners;
 	}
 
-	/* This function is similar to get_visibility_world_position_corners but instead it
+	/* This function is similar to GetVisibilityWorldPositionCorners but instead it
 	returns the two Vector2's which represent the chunk indices that can be seen by
 	the player. */
 	public Array<Vector2> GetVisibilityChunkPositionCorners()
@@ -193,22 +187,26 @@ public class Player : Node2D
 		return chunkPositionCorners;
 	}
 
-	/* This function returns a. Array of chunk positions that are contained by the
-	function get_visibility_chunk_position_corners().
+	/* This function returns an Array of chunk positions that are contained by the
+	method GetVisibilityChunkPositionCorners().
 		- The margin parameter extends the radius of the visibility by the 'margin'
-		chunks. This can be used to include chunks are slightly off screen.
+		chunks. This can be used to include chunks are slightly off screen. I guess the
+		name of this parameter can be slightly misleading.
 		- The border only parameter is only relevant if the margin parameter is
-		used. If border_only is true, then only the chunk indices that the
+		used. If borderOnly is true, then only the chunk indices that the
 		(non-zero) margin added are returned in the Array.
 
 	Example Return:
 	[
+		Vector2(0, -1),
 		Vector2(0, 0),
-		Vector2(0, 1),
+		Vector2(1, -1),
 		Vector2(1, 0),
-		Vector2(1, 1),
+		Vector2(2, -1),
+		Vector2(2, 0),
 		...
-	]*/
+	]
+	*/
 	public Array<Vector2> GetVisibilityChunkPositions(int margin=0, bool borderOnly=false, int borderIgnore=0)
 	{
 		Array<Vector2> chunkCorners = GetVisibilityChunkPositionCorners();
@@ -218,11 +216,16 @@ public class Player : Node2D
 		Vector2 bottomRightMargin = chunkCorners[1] + Vector2.One * margin;
 		
 		Array<Vector2> visibilityPoints = new Array<Vector2>();
+
+		// If borderOnly is true then we only add chunkPositions that are in the margin. If the margin is zero,
+		// then this would return an empty Array... I hope.
 		if (borderOnly)
 		{
 			for (int i = (int)topLeftMargin.x; i < (int)bottomRightMargin.x + 1; i++)
 			for (int j = (int)topLeftMargin.y; j < (int)bottomRightMargin.y + 1; j++)
 			{
+				// borderIgnore reduces the radius of the border by borderIgnore ammount, from the inside.
+				// It's like eating a donut but from the middle first. Don't do this btw.
 				Vector2 ignoreTopLeft = chunkCorners[0] - Vector2.One * borderIgnore;
 				Vector2 ignoreBottomRight = chunkCorners[1] + Vector2.One * borderIgnore;
 				if (i < ignoreTopLeft.x || j < ignoreTopLeft.y || i > ignoreBottomRight.x || j > ignoreBottomRight.y)
@@ -238,24 +241,30 @@ public class Player : Node2D
 		return visibilityPoints;
 	}
 
+	/* Return the rigidbody position of the Player. This is the position you should use in physics
+	calculations of the player. */
 	public KinematicBody2D GetRigidbody()
 	{
 		return rigidbody;
 	}
 
+	/* Returns the velocity of the player. This Vector2 is added to the Player's position every
+	physics frame. */
 	public Vector2 GetVelocity()
 	{
 		return velocity;
 	}
 
+	/* Sets the velocity of the player.This Vector2 is added to the Player's position every
+	physics frame. */
 	public void SetVelocity(Vector2 velocity)
 	{
 		this.velocity = velocity;
 	}
 
-	/* This returns the player's position, which is actually the smoothing sprite's
-	location if you want the player's position on any frame other than a physics
-	call. */
+	/* This returns the player's position (which is actually the smoothing sprite's
+	location) if you want the player's position on any frame other than a physics
+	frame. This is an linear interpolated Vector2. */
 	public Vector2 GetPlayerPosition()
 	{
 		return (Vector2)smoothing.Get("position");
@@ -264,12 +273,12 @@ public class Player : Node2D
 	/* This function returns the zoom factor of the player's camera. */
 	public Vector2 GetCameraZoom()
 	{
-		return (Vector2)camera.Get("zoom");
+		return camera.Zoom;
 	}
 
 	/* This function converts a screen position to a world position.
-		- A screen position is a location inside the window. The location of the
-		mouse is supplied to Godot as a screen position. */
+		- A screen position is a location inside the window. For example, The location
+		of the mouse is supplied to Godot as a screen position. */
 	public Vector2 ScreenToWorldPosition(Vector2 screenPosition)
 	{
 		Vector2 worldPosition = GetPlayerPosition() + screenPosition * GetCameraZoom();

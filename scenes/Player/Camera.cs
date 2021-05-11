@@ -8,7 +8,7 @@ public class Camera : Camera2D
         Name = "Camera";
     }
 
-    // Called every frame. 'delta' is the elapsed time since the previous frame.
+    // This is required to stop the camera from being a frame behind the player.
     public override void _Process(float delta)
     {
         Align();

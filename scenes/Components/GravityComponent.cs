@@ -10,7 +10,8 @@ public class GravityComponent : Node2D
         Name = "GravityComponent";
     }
 
-    // Called when the node enters the scene tree for the first time.
+    /* Adds Gravity to the Node. */
+    // TODO: In future, use an Interface that has a Velocity.
     public override void _PhysicsProcess(float _delta)
     {
         if (enabled)

@@ -2,6 +2,15 @@ using Godot;
 using Godot.Collections;
 using System;
 
+/*
+ThreadPool
+A thread pool to asynchronously execute tasks
+By Marcos Zolnowski
+
+(Ported to C# by JaedanC)
+*/
+
+// TODO: Change this to user the futures implementation because stop reinventing the wheel.
 public class ThreadPool : Node
 {
     [Export]
@@ -150,6 +159,8 @@ public class ThreadPool : Node
         }
     }
 
+    /* This method will block until it finds a task in __finishedTasks with a matching
+    taskSpecific tag. */
     public void WaitForTaskSpecific(object taskSpecific)
     {
         //GD.Print("Force waiting for " + str(tag_specific) + " thread to finish");
@@ -200,7 +211,7 @@ public class ThreadPool : Node
             {
                 if (discardFinishedTasks)
                 {
-                    //
+                    // Signals unused.
                     //CallDeferred("emit_signal", "task_discarded", task);
                 }
                 else
@@ -208,6 +219,7 @@ public class ThreadPool : Node
                     __finishedTasksLock.Lock();
                     __finishedTasks.Add(task);
                     __finishedTasksLock.Unlock();
+                    // Signals unused.
                     //CallDeferred("emit_signal", "task_finished", task.tag);
                 }
             }

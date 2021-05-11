@@ -1,73 +1,63 @@
 using Godot;
 using Godot.Collections;
 using System;
+using System.Diagnostics;
 
 public class Terrain : Node2D
 {
     // [Export]
-    private Vector2 blockPixelSize;
-
+    private Vector2 blockPixelSize = new Vector2(16, 16);
     // [Export]
-    private Vector2 chunkBlockCount;
+    private Vector2 chunkBlockCount = new Vector2(256, 256);
+    private int loadMargin = 1;
+    private int drawMargin = 0;
 
     private ThreadPool threadPool;
     private Player player;
     private Godot.Object lighting;
-    private Godot.Object inputLayering;
+    private InputLayering inputLayering;
 
     private Vector2 chunkPixelDimensions;
     private Dictionary<Vector2, Chunk> loadedChunks;
     private Dictionary<Vector2, Chunk> urgentlyLoadingBlocksChunks;
     private Dictionary<Vector2, Chunk> lightlyLoadingDrawingChunks;
     private Dictionary<Vector2, Chunk> lightlyLoadingBlocksChunks;
-    private Array<Chunk> deactivatedAndReusableChunks;
-
     private Image worldImage;
     private Image worldImageLuminance;
     // private Image worldImageLightSources;
-    /* Returns the size of a chunk in pixels as a Vector2. */
-
     private ObjectPool<Chunk> chunkPool;
-
-    private int loadMargin = 1;
-    private int drawMargin = 0;
 
 
     public override void _Ready()
     {
         Name = "Terrain";
-        blockPixelSize = new Vector2(16, 16);
-        chunkBlockCount = new Vector2(256, 256);
+        chunkPixelDimensions = blockPixelSize * chunkBlockCount;
 
-        if (blockPixelSize.x == 0 || blockPixelSize.y == 0)
-        {
-            throw new Exception("blockPixelSize is 0.");
-        }
+        Debug.Assert(blockPixelSize.x > 0, "blockPixelSize.x is 0");
+        Debug.Assert(blockPixelSize.y > 0, "blockPixelSize.y is 0");
+        Debug.Assert(chunkBlockCount.y > 0, "chunkBlockCount.y is 0");
+        Debug.Assert(chunkBlockCount.y > 0, "chunkBlockCount.y is 0");
 
         loadedChunks = new Dictionary<Vector2, Chunk>();
         urgentlyLoadingBlocksChunks = new Dictionary<Vector2, Chunk>();
         lightlyLoadingDrawingChunks = new Dictionary<Vector2, Chunk>();
         lightlyLoadingBlocksChunks = new Dictionary<Vector2, Chunk>();
-        deactivatedAndReusableChunks = new Array<Chunk>();
 
-        threadPool = GetNode<ThreadPool>("/root/WorldSpawn/ThreadPool");
-        player = GetNode<Player>("/root/WorldSpawn/Player");
-        lighting = GetNode<Godot.Object>("Lighting");
-        inputLayering = GetTree().Root.GetNode("InputLayering");
+        threadPool =    GetNode<ThreadPool>("/root/ThreadPool");
+        player =        GetNode<Player>("/root/WorldSpawn/Player");
+        lighting =      GetNode<Godot.Object>("Lighting");
+        inputLayering = GetNode<InputLayering>("/root/InputLayering");
 
         // TODO: dynamically load the world
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/save_image.png");
-        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorld.png");
-        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
+        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/small.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/medium.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/hd.png");
         worldImage = worldTexture.GetData();
         worldImage.Lock();
-
-        chunkPixelDimensions = blockPixelSize * chunkBlockCount;
-
         worldImageLuminance = new Image();
         worldImageLuminance.Create(worldImage.GetWidth(), worldImage.GetHeight(), false, Image.Format.Rgba8);
         worldImageLuminance.Fill(Colors.Red);
@@ -77,20 +67,14 @@ public class Terrain : Node2D
         {
             Color colour = worldImage.GetPixel(i, j);
             if (colour.a == 0)
-            {
                 worldImageLuminance.SetPixel(i, j, Colors.White);
-            }
             else
-            {
                 worldImageLuminance.SetPixel(i, j, Colors.Black);
-            }
-
         }
 
         // TODO: initialise with a better number
-        chunkPool = new ObjectPool<Chunk>(5);
+        chunkPool = new ObjectPool<Chunk>(10);
 
-        GD.Print("Hello");
         // GenerateWorld()
     }
 
@@ -98,7 +82,7 @@ public class Terrain : Node2D
     {
         // Save the all chunks loaded in memory to a file.
         // TODO: This won't work
-        if ((bool)inputLayering.Call("pop_action", "save_world"))
+        if (inputLayering.PopAction("save_world"))
         {
             foreach (Chunk chunk in GetChildren())
             {
@@ -146,18 +130,10 @@ public class Terrain : Node2D
         }
     }
 
-    /* This method frees a chunk and removes it from this node as a child. The Chunk
-    is not freed unless the amount of chunks that are queued to be reset exceeds the
-    value maximum_deactivated_and_reusable_chunks. Instead, it is reset and stored
-    such that when a new chunk is created one of these chunks can be used instead
-    to decrease the number of memory allocations. This technique provides a large
-    speed up in performance. */
-    // private void FreeChunk(Chunk chunk)
-    // {
-	//     RemoveChild(chunk);
-    //     deactivatedAndReusableChunks.Add(chunk);
-    // }
-
+    /* This method is run on the threadPool, and it generates all the data a chunk requires
+    for it to work. This function can only take one paramater, thus we take in an away of objects.
+    We return the chunkPosition so that we can retrieve the Chunk from the threadPool forcefully
+    if it is taking too much time, and the player is getting too close. */
     public Vector2 GetChunkData(Array<object> data)
     {
         Vector2 chunkPosition = (Vector2)data[0];
@@ -166,7 +142,8 @@ public class Terrain : Node2D
         int numberOfBlocks = (int)(chunkBlockCount.x * chunkBlockCount.y);
 
         // TODO: Use an Array instead
-        Array<Dictionary<String, object>> blocks = new Array<Dictionary<String, object>>();
+        Dictionary<String, object>[] blocks = new Dictionary<String, object>[numberOfBlocks];
+        // Array<Dictionary<String, object>> blocks = new Array<Dictionary<String, object>>();
 
         // This is to check if the next thread that could have been waiting is
         // accidentally about to do work a second time.
@@ -207,48 +184,15 @@ public class Terrain : Node2D
             // block.Add("colour", pixel);
 
             int blockIndex = chunk.BlockPositionToBlockIndex(blockPosition);
-
-            // TODO: Use an Array instead
-            blocks.Add(block);
-			// blocks[blockIndex] = block;
+			blocks[blockIndex] = block;
         }
 	    
         chunk.ObtainChunkData(blocks, chunkImage);
-
 	    return chunkPosition;
     }
-			
-	// private Chunk CreateChunk(Vector2 chunkPosition)
-    // {
-    //     Chunk chunk;
-    //     if (deactivatedAndReusableChunks.Count != 0)
-    //     {
-    //         // GD.Print("Reusing: ", chunkPosition);
-    //         chunk = deactivatedAndReusableChunks[0];
-    //         deactivatedAndReusableChunks.RemoveAt(0);
 
-    //         // Reset the chunk
-    //         chunk.Reset(new object[]{chunkPosition});
-    //     }
-    //     else
-    //     {
-            
-            // Reset the chunk
-        //     chunk.Reset(chunkPosition);
-        // }
-        // else
-        // {
-        //     chunk = new Chunk(worldImage, chunkPosition, chunkBlockCount, blockPixelSize);
-        // }
-        // Don't forget to add this chunk as a child so it has access to
-        // the root of the project.
-        // AddChild(chunk);
-
-    //     return chunk;
-    // }
-
-    /* This method creates and initialises all the chunks the player can see such
-    that they are ready to have their blocks streamed in. */
+    /* This method creates chunks (from the ObjectPool) that are visible to the player. These
+    chunks are stored in the loadedChunks Dictionary. */
     private void LoadVisibleChunks()
     {
         Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(loadMargin + drawMargin);
@@ -267,8 +211,7 @@ public class Terrain : Node2D
             {
                 Chunk chunk = chunkPool.GetInstance(worldImage, chunkPosition, chunkBlockCount, blockPixelSize);
                 AddChild(chunk);
-                // Chunk chunk = CreateChunk(chunkPosition);
-                loadedChunks.Add(chunkPosition, chunk);
+                loadedChunks[chunkPosition] = chunk;
             }
         }
     }
@@ -296,14 +239,12 @@ public class Terrain : Node2D
         }
 
         // Now the remaining chunks in loaded_chunks are invisible to the player
-        // and can be deleted from memory. The delete_chunk method will handle this
-        // for us.
-        // TODO: .Keys() not possible
+        // and can be deleted from memory.
         foreach (Vector2 invisibleChunkPosition in loadedChunks.Keys)
         {
             Chunk chunk = loadedChunks[invisibleChunkPosition];
-            chunkPool.ReturnToPool(chunk);
             RemoveChild(chunk);
+            chunkPool.Die(chunk);
             // FreeChunk(chunk);
             loadedChunks.Remove(invisibleChunkPosition);
         }
@@ -430,11 +371,10 @@ public class Terrain : Node2D
                 continue;
 
             chunk.Lock();
-            // Vector2 chunkPosition = getChunkData(point);
-            // chunk.obtainChunkData(chunkPosition);
-            Array<object> chunkData = new Array<object>{};
-            chunkData.Add(chunkPoint);
-            chunkData.Add(chunk);
+            Array<object> chunkData = new Array<object>{
+                chunkPoint,
+                chunk
+            };
             threadPool.SubmitTask(this, "GetChunkData", chunkData, "chunk", chunkPoint);
         }
 

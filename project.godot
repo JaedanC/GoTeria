@@ -32,12 +32,17 @@ config/icon="res://assets/tree.png"
 
 [autoload]
 
-InputLayering="*res://scenes/Singletons/InputLayering.gd"
+InputLayering="*res://scenes/Singletons/InputLayering.cs"
+ThreadPool="*res://scenes/Singletons/ThreadPool.cs"
 
 [debug]
 
 gdscript/warnings/narrowing_conversion=false
 gdscript/warnings/integer_division=false
+
+[display]
+
+window/vsync/use_vsync=false
 
 [editor_plugins]
 
@@ -53,6 +58,10 @@ ui_accept={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":0,"button_index":0,"pressure":0.0,"pressed":false,"script":null)
  ]
 }
+
+[mono]
+
+profiler/enabled=true
 
 [rendering]
 

@@ -5,9 +5,7 @@ using System.Diagnostics;
 
 public class Chunk : Node2D, IResettable
 {
-    
     private Terrain terrain;
-
     private Image worldImage;
     private Image chunkImage;
     private ImageTexture chunkTexture;
@@ -29,7 +27,7 @@ public class Chunk : Node2D, IResettable
 
     public override void _Ready()
     {
-        terrain = GetTree().Root.GetNode<Terrain>("WorldSpawn/Terrain");
+        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */
@@ -78,14 +76,9 @@ public class Chunk : Node2D, IResettable
         return drawn;
     }
 
-    public void ObtainChunkData(Array<Dictionary<String, object>> blocks, Image chunkImage)
+    public void ObtainChunkData(Dictionary<String, object>[] blocks, Image chunkImage)
     {
-        // this.blocks = new Dictionary<String, object>[(int)blockCount.x * (int)blockCount.y];
-        
-        for (int i = 0; i < blocks.Count; i++)
-        {
-            this.blocks[i] = blocks[i];
-        }
+        this.blocks = blocks;
         this.chunkImage = chunkImage;
         loaded = true;
     }

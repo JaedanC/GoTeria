@@ -1,0 +1,53 @@
+using Godot;
+using Godot.Collections;
+using System;
+
+// TODO: Does this need to have the orphan T's unloaded?
+
+/* This class is a generic ObjectPool. This class stores an Array of objects in a pool, and
+when you request an instance with GetInstance(), an instance is created if the pool is empty,
+OR an instance from the pool is popped and returned. In either case, the T.Reset() method is
+called. Objects that wish to use this Class need to Implement to IResettable interface. They
+also need to define a default constructor.
+*/
+public class ObjectPool<T> : Resource where T : Node, IResettable, new()
+{
+    private Array<T> pool;
+
+    public ObjectPool(int numberOfInstances=0)
+    {
+        pool = new Array<T>();
+        for (int i = 0; i < numberOfInstances; i++)
+        {
+            pool.Add(new T());
+        }
+    }
+
+    /* This method returns a new instance of T is the Pool is not empty. Otherwise it will
+    return a reset old T from the pool. The either case, the T.Reset() method is called on T.
+    The parameters to this function are passed in using an object[]. Note: You are still
+    responsible for adding the instance to the tree! */
+    public T GetInstance(params object[] resetParameters)
+    {
+        T item;
+        if (pool.Count > 0)
+        {
+            item = pool[0];
+            pool.RemoveAt(0);
+        }
+        else
+        {
+            item = new T();
+        }
+
+        item.Reset(resetParameters);
+        return item;
+    }
+
+    /* This method returns an instance to the pool. It is not Reset yet. Note: You are still
+    responsible for removing the instance from the tree! */
+    public void Die(T instance)
+    {
+        pool.Add(instance);
+    }
+}

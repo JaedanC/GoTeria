@@ -6,14 +6,14 @@ using System.Diagnostics;
 public class CollisionComponent : Node2D
 {
     private Terrain terrain;
+    // TODO: Use an interface with a velocity in future so that this module can be reused
+    // for other entities... Change 'player' to 'parent'.
     private Player player;
     private KinematicBody2D parentRigidbody;
     private CollisionShape2D parentHitbox;
-
     private Rect2 previousParentHitboxRect;
     private Rect2 nextParentHitboxRect;
     private Rect2 mergedParentHitboxRect;
-
     private PackedScene blockScene;
     private Dictionary<Vector2, StaticBody2D> loadedBlocks;
 
@@ -27,7 +27,13 @@ public class CollisionComponent : Node2D
         parentRigidbody = player.GetNode<KinematicBody2D>("Rigidbody");
         parentHitbox = parentRigidbody.GetNode<CollisionShape2D>("Hitbox");
 
+        // The block scene is used exclusively for collision detection. See Chunk for more
+        // information on how blocks are actually stored in memory.
         blockScene = (PackedScene)ResourceLoader.Load("res://scenes/Block/Block.tscn");
+
+        // These are the blocks locally created by this script. TODO: Maybe in future
+        // have these blocks be stored someone else so that blocks are not instanced twice
+        // unnecessarily.
         loadedBlocks = new Dictionary<Vector2, StaticBody2D>();
     }
 
@@ -39,33 +45,46 @@ public class CollisionComponent : Node2D
         Move(player.GetVelocity());
     }
 
+    /* This function expands a Rect2 to include the player and where the player would be
+    after adding their velocity to the Hitbox. This Rect2 is mergedParentHitboxRect, and
+    it is the area that is used to spawn in blocks. */
     private void UpdateCollisionVisiblityRect(float delta)
     {
         RectangleShape2D shape = (RectangleShape2D)parentHitbox.Shape;
         Vector2 hitboxSize = shape.Extents;
-        // TODO Hardcoded hitbox size
+        // TODO: In future, take into account that some entities may be
+        // defined by more than one Hitbox.
         Vector2 collision_visibility = parentHitbox.Position - hitboxSize;
         previousParentHitboxRect = new Rect2(collision_visibility + parentRigidbody.Position, 2 * hitboxSize);
         nextParentHitboxRect = previousParentHitboxRect;
         nextParentHitboxRect.Position += player.GetVelocity() * delta;
+        // Expand the Rect2 to include their nextPosition
         mergedParentHitboxRect = nextParentHitboxRect.Merge(previousParentHitboxRect);
+        // TODO: Maybe in future return a value?
     }
 
+    /* This method spawns in the blocks that are inside the player's mergedParentHitboxRect.
+    This reduces the number of objects created to only be blocks that can be collided with the player,
+    heavily reducing the time complexity of calculating the player's collision. */
     private void CreateVisibleBlocksHitboxes()
     {
-        Array<Vector2> visibleBlockPoints = GetHitboxVisibilityPoints(mergedParentHitboxRect);
+        Array<Vector2> visibleBlockPoints = GetHitboxBlockVisibilityPoints(mergedParentHitboxRect);
         foreach (Vector2 visibleBlockPoint in visibleBlockPoints)
         {
             if (loadedBlocks.ContainsKey(visibleBlockPoint))
                 continue;
             
             Dictionary<String, object> existingBlock = terrain.GetBlockFromWorldPosition(visibleBlockPoint * terrain.GetBlockPixelSize());
+
+            // Don't add collision for air.
+            // TODO: Use a future IsSolid() method potentially.
             if (existingBlock != null && (int)existingBlock["id"] != 0)
             {
-                // TODO: This could be my memory leak
-                StaticBody2D block = (StaticBody2D)blockScene.Instance();
+                StaticBody2D block = (StaticBody2D)blockScene.Instance(); // Instance the block scene.
 
-                // The order of these two operations is very important. Flip them, and collision goes out the window
+                // The order of these two operations is very important. Flip them, and collision goes out the window.
+                // I assume this is because the _Ready() method in the block requires this value, but I'll be honest
+                // I have no idea why this is the case from looking at the source code.
                 block.Position = visibleBlockPoint * terrain.GetBlockPixelSize() + terrain.GetBlockPixelSize() / 2;
                 AddChild(block);
                 loadedBlocks[visibleBlockPoint] = block;
@@ -73,33 +92,47 @@ public class CollisionComponent : Node2D
         }
     }
 
+    /* Free blocks from the SceneTree that are no longer inside the mergedParentHitboxRect. */
     private void DeleteInvisibleBlocksHitboxes() {
         Dictionary<Vector2, StaticBody2D> visibleBlocks = new Dictionary<Vector2, StaticBody2D>();
-        Array<Vector2> visibleBlockPoints = GetHitboxVisibilityPoints(mergedParentHitboxRect);
+        Array<Vector2> visibleBlockPoints = GetHitboxBlockVisibilityPoints(mergedParentHitboxRect);
         foreach (Vector2 visibleBlockPoint in visibleBlockPoints)
         {
             if (loadedBlocks.ContainsKey(visibleBlockPoint))
             {
                 Dictionary<String, object> existingBlock = terrain.GetBlockFromWorldPosition(visibleBlockPoint * terrain.GetBlockPixelSize());
-                // TODO check for null?
-                if ((int)existingBlock["id"] == 0) // Don't add collision for air. TODO: use a future is_solid() method
+                // Don't need to check for null as it was only added if the block wasn't null.
+                Debug.Assert(existingBlock != null);
+
+                // If the block is now air, that means the player mined the block while it was loaded.
+                // We continue because we now do not want the block to go back into the visibleBlocks
+                // Dictionary.
+                if ((int)existingBlock["id"] == 0) 
                     continue;
                 
                 visibleBlocks[visibleBlockPoint] = loadedBlocks[visibleBlockPoint];
+
+                // Make sure we did indeed remove a block.
                 bool erased = loadedBlocks.Remove(visibleBlockPoint);
-			    Debug.Assert(erased == true);
+                Debug.Assert(erased);
             }
         }
 
+        // After the loop above, the loadedBlocks Dictionary now only contains blocks
+        // that aren't visible. Thus, we remove them from the Scene Tree.
         foreach (Vector2 invisibleBlock in loadedBlocks.Keys)
         {
             loadedBlocks[invisibleBlock].QueueFree();
+            // loadedBlocks[invisibleBlock].Free();
         }
-
+        
+        // Update the blocks that are loaded.
+        // loadedBlocks = new Dictionary<Vector2, StaticBody2D>(visibleBlocks);
         loadedBlocks = visibleBlocks;
     }
 
-    private Array<Vector2> GetHitboxVisibilityPoints(Rect2 area)
+    /* Returns an Array of points that lie on the block indices contained by the area Rect2. */
+    private Array<Vector2> GetHitboxBlockVisibilityPoints(Rect2 area)
     {
         Vector2 topLeft = (area.Position / terrain.GetBlockPixelSize()).Floor();
         Vector2 bottomRight = ((area.Position + area.Size) / terrain.GetBlockPixelSize()).Floor();
@@ -117,7 +150,8 @@ public class CollisionComponent : Node2D
         // Fixes infinite velocity Portal 2 style
         Vector2 oldParentPosition = parentRigidbody.Position;
         
-        // Let's do the collision in two parts:
+        // Let's do the collision in two parts. This seems to fix many edge case with movement hitting
+        // zero randomly on slopes when sliding.
         Vector2 firstResponse = parentRigidbody.MoveAndSlide(new Vector2(vector.x, 0), Vector2.Up);
         Vector2 secondResponse = parentRigidbody.MoveAndSlide(new Vector2(0, vector.y), Vector2.Up);
         player.SetVelocity(firstResponse + secondResponse);
@@ -136,7 +170,7 @@ public class CollisionComponent : Node2D
     // {
     //     if (mergedParentHitboxRect != null)
     //     {
-    //         foreach (Vector2 point in GetHitboxVisibilityPoints(mergedParentHitboxRect))
+    //         foreach (Vector2 point in GetHitboxBlockVisibilityPoints(mergedParentHitboxRect))
     //         {
     //             Vector2 worldLocation = point * terrain.GetBlockPixelSize();
     //             DrawCircle(worldLocation, 4, new Color(0, 1, 0));
