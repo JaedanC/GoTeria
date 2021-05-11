@@ -18,10 +18,9 @@ var drawn: bool
 var calls: int
 
 
-#func _process(_delta):
-	# Turn this on to see the chunk be streamed in
-#	update()
-#	pass
+func _ready():
+	print("Ran GD")
+	pass
 
 
 

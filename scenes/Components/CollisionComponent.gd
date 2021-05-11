@@ -38,11 +38,11 @@ func create_visible_blocks_hitboxes():
 		if loaded_blocks.has(visible_block_point):
 			continue
 		
-		var existing_block = terrain.get_block_from_world_position(visible_block_point * terrain.block_pixel_size)
+		var existing_block = terrain.GetBlockFromWorldPosition(visible_block_point * terrain.GetBlockPixelSize())
 		if existing_block and existing_block["id"] != 0:
 			var block = block_scene.instance()
 #			var block: Block = Block.new()
-			block.position = visible_block_point * terrain.block_pixel_size + terrain.block_pixel_size / 2
+			block.position = visible_block_point * terrain.GetBlockPixelSize() + terrain.GetBlockPixelSize() / 2
 			add_child(block)
 			loaded_blocks[visible_block_point] = block
 
@@ -50,7 +50,7 @@ func delete_invisible_blocks_hitboxes():
 	var visible_blocks := {}
 	for visible_block_point in get_hitbox_visibility_points(merged_parent_hitbox_rect):
 		if loaded_blocks.has(visible_block_point):
-			var existing_block_data: Dictionary = terrain.get_block_from_world_position(visible_block_point * terrain.block_pixel_size)
+			var existing_block_data: Dictionary = terrain.GetBlockFromWorldPosition(visible_block_point * terrain.GetBlockPixelSize())
 			if existing_block_data["id"] == 0: # Don't add collision for air. TODO: use a future is_solid() method
 				continue
 			visible_blocks[visible_block_point] = loaded_blocks[visible_block_point]
@@ -64,8 +64,8 @@ func delete_invisible_blocks_hitboxes():
 
 func get_hitbox_visibility_points(area: Rect2) -> Array:
 	var visibility_points := []
-	var top_left: Vector2 = (area.position / terrain.block_pixel_size).floor()
-	var bottom_right: Vector2 = ((area.position + area.size) / terrain.block_pixel_size).floor()
+	var top_left: Vector2 = (area.position / terrain.GetBlockPixelSize()).floor()
+	var bottom_right: Vector2 = ((area.position + area.size) / terrain.GetBlockPixelSize()).floor()
 	for i in range(top_left.x, bottom_right.x + 1):
 		for j in range(top_left.y, bottom_right.y + 1):
 			visibility_points.append(Vector2(i, j))
@@ -96,5 +96,5 @@ func move(vector: Vector2):
 #func _draw():
 #	if (merged_parent_hitbox_rect != null):
 #		for point in get_hitbox_visibility_points(merged_parent_hitbox_rect):
-#			var world_location = point * terrain.block_pixel_size
+#			var world_location = point * terrain.GetBlockPixelSize()
 #			draw_circle(world_location, 4, Color(0, 1, 0))

@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=2]
 
-[ext_resource path="res://scenes/Terrain/Terrain.gd" type="Script" id=1]
+[ext_resource path="res://scenes/Terrain/Terrain.cs" type="Script" id=1]
 [ext_resource path="res://pixel_1x1.png" type="Texture" id=2]
 [ext_resource path="res://scenes/Terrain/Lighting.gd" type="Script" id=3]
 [ext_resource path="res://scenes/Terrain/Lighting.shader" type="Shader" id=4]
@@ -11,8 +11,6 @@ shader_param/light_values_size = null
 
 [node name="Terrain" type="Node2D"]
 script = ExtResource( 1 )
-block_pixel_size = Vector2( 16, 16 )
-chunk_block_count = Vector2( 64, 64 )
 
 [node name="Lighting" type="Sprite" parent="."]
 material = SubResource( 1 )

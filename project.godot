@@ -9,11 +9,6 @@
 config_version=4
 
 _global_script_classes=[ {
-"base": "Node2D",
-"class": "Chunk",
-"language": "GDScript",
-"path": "res://scenes/Chunk/Chunk.gd"
-}, {
 "base": "Node",
 "class": "FutureThreadPool",
 "language": "GDScript",
@@ -25,7 +20,6 @@ _global_script_classes=[ {
 "path": "res://addons/thread_pool/thread_pool.gd"
 } ]
 _global_script_class_icons={
-"Chunk": "",
 "FutureThreadPool": "",
 "ThreadPool": ""
 }

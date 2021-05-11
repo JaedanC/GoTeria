@@ -13,13 +13,16 @@ var run_once = false
 func _ready():
 	self.light_image = Image.new()
 	self.light_texture = ImageTexture.new()
-	create_light_image(Color.aqua)
+#	create_light_image(Color.white)
+	
+	set_physics_process(false);
 	
 func _physics_process(_delta):
 	refresh_shader_canvas_size()
 	
-	create_light_image(Color.aqua)
-	refresh_light_image_from_terrain_luminance()
+#	create_light_image(Color.aqua)
+	create_light_image(Color.white)
+#	refresh_light_image_from_terrain_luminance()
 	
 	# Absolute machine killer this function
 #	create_light_image(Color.aqua)
@@ -48,7 +51,7 @@ func _physics_process(_delta):
 	
 
 func create_light_image(fill_colour: Color = Color.red):
-	var light_size = self.scale / terrain.get_block_pixel_size()
+	var light_size = self.scale / terrain.GetBlockPixelSize()
 	
 	var lazy_load = self.light_image == null or light_size.x != self.light_image.get_width() or light_size.y != self.light_image.get_height()
 	
@@ -60,8 +63,8 @@ func create_light_image(fill_colour: Color = Color.red):
 
 func refresh_shader_canvas_size():
 	var chunk_point_corners = player.get_visibility_chunk_position_corners()
-	var chunk_point_top_left_in_pixels = chunk_point_corners[0] * terrain.get_chunk_pixel_dimensions()
-	var chunk_point_bottom_right_in_pixels = (chunk_point_corners[1] + Vector2.ONE) * terrain.get_chunk_pixel_dimensions()
+	var chunk_point_top_left_in_pixels = chunk_point_corners[0] * terrain.GetChunkPixelDimensions()
+	var chunk_point_bottom_right_in_pixels = (chunk_point_corners[1] + Vector2.ONE) * terrain.GetChunkPixelDimensions()
 	
 	self.position = chunk_point_top_left_in_pixels
 	self.scale = chunk_point_bottom_right_in_pixels - chunk_point_top_left_in_pixels
@@ -79,8 +82,8 @@ func min_vector2(first: Vector2, second: Vector2) -> Vector2:
 func refresh_light_image_from_terrain_luminance():
 	var chunk_point_corners = player.get_visibility_chunk_position_corners()
 	
-	var blocks_on_screen = self.scale / terrain.get_block_pixel_size()
-	var top_left_block = chunk_point_corners[0] * terrain.get_chunk_block_count()
+	var blocks_on_screen = self.scale / terrain.GetBlockPixelSize()
+	var top_left_block = chunk_point_corners[0] * terrain.GetChunkBlockCount()
 	
 	# This makes sure we only copy from pixels inside the range of the world at 
 	# the negative x and y values
@@ -95,7 +98,7 @@ func refresh_light_image_from_terrain_luminance():
 	# This makes sure we only copy from pixels inside the range of the world at
 	# the x and y values that are greater than the size of the world
 	blocks_on_screen = min_vector2(
-		terrain.get_world_size() - (top_left_block + top_left_out_of_bounds_offset),
+		terrain.GetWorldSize() - (top_left_block + top_left_out_of_bounds_offset),
 		blocks_on_screen
 	)
 	

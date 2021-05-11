@@ -4,7 +4,7 @@
 [ext_resource path="res://scenes/Player/Camera.gd" type="Script" id=2]
 [ext_resource path="res://scenes/Components/GravityComponent.tscn" type="PackedScene" id=3]
 [ext_resource path="res://addons/smoothing/smoothing_2d.gd" type="Script" id=4]
-[ext_resource path="res://scenes/Player/Player.gd" type="Script" id=5]
+[ext_resource path="res://scenes/Player/Player.cs" type="Script" id=5]
 [ext_resource path="res://scenes/Components/WorldCollisionComponent.tscn" type="PackedScene" id=6]
 
 [sub_resource type="RectangleShape2D" id=1]

@@ -17,20 +17,20 @@ func _process(_delta):
 	
 	if InputLayering.pop_action("click"):
 		var world_position: Vector2 = screen_to_world_position(get_viewport().get_mouse_position())
-		var block = terrain.get_block_from_world_position(world_position)
+		var block = terrain.GetBlockFromWorldPosition(world_position)
 		if block:
 			block["id"] = 1
 			block["colour"] = Color(randf(), randf(), randf(), 1)
 			block["colour"] = Color(0.5, 0.5, 0, 1)
-			terrain.set_block_at_world_position(world_position, block)
+			terrain.SetBlockAtWorldPosition(world_position, block)
 	
 	if InputLayering.pop_action("dig"):
 		var world_position: Vector2 = screen_to_world_position(get_viewport().get_mouse_position())
-		var block = terrain.get_block_from_world_position(world_position)
+		var block = terrain.GetBlockFromWorldPosition(world_position)
 		if block:
 			block["id"] = 0
 			block["colour"] = Color(0, 0, 0, 0)
-			terrain.set_block_at_world_position(world_position, block)
+			terrain.SetBlockAtWorldPosition(world_position, block)
 	
 	update()
 
@@ -101,9 +101,9 @@ func get_visibility_world_position_corners() -> Array:
 	
 	# Use this to temporarily reduce the size of the viewport loading rectangle
 	# to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-	var viewport_modifier := 0.4
+#	var viewport_modifier := 0.4
 #	var viewport_modifier := 0.2
-#	var viewport_modifier := 0
+	var viewport_modifier := 0
 	var size: Vector2 = viewport_rectangle.size * Vector2(viewport_modifier, viewport_modifier)
 	viewport_rectangle = viewport_rectangle.grow_individual(-size.x, -size.y, -size.x, -size.y)
 	
@@ -125,8 +125,8 @@ seen by the player.
 func get_visibility_world_block_position_corners() -> Array:
 	var corners = get_visibility_world_position_corners()
 	var world_block_position_corners = [
-		(corners[0] / terrain.get_block_pixel_size()).floor(),
-		(corners[1] / terrain.get_block_pixel_size()).floor()
+		(corners[0] / terrain.GetBlockPixelSize()).floor(),
+		(corners[1] / terrain.GetBlockPixelSize()).floor()
 	]
 	return world_block_position_corners
 
@@ -137,8 +137,8 @@ the player.
 """
 func get_visibility_chunk_position_corners() -> Array:
 	var world_position_corners = get_visibility_world_position_corners()
-	var chunk_position_top_left = (world_position_corners[0] / terrain.get_chunk_pixel_dimensions()).floor()
-	var chunk_position_bottom_right = (world_position_corners[1] / terrain.get_chunk_pixel_dimensions()).floor()
+	var chunk_position_top_left = (world_position_corners[0] / terrain.GetChunkPixelDimensions()).floor()
+	var chunk_position_bottom_right = (world_position_corners[1] / terrain.GetChunkPixelDimensions()).floor()
 	return [
 		chunk_position_top_left,
 		chunk_position_bottom_right
@@ -214,7 +214,7 @@ func screen_to_world_position(screen_position : Vector2) -> Vector2:
 func _draw():
 #	for point in get_visibility_points():
 #		draw_circle(
-#			point * terrain.get_chunk_pixel_dimensions(),
+#			point * terrain.GetChunkPixelDimensions(),
 #			15,
 #			Color(0, 1, 0, 1)
 #		)
