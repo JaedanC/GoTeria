@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/skinny.png-a4919129f96500614ea60f341db3fed3.stex"
+path="res://.import/pixel_1x1.png-ad6d6336e077d7126d7cf885c63aaa35.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://skinny.png"
-dest_files=[ "res://.import/skinny.png-a4919129f96500614ea60f341db3fed3.stex" ]
+source_file="res://assets/pixel_1x1.png"
+dest_files=[ "res://.import/pixel_1x1.png-ad6d6336e077d7126d7cf885c63aaa35.stex" ]
 
 [params]
 
@@ -20,7 +20,7 @@ compress/hdr_mode=0
 compress/bptc_ldr=0
 compress/normal_map=0
 flags/repeat=0
-flags/filter=false
+flags/filter=true
 flags/mipmaps=false
 flags/anisotropic=false
 flags/srgb=2

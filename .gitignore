@@ -1,3 +1,4 @@
 .import
-big_noise*
-shaders
+.vs
+.mono
+.vscode

@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/medium.png-9ccb3e345a102ba149c79fbfbcb96adf.stex"
+path="res://.import/medium.png-d3a2ef49ca1ebc5d2ffd82ad6f25f453.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://medium.png"
-dest_files=[ "res://.import/medium.png-9ccb3e345a102ba149c79fbfbcb96adf.stex" ]
+source_file="res://saves/worlds/medium.png"
+dest_files=[ "res://.import/medium.png-d3a2ef49ca1ebc5d2ffd82ad6f25f453.stex" ]
 
 [params]
 

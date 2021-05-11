@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/LargeWorldAlpha.png-db2e8ccd6bbcd8267674a35c0cee0d48.stex"
+path="res://.import/tree.png-bf64094b89302dd1be83aa5edf9988ef.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://LargeWorldAlpha.png"
-dest_files=[ "res://.import/LargeWorldAlpha.png-db2e8ccd6bbcd8267674a35c0cee0d48.stex" ]
+source_file="res://assets/tree.png"
+dest_files=[ "res://.import/tree.png-bf64094b89302dd1be83aa5edf9988ef.stex" ]
 
 [params]
 

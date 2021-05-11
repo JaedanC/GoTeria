@@ -145,8 +145,8 @@ public class Player : Node2D
 		
 		// Use this to temporarily reduce the size of the viewport loading rectangle
 		// to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-		// float viewportModifier = 0.4f;
-		// float viewportModifier = 0.2f;
+		//float viewportModifier = 0.4f;
+		//float viewportModifier = 0.2f;
 		float viewportModifier = 0f;
 		Vector2 size = viewportRectangle.Size * new Vector2(viewportModifier, viewportModifier);
 		viewportRectangle = viewportRectangle.GrowIndividual(-size.x, -size.y, -size.x, -size.y);
@@ -235,6 +235,16 @@ public class Player : Node2D
 	public KinematicBody2D GetRigidbody()
 	{
 		return rigidbody;
+	}
+
+	public Vector2 GetVelocity()
+	{
+		return velocity;
+	}
+
+	public void SetVelocity(Vector2 velocity)
+	{
+		this.velocity = velocity;
 	}
 
 	/* This returns the player's position, which is actually the smoothing sprite's

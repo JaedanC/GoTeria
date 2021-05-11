@@ -20,8 +20,6 @@ public class Chunk : Node2D
     private bool loaded;
     private bool drawn;
 
-    public Chunk() {}
-
     /* This function is the constructor of the chunk. Remember, since chunks are
     going to be reused, the variables that need to be set once should be placed in
     here. For example, the Mutex should not be changed in the event that the
@@ -44,7 +42,6 @@ public class Chunk : Node2D
     public override void _Ready()
     {
         terrain = GetTree().Root.GetNode<Terrain>("WorldSpawn/Terrain");
-        GD.Print("Ran Mono");
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */

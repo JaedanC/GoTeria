@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/solid.png-2f68e1a72743244ae201bebc8da36e49.stex"
+path="res://.import/LargeWorld.png-7ff9ba4319ceedc3bd23fc0248c9872d.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://solid.png"
-dest_files=[ "res://.import/solid.png-2f68e1a72743244ae201bebc8da36e49.stex" ]
+source_file="res://saves/worlds/LargeWorld.png"
+dest_files=[ "res://.import/LargeWorld.png-7ff9ba4319ceedc3bd23fc0248c9872d.stex" ]
 
 [params]
 

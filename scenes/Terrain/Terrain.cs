@@ -10,7 +10,7 @@ public class Terrain : Node2D
     // [Export]
     private Vector2 chunkBlockCount;
 
-    private Godot.Object threadPool;
+    private ThreadPool threadPool;
     private Player player;
     private Godot.Object lighting;
     private Godot.Object inputLayering;
@@ -34,7 +34,7 @@ public class Terrain : Node2D
     public override void _Ready()
     {
         blockPixelSize = new Vector2(16, 16);
-        chunkBlockCount = new Vector2(128, 128);
+        chunkBlockCount = new Vector2(256, 256);
 
         if (blockPixelSize.x == 0 || blockPixelSize.y == 0)
         {
@@ -52,20 +52,19 @@ public class Terrain : Node2D
         lightlyLoadingBlocksChunks = new Dictionary<Vector2, Chunk>();
         deactivatedAndReusableChunks = new Array<Chunk>();
 
-        threadPool = GetNode<Godot.Object>("ThreadPool");
+        threadPool = GetNode<ThreadPool>("ThreadPool");
         player = GetNode<Player>("/root/WorldSpawn/Player");
         lighting = GetNode<Godot.Object>("Lighting");
         inputLayering = GetTree().Root.GetNode("InputLayering");
 
-        // Texture worldTexture = (Texture)GD.Load("res://save_image.png");
-        // Texture worldTexture = (Texture)GD.Load("res://blocks.png");
-        // Texture worldTexture = (Texture)GD.Load("res://LargeWorld.png");
-        Texture worldTexture = (Texture)GD.Load("res://LargeWorldAlpha.png");
-        // Texture worldTexture = (Texture)GD.Load("res://solid.png");
-        // Texture worldTexture = (Texture)GD.Load("res://skinny.png");
-        // Texture worldTexture = (Texture)GD.Load("res://small.png");
-        // Texture worldTexture = (Texture)GD.Load("res://medium.png");
-        // Texture worldTexture = (Texture)GD.Load("res://hd.png");
+        // TODO: dynamically load the world
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/save_image.png");
+        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorld.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/small.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/medium.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/hd.png");
         worldImage = worldTexture.GetData();
         worldImage.Lock();
 
@@ -157,7 +156,7 @@ public class Terrain : Node2D
         deactivatedAndReusableChunks.Add(chunk);
     }
 
-    private Vector2 GetChunkData(Array<object> data)
+    public Vector2 GetChunkData(Array<object> data)
     {
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
@@ -424,7 +423,7 @@ public class Terrain : Node2D
             Array<object> chunkData = new Array<object>{};
             chunkData.Add(chunkPoint);
             chunkData.Add(chunk);
-            threadPool.Call("submit_task", this, "GetChunkData", chunkData, "chunk", chunkPoint);
+            threadPool.SubmitTask(this, "GetChunkData", chunkData, "chunk", chunkPoint);
         }
 
         // Next, we obtain the completed blocks that have loaded and start the
@@ -432,17 +431,17 @@ public class Terrain : Node2D
         // blocks have been done as they are required to be completed by now.
         foreach (Vector2 chunkPosition in forceLoad)
         {
-            threadPool.Call("wait+for_task_specific", chunkPosition);
+            threadPool.WaitForTaskSpecific(chunkPosition);
             // Now all tasks that need to be done should be ready
         }
         
         // Obtain the tasks completed that has the chunks that are being
         // loaded inside the thread pool. If they have completed, then we can send
         // this data to the chunk to automatically mark it as completed.
-        Godot.Collections.Array completedChunkTasks = (Godot.Collections.Array)threadPool.Call("fetch_finished_tasks_by_tag", "chunk");
-        foreach (Godot.Object completedChunkTask in completedChunkTasks)
+        Godot.Collections.Array completedChunkTasks = (Godot.Collections.Array)threadPool.FetchFinishedTasksByTag("chunk");
+        foreach (Task completedChunkTask in completedChunkTasks)
         {
-            Vector2 chunkPoint = (Vector2)completedChunkTask.Call("get_result");
+            Vector2 chunkPoint = (Vector2)completedChunkTask.GetResult();
             // In the case that the chunk has already been freed, don't assign the
             // chunk any data.
             if (!loadedChunks.ContainsKey(chunkPoint))

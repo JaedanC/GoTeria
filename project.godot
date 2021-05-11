@@ -28,7 +28,7 @@ _global_script_class_icons={
 
 config/name="Teria"
 run/main_scene="res://scenes/WorldSpawn/WorldSpawn.tscn"
-config/icon="res://icon.png"
+config/icon="res://assets/tree.png"
 
 [autoload]
 
@@ -41,11 +41,12 @@ gdscript/warnings/integer_division=false
 
 [display]
 
+window/size/fullscreen=true
 window/vsync/use_vsync=false
 
 [editor_plugins]
 
-enabled=PoolStringArray( "smoothing", "thread_pool" )
+enabled=PoolStringArray( "res://addons/smoothing/plugin.cfg" )
 
 [input]
 

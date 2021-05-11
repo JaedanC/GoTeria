@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/pixel_1x1.png-b1291bd6202557c6f4cc77ef3e8fd70e.stex"
+path="res://.import/small.png-9efc0a5bc5a6c3781ac232132f500e54.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://pixel_1x1.png"
-dest_files=[ "res://.import/pixel_1x1.png-b1291bd6202557c6f4cc77ef3e8fd70e.stex" ]
+source_file="res://saves/worlds/small.png"
+dest_files=[ "res://.import/small.png-9efc0a5bc5a6c3781ac232132f500e54.stex" ]
 
 [params]
 

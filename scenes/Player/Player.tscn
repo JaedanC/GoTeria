@@ -1,11 +1,11 @@
 [gd_scene load_steps=8 format=2]
 
-[ext_resource path="res://icon.png" type="Texture" id=1]
-[ext_resource path="res://scenes/Player/Camera.gd" type="Script" id=2]
+[ext_resource path="res://assets/icon.png" type="Texture" id=1]
+[ext_resource path="res://scenes/Player/Camera.cs" type="Script" id=2]
 [ext_resource path="res://scenes/Components/GravityComponent.tscn" type="PackedScene" id=3]
 [ext_resource path="res://addons/smoothing/smoothing_2d.gd" type="Script" id=4]
 [ext_resource path="res://scenes/Player/Player.cs" type="Script" id=5]
-[ext_resource path="res://scenes/Components/WorldCollisionComponent.tscn" type="PackedScene" id=6]
+[ext_resource path="res://scenes/Components/CollisionComponent.tscn" type="PackedScene" id=6]
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 32, 32 )
@@ -38,6 +38,5 @@ drag_margin_bottom = 0.0
 script = ExtResource( 2 )
 
 [node name="GravityComponent" parent="." instance=ExtResource( 3 )]
-enabled = false
 
 [node name="CollisionComponent" parent="." instance=ExtResource( 6 )]
