@@ -15,6 +15,8 @@ public class Player : Node2D
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+		Name = "Player";
+
         terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
         rigidbody = GetNode<KinematicBody2D>("Rigidbody");
         smoothing = GetNode<Godot.Object>("Smoothing");
@@ -91,6 +93,10 @@ public class Player : Node2D
 		{
 			velocity = Vector2.Zero;
 		}
+		if ((bool)inputLayering.Call("poll_action", "debug"))
+		{
+			PrintStrayNodes();
+		}
     }
 
     public override void _Input(InputEvent @event)
@@ -145,9 +151,9 @@ public class Player : Node2D
 		
 		// Use this to temporarily reduce the size of the viewport loading rectangle
 		// to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-		//float viewportModifier = 0.4f;
+		float viewportModifier = 0.4f;
 		//float viewportModifier = 0.2f;
-		float viewportModifier = 0f;
+		// float viewportModifier = 0f;
 		Vector2 size = viewportRectangle.Size * new Vector2(viewportModifier, viewportModifier);
 		viewportRectangle = viewportRectangle.GrowIndividual(-size.x, -size.y, -size.x, -size.y);
 		

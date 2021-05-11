@@ -47,5 +47,5 @@ script = ExtResource( 5 )
 
 [node name="Terrain" parent="." instance=ExtResource( 7 )]
 
-[node name="ThreadPool" type="Node" parent="Terrain"]
+[node name="ThreadPool" type="Node" parent="."]
 script = ExtResource( 8 )

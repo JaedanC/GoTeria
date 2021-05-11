@@ -3,8 +3,9 @@ using Godot.Collections;
 using System;
 using System.Diagnostics;
 
-public class Chunk : Node2D
+public class Chunk : Node2D, IResettable
 {
+    
     private Terrain terrain;
 
     private Image worldImage;
@@ -20,23 +21,10 @@ public class Chunk : Node2D
     private bool loaded;
     private bool drawn;
 
-    /* This function is the constructor of the chunk. Remember, since chunks are
-    going to be reused, the variables that need to be set once should be placed in
-    here. For example, the Mutex should not be changed in the event that the
-    previous Mutex had not opened up yet. self.blocks is in here because these will
-    be changed in the stream method anyway. Assigning the variable a new Dictionary
-    is an expensive operation because all its blocks are dellocated on the main
-    thread. */
-    public Chunk(Image worldImage, Vector2 chunkPosition, Vector2 blockCount, Vector2 blockPixelSize)
+    public Chunk()
     {
-        this.worldImage = worldImage;
-        this.blockCount = blockCount;
-        this.blockPixelSize = blockPixelSize;
         chunkTexture = new ImageTexture();
-        int blocksInChunk = (int)(blockCount.x * blockCount.y);
-        blocks = new Dictionary<String, object>[blocksInChunk];
-
-        Reset(chunkPosition);
+        Name = "Chunk";
     }
 
     public override void _Ready()
@@ -45,9 +33,16 @@ public class Chunk : Node2D
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */
-    public void Reset(Vector2 chunkPosition)
+    // public void Reset(Vector2 chunkPosition)
+    public void Reset(object[] parameters)
     {
-        this.chunkPosition = chunkPosition;
+        worldImage =        (Image)parameters[0];
+        chunkPosition =     (Vector2)parameters[1];
+        blockCount =        (Vector2)parameters[2];
+        blockPixelSize =    (Vector2)parameters[3];
+
+        int blocksInChunk = (int)(blockCount.x * blockCount.y);
+        blocks = new Dictionary<String, object>[blocksInChunk];
         Position = blockPixelSize * chunkPosition * blockCount;
         volatileStreaming = 0;
         loaded = false;
@@ -85,7 +80,7 @@ public class Chunk : Node2D
 
     public void ObtainChunkData(Array<Dictionary<String, object>> blocks, Image chunkImage)
     {
-        this.blocks = new Dictionary<String, object>[(int)blockCount.x * (int)blockCount.y];
+        // this.blocks = new Dictionary<String, object>[(int)blockCount.x * (int)blockCount.y];
         
         for (int i = 0; i < blocks.Count; i++)
         {

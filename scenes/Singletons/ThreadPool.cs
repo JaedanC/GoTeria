@@ -19,6 +19,8 @@ public class ThreadPool : Node
 
     public override void _Ready()
     {
+        Name = "ThreadPool";
+
         __tasks = new Array<Task>();
         __started = false;
         __finished = false;

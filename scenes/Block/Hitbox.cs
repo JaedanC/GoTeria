@@ -5,6 +5,7 @@ public class Hitbox : CollisionShape2D
 {
     public override void _Ready()
     {
+        Name = "BlockHitbox";
         RectangleShape2D shape = (RectangleShape2D)Shape;
         Terrain terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
         shape.Extents = terrain.GetBlockPixelSize() / 2;

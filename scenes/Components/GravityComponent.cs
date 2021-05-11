@@ -5,6 +5,11 @@ public class GravityComponent : Node2D
 {
     private bool enabled = false;
 
+    public override void _Ready()
+    {
+        Name = "GravityComponent";
+    }
+
     // Called when the node enters the scene tree for the first time.
     public override void _PhysicsProcess(float _delta)
     {

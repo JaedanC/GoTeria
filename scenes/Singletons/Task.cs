@@ -3,7 +3,7 @@ using Godot.Collections;
 using System;
 using System.Linq;
 
-public class Task : Node
+public class Task : Resource
 {
     private object targetInstance;
     private String targetMethod;
@@ -28,11 +28,6 @@ public class Task : Node
         result = null;
     }
 
-    public override void _Ready()
-    {
-        
-    }
-    
     public object GetTag()
     {
         return tag;

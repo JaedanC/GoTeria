@@ -20,6 +20,8 @@ public class CollisionComponent : Node2D
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        Name = "CollisionComponent";
+
         terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
         player = GetParent<Player>();
         parentRigidbody = player.GetNode<KinematicBody2D>("Rigidbody");
