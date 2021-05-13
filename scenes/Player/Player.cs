@@ -3,61 +3,56 @@ using Godot.Collections;
 using System;
 using System.Diagnostics;
 
-public class Player : Node2D
+public class Player : Node2D, ICollidable
 {   
-    private Terrain terrain;
-    private KinematicBody2D rigidbody;
-	private Godot.Object smoothing;
-	private Camera2D camera;
-	private InputLayering inputLayering;
+	private const float _ZOOM_CLAMP = 10f;
+    private Terrain _terrain;
+	private Godot.Object _smoothing;
+	private Camera2D _camera;
+	private InputLayering _inputLayering;
+    private KinematicBody2D _rigidBody;
+	private CollisionShape2D _hitbox;
+	
+	private Vector2 _velocity;
+	public Vector2 Velocity { get {	return _velocity; } set { _velocity = value; } }
 
-	private Vector2 velocity;
+	/* Hide the player's position with the smoothing one. This returns the player's position
+	(which is actually the smoothing sprite's location) if you want the player's position on
+	any frame other than a physics frame. This is an linear interpolated Vector2. */
+	new public Vector2 Position { get { return (Vector2)_smoothing.Get("position"); } }
+
+
 
     public override void _Ready()
     {
 		Name = "Player";
 
-        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
-        rigidbody = GetNode<KinematicBody2D>("Rigidbody");
-        smoothing = GetNode<Godot.Object>("Smoothing");
-        camera = GetNode<Camera2D>("Smoothing/Camera");
-        inputLayering = GetNode<InputLayering>("/root/InputLayering");
-
-		velocity = Vector2.Zero;
+        _terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
+        _rigidBody = GetNode<KinematicBody2D>("RigidBody");
+        _hitbox = _rigidBody.GetNode<CollisionShape2D>("Hitbox");
+        _smoothing = GetNode<Godot.Object>("Smoothing");
+        _camera = GetNode<Camera2D>("Smoothing/Camera");
+        _inputLayering = GetNode<InputLayering>("/root/InputLayering");
+		_velocity = Vector2.Zero;
     }
 
 	public override void _Process(float delta)
 	{
-		// The 'player' node does not actually change. Rather the rigidbody and the smoothing
-		// sprite move.
-		Debug.Assert(Position == Vector2.Zero, "Player position must stay at (0, 0).");
-
-		if (inputLayering.PopAction("zoom_reset"))
-			camera.Zoom = Vector2.Zero;
+		if (_inputLayering.PopAction("zoom_reset"))
+			_camera.Zoom = Vector2.Zero;
 		
-		if (inputLayering.PopAction("click"))
+		if (_inputLayering.PopAction("click"))
 		{
 			Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
-			Dictionary<String, object> block = terrain.GetBlockFromWorldPosition(worldPosition);
-			if (block != null)
-			{
-				block["id"] = 1;
-				// block["colour"] = new Color(GD.Randf(), GD.Randf(), GD.Randf(), 1);
-				block["colour"] = new Color(1, 1, 0, 1);
-			}
-			terrain.SetBlockAtWorldPosition(worldPosition, block);
+			Block newBlock = new Block(1, new Color(1, 1, 0, 1));
+			_terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
 		}
 
-		if (inputLayering.PopAction("dig"))
+		if (_inputLayering.PopAction("dig"))
 		{
 			Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
-			Dictionary<String, object> block = terrain.GetBlockFromWorldPosition(worldPosition);
-			if (block != null)
-			{
-				block["id"] = 0;
-				block["colour"] = new Color(0, 0, 0, 0);
-			}
-			terrain.SetBlockAtWorldPosition(worldPosition, block);
+			Block newBlock = new Block(0, new Color(0, 0, 0, 0));
+			_terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
 		}
 
 		Update();
@@ -65,31 +60,31 @@ public class Player : Node2D
 
     public override void _PhysicsProcess(float delta)
     {
-		if (inputLayering.PopAction("move_left"))
+		if (_inputLayering.PopAction("move_left"))
 		{
-			velocity.x -= 50;
+			_velocity.x -= 50;
 		}
-		if (inputLayering.PopAction("move_right"))
+		if (_inputLayering.PopAction("move_right"))
 		{
-			velocity.x += 50;
+			_velocity.x += 50;
 		}
-		if (inputLayering.PopAction("move_up"))
+		if (_inputLayering.PopAction("move_up"))
 		{
-			velocity.y -= 50;
+			_velocity.y -= 50;
 		}
-		if (inputLayering.PopAction("move_down"))
+		if (_inputLayering.PopAction("move_down"))
 		{
-			velocity.y += 50;
+			_velocity.y += 50;
 		}
-		if (inputLayering.PopAction("jump"))
+		if (_inputLayering.PopAction("jump"))
 		{
-			velocity.y = -1000;
+			_velocity.y = -1000;
 		}
-		if (inputLayering.PopAction("brake"))
+		if (_inputLayering.PopAction("brake"))
 		{
-			velocity = Vector2.Zero;
+			_velocity = Vector2.Zero;
 		}
-		if (inputLayering.PollActionPressed("debug"))
+		if (_inputLayering.PollActionPressed("debug"))
 		{
 			GD.Print("Printing Stray Nodes:");
 			PrintStrayNodes();
@@ -99,17 +94,17 @@ public class Player : Node2D
     public override void _Input(InputEvent @event)
     {
         if (@event.IsActionPressed("zoom_in"))
-			camera.Zoom += new Vector2(0.5f, 0.5f);
+			_camera.Zoom += new Vector2(0.5f, 0.5f);
 
 		if (@event.IsActionPressed("zoom_out"))
-			camera.Zoom -= new Vector2(0.5f, 0.5f);
+			_camera.Zoom -= new Vector2(0.5f, 0.5f);
 
 		if (@event.IsActionPressed("quit"))
 			GetTree().Quit();
 		
-		camera.Zoom = new Vector2(
-			Mathf.Clamp(camera.Zoom.x, 1, 10),
-			Mathf.Clamp(camera.Zoom.y, 1, 10)
+		_camera.Zoom = new Vector2(
+			Mathf.Clamp(_camera.Zoom.x, 1, _ZOOM_CLAMP),
+			Mathf.Clamp(_camera.Zoom.y, 1, _ZOOM_CLAMP)
 		);
     }
 
@@ -129,7 +124,8 @@ public class Player : Node2D
 	public Array<Vector2> GetVisibilityWorldPositionCorners()
 	{
 		// Grab important data
-		Vector2 smoothedPosition = GetPlayerPosition();
+		// Vector2 smoothedPosition = GetPlayerPosition();
+		Vector2 smoothedPosition = Position;
 		Rect2 viewportRectangle = GetViewportRect();
 		
 		// Using the viewport rectangle as a base, centre a copy of it around the player.
@@ -157,8 +153,7 @@ public class Player : Node2D
 		Vector2 topLeft = viewportRectangle.Position;
 		Vector2 bottomRight = viewportRectangle.Position + viewportRectangle.Size;
 
-		Array<Vector2> corners = new Array<Vector2>(topLeft, bottomRight);
-		return corners;
+		return new Array<Vector2>(topLeft, bottomRight);
 	}
 	
 	/* This function is similar to GetVisibilityWorldPositionCorners() but this
@@ -168,11 +163,10 @@ public class Player : Node2D
 	public Array<Vector2> GetVisibilityWorldBlockPositionCorners()
 	{
 		Array<Vector2> corners = GetVisibilityWorldPositionCorners();
-		Array<Vector2> worldBlockPositionCorners = new Array<Vector2>(
-			(corners[0] / terrain.GetBlockPixelSize()).Floor(),
-			(corners[1] / terrain.GetBlockPixelSize()).Floor()
+		return new Array<Vector2>(
+			(corners[0] / _terrain.BlockPixelSize).Floor(),
+			(corners[1] / _terrain.BlockPixelSize).Floor()
 		);
-		return worldBlockPositionCorners;
 	}
 
 	/* This function is similar to GetVisibilityWorldPositionCorners but instead it
@@ -181,10 +175,9 @@ public class Player : Node2D
 	public Array<Vector2> GetVisibilityChunkPositionCorners()
 	{
 		Array<Vector2> worldPositionCorners = GetVisibilityWorldPositionCorners();
-		var chunkPositionTopLeft = (worldPositionCorners[0] / terrain.GetChunkPixelDimensions()).Floor();
-		var chunkPositionBottomRight = (worldPositionCorners[1] / terrain.GetChunkPixelDimensions()).Floor();
-		Array<Vector2> chunkPositionCorners = new Array<Vector2>(chunkPositionTopLeft, chunkPositionBottomRight);
-		return chunkPositionCorners;
+		var chunkPositionTopLeft = (worldPositionCorners[0] / _terrain.ChunkPixelDimensions).Floor();
+		var chunkPositionBottomRight = (worldPositionCorners[1] / _terrain.ChunkPixelDimensions).Floor();
+		return new Array<Vector2>(chunkPositionTopLeft, chunkPositionBottomRight);
 	}
 
 	/* This function returns an Array of chunk positions that are contained by the
@@ -240,40 +233,16 @@ public class Player : Node2D
 		}
 		return visibilityPoints;
 	}
-
-	/* Return the rigidbody position of the Player. This is the position you should use in physics
-	calculations of the player. */
-	public KinematicBody2D GetRigidbody()
-	{
-		return rigidbody;
-	}
-
-	/* Returns the velocity of the player. This Vector2 is added to the Player's position every
-	physics frame. */
-	public Vector2 GetVelocity()
-	{
-		return velocity;
-	}
-
-	/* Sets the velocity of the player.This Vector2 is added to the Player's position every
-	physics frame. */
-	public void SetVelocity(Vector2 velocity)
-	{
-		this.velocity = velocity;
-	}
-
-	/* This returns the player's position (which is actually the smoothing sprite's
-	location) if you want the player's position on any frame other than a physics
-	frame. This is an linear interpolated Vector2. */
-	public Vector2 GetPlayerPosition()
-	{
-		return (Vector2)smoothing.Get("position");
-	}
+	
+	// public Vector2 GetPlayerPosition()
+	// {
+	// 	return (Vector2)_smoothing.Get("position");
+	// }
 
 	/* This function returns the zoom factor of the player's camera. */
 	public Vector2 GetCameraZoom()
 	{
-		return camera.Zoom;
+		return _camera.Zoom;
 	}
 
 	/* This function converts a screen position to a world position.
@@ -281,8 +250,19 @@ public class Player : Node2D
 		of the mouse is supplied to Godot as a screen position. */
 	public Vector2 ScreenToWorldPosition(Vector2 screenPosition)
 	{
-		Vector2 worldPosition = GetPlayerPosition() + screenPosition * GetCameraZoom();
+		// Vector2 worldPosition = GetPlayerPosition() + screenPosition * GetCameraZoom();
+		Vector2 worldPosition = Position + screenPosition * GetCameraZoom();
 		return worldPosition - GetCameraZoom() * GetViewportRect().Size / 2;
+	}
+
+	public KinematicBody2D GetRigidBody()
+	{
+		return _rigidBody;
+	}
+
+	public CollisionShape2D GetHitbox()
+	{
+		return _hitbox;
 	}
 
     public override void _Draw()
@@ -304,7 +284,7 @@ public class Player : Node2D
 
         DrawLine(
             ScreenToWorldPosition(GetViewport().Size/2),
-            ScreenToWorldPosition(GetViewport().Size/2 + velocity / 10),
+            ScreenToWorldPosition(GetViewport().Size/2 + Velocity / 10),
             new Color(1, 0, 0)
         );
     }

@@ -5,85 +5,74 @@ using System.Diagnostics;
 
 public class Chunk : Node2D, IResettable
 {
-    private Terrain terrain;
-    private Image worldImage;
-    private Image chunkImage;
-    private ImageTexture chunkTexture;
-    private int volatileStreaming;
+    private Terrain _terrain;
+    private Image _worldImage;
+    private Image _chunkImage;
+    private readonly ImageTexture _chunkTexture;
+    private Vector2 _chunkPosition;
+    private Vector2 _blockCount;
+    private Vector2 _blockPixelSize;
+    private Block[] _blocks;
+    private bool _locked;
+    private bool _drawn;
 
-    private Vector2 chunkPosition;
-    private Vector2 blockCount;
-    private Vector2 blockPixelSize;
-
-    private Dictionary<String, object>[] blocks;
-    private bool loaded;
-    private bool drawn;
+    public Image ChunkImage { get { return _chunkImage; } }
+    public Vector2 ChunkPosition { get { return _chunkPosition; } }
+    public Block[] Blocks { get { return _blocks; } }
+    public bool Locked
+    {
+        get { return _locked; } 
+        set
+        {
+            if (value)
+            {
+                Debug.Assert(!_locked);
+            }
+            _locked = value;
+        }
+    }
+    public bool Loaded { get; set; }
+    /* This variable is true only after a chunk has been fully loaded AND then drawn.
+    This is so the chunks draw call is cached and the terrain knows not to try
+    and draw this chunk to the screen again. */
+    public bool Drawn { get { return _drawn; } }
+    public bool MemoryAllocated { get; set; }
+    
 
     public Chunk()
     {
-        chunkTexture = new ImageTexture();
         Name = "Chunk";
+        _chunkTexture = new ImageTexture();
     }
 
     public override void _Ready()
     {
-        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
+        _terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */
-    // public void Reset(Vector2 chunkPosition)
     public void Reset(object[] parameters)
     {
-        worldImage =        (Image)parameters[0];
-        chunkPosition =     (Vector2)parameters[1];
-        blockCount =        (Vector2)parameters[2];
-        blockPixelSize =    (Vector2)parameters[3];
-
-        int blocksInChunk = (int)(blockCount.x * blockCount.y);
-        blocks = new Dictionary<String, object>[blocksInChunk];
-        Position = blockPixelSize * chunkPosition * blockCount;
-        volatileStreaming = 0;
-        loaded = false;
-        drawn = false;
+        _worldImage = (Image)parameters[0];
+        _chunkPosition = (Vector2)parameters[1];
+        _blockCount = (Vector2)parameters[2];
+        _blockPixelSize = (Vector2)parameters[3];
+        Loaded = false;
+        _locked = false;
+        _drawn = false;
+        Position = _blockPixelSize * _chunkPosition * _blockCount;
     }
 
-    // public override void _Process(float delta)
-    // {
-    //     Update();
-    // }
-
-    public void Lock()
+    /* This function should only be run once. This initialises a chunk to have the memory it requires
+    to be allocated on the heap. */ 
+    public void AllocateMemory(int blocksInChunk)
     {
-        Debug.Assert(volatileStreaming == 0);
-        volatileStreaming += 1;
+        _blocks = new Block[blocksInChunk];
+        _chunkImage = new Image();
+        _chunkImage.Create((int)_blockCount.x, (int)_blockCount.y, false, Image.Format.Rgba8);
+        MemoryAllocated = true;
     }
 
-    public bool IsLocked()
-    {
-        return volatileStreaming > 0;
-    }
-
-    public bool IsLoaded()
-    {
-        return loaded;
-    }
-
-    /* This function is true only after a chunk has been fully loaded AND then drawn.
-    This is so the chunks draw call is cached and the terrain knows not to try
-    and draw this chunk to the screen again. */
-    public bool IsDrawn()
-    {
-        return drawn;
-    }
-
-    public void ObtainChunkData(Dictionary<String, object>[] blocks, Image chunkImage)
-    {
-        this.blocks = blocks;
-        this.chunkImage = chunkImage;
-        loaded = true;
-    }
-
-    
     /* This method will save all the data in a chunk to disk. Currently it is being
     done using compression, however this can be changed below. TODO: Change this
     to take in a parameter as a save destination. Currently it's hardcoded. */
@@ -97,11 +86,11 @@ public class Chunk : Node2D, IResettable
         // size heavily depends on how varied the data is stored between blocks.
         File chunkFile = new File();
         // chunk.Open("user://chunk_data/%s.dat" % worldPosition, File.Write);
-        chunkFile.OpenCompressed(String.Format("user://chunk_data/{0}.dat", chunkPosition), File.ModeFlags.Write, File.CompressionMode.Zstd);
+        chunkFile.OpenCompressed(String.Format("user://chunk_data/{0}.dat", _chunkPosition), File.ModeFlags.Write, File.CompressionMode.Zstd);
         
         // Save all chunk data in here
-        for (int i = 0; i < blockCount.x; i++)
-        for (int j = 0; j < blockCount.y; j++)
+        for (int i = 0; i < _blockCount.x; i++)
+        for (int j = 0; j < _blockCount.y; j++)
         {
             float randomNumber = Mathf.Floor(Convert.ToSingle(GD.RandRange(0, 5)));
             chunkFile.Store16(Convert.ToUInt16(randomNumber));
@@ -114,71 +103,47 @@ public class Chunk : Node2D, IResettable
     run after all the blocks have been loaded.*/
     private void DrawChunk()
     {
-        if (!IsLoaded())
+        if (!Loaded)
             return;
-        drawn = true;
+        _drawn = true;
 
-        chunkTexture.CreateFromImage(chunkImage, (int)Texture.FlagsEnum.Mipmaps | (int)Texture.FlagsEnum.AnisotropicFilter);
-        DrawSetTransform(Vector2.Zero, 0, blockPixelSize);
-        DrawTexture(chunkTexture, Vector2.Zero);
+        _chunkTexture.CreateFromImage(ChunkImage, (int)Texture.FlagsEnum.Mipmaps | (int)Texture.FlagsEnum.AnisotropicFilter);
+        DrawSetTransform(Vector2.Zero, 0, _blockPixelSize);
+        DrawTexture(_chunkTexture, Vector2.Zero);
         DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
 
     private bool IsValidBlockPosition(Vector2 blockPosition)
     {
-    	return !(blockPosition.x < 0 || blockPosition.x >= blockCount.x || 
-			    blockPosition.y < 0 || blockPosition.y >= blockCount.y);
+    	return !(blockPosition.x < 0 || blockPosition.x >= _blockCount.x || 
+			    blockPosition.y < 0 || blockPosition.y >= _blockCount.y);
     }
 
     public int BlockPositionToBlockIndex(Vector2 blockPosition)
     {
-	    return (int)(blockCount.x * blockPosition.y + blockPosition.x);
+	    return (int)(_blockCount.x * blockPosition.y + blockPosition.x);
     }
 
-    public Dictionary<String, object> GetBlockFromBlockPosition(Vector2 blockPosition)
+    public Block GetBlockFromBlockPosition(Vector2 blockPosition)
     {
         if (!IsValidBlockPosition(blockPosition))
             return null;
-        return blocks[BlockPositionToBlockIndex(blockPosition)];
+        return _blocks[BlockPositionToBlockIndex(blockPosition)];
     }
 
-    public void SetBlockFromBlockPosition(Vector2 blockPosition, Dictionary<String, object> newBlock)
+    public void SetBlockFromBlockPosition(Vector2 blockPosition, Block newBlock)
     {
         if (!IsValidBlockPosition(blockPosition))
             return;
 
-        blocks[BlockPositionToBlockIndex(blockPosition)] = newBlock;
-        chunkImage.Lock();
-        if ((int)newBlock["id"] == 0)
-            chunkImage.SetPixelv(blockPosition, new Color(0, 0, 0, 0));
+        _blocks[BlockPositionToBlockIndex(blockPosition)] = newBlock;
+        _chunkImage.Lock();
+        if (newBlock.IsSolid())
+            _chunkImage.SetPixelv(blockPosition, newBlock.Colour);
         else
-            chunkImage.SetPixelv(blockPosition, (Color)newBlock["colour"]);
-        chunkImage.Unlock();
+            _chunkImage.SetPixelv(blockPosition, new Color(0, 0, 0, 0));
+        _chunkImage.Unlock();
         Update();
-    }
-
-    private void SetBlockColourFromInt(int x, int y, Color colour)
-    {
-        SetBlockColour(new Vector2(x, y), colour);
-    }
-
-    private void SetBlockColour(Vector2 blockPosition, Color colour)
-    {
-        Dictionary<String, object> block = GetBlockFromBlockPosition(blockPosition);
-        if (block == null)
-            return;
-        
-        block.Add("colour", colour);
-
-        chunkImage.Lock();
-        chunkImage.SetPixelv(blockPosition, colour);
-        chunkImage.Unlock();
-        Update();
-    }
-
-    public Vector2 GetChunkPosition()
-    {
-        return chunkPosition;
     }
 
     public override void _Draw()

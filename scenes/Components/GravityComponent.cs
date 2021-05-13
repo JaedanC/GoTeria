@@ -16,8 +16,8 @@ public class GravityComponent : Node2D
     {
         if (enabled)
         {
-            Player parent = GetParent<Player>();
-            parent.SetVelocity(parent.GetVelocity() + new Vector2(0, 98));
+            ICollidable parent = GetParent<ICollidable>();
+            parent.Velocity = parent.Velocity + new Vector2(0, 98);
         }
     }
 

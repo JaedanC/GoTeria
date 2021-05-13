@@ -13,18 +13,18 @@ extents = Vector2( 32, 32 )
 [node name="Player" type="Node2D"]
 script = ExtResource( 5 )
 
-[node name="Rigidbody" type="KinematicBody2D" parent="."]
+[node name="RigidBody" type="KinematicBody2D" parent="."]
 visible = false
 collision/safe_margin = 0.008
 
-[node name="Hitbox" type="CollisionShape2D" parent="Rigidbody"]
+[node name="Hitbox" type="CollisionShape2D" parent="RigidBody"]
 visible = false
 shape = SubResource( 1 )
 one_way_collision = true
 
 [node name="Smoothing" type="Node2D" parent="."]
 script = ExtResource( 4 )
-target = NodePath("../Rigidbody")
+target = NodePath("../RigidBody")
 
 [node name="PlayerSprite" type="Sprite" parent="Smoothing"]
 texture = ExtResource( 1 )

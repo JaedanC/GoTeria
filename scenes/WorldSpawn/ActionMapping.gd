@@ -1,55 +1,55 @@
 extends Node
 
-var mapping_data = {
-	"Keyboard": {
+onready var config_handler = $"../ConfigHandler"
+
+var game_action_bindings = {
+	InputEventKey: {
 		"binds": {},
-		"get_int": "get_key_int",
-		"input_event_type": InputEventKey 
 	},
-	"Joystick": {
+	InputEventJoypadButton: {
 		"binds": {},
-		"get_int": "get_joy_int",
-		"input_event_type": InputEventJoypadButton
 	},
-	"Mouse": {
+	InputEventMouseButton: {
 		"binds": {},
-		"get_int": "get_mouse_int",
-		"input_event_type": InputEventMouseButton
 	},
-	"Axis": {
+	InputEventJoypadMotion: {
 		"binds": {},
-		"get_int": "get_axis_int",
-		"input_event_type": InputEventJoypadMotion
 	}
 }
 
-# Called when the node enters the scene tree for the first time.
+var input_type_strings = {}
+
 func _ready():
+	input_type_strings[InputEventKey] = "Keyboard"
+	input_type_strings[InputEventJoypadButton] = "Joy"
+	input_type_strings[InputEventMouseButton] = "Mouse"
+	input_type_strings[InputEventJoypadMotion] = "Axis"
+	
 	setup_aliases()
 	
-	add_action_mapping("jump", KEY_SPACE, InputEventKey)
-	add_action_mapping("save_config", KEY_I, InputEventKey)
-	add_action_mapping("load_config", KEY_O, InputEventKey)
-	add_action_mapping("show_mappings", KEY_P, InputEventKey)
-	
-	add_action_mapping("move_left", KEY_A, InputEventKey)
-	add_action_mapping("move_right", KEY_D, InputEventKey)
-	add_action_mapping("move_up", KEY_W, InputEventKey)
-	add_action_mapping("move_down", KEY_S, InputEventKey)
-	add_action_mapping("zoom_reset", key_string_to_int("backspace", "Keyboard"), InputEventKey)
-	add_action_mapping("zoom_in", key_string_to_int("mwheeldown", "Mouse"), InputEventMouseButton)
-	add_action_mapping("zoom_out", key_string_to_int("mwheelup", "Mouse"), InputEventMouseButton)
-	add_action_mapping("save_world", key_string_to_int("m", "Keyboard"), InputEventKey)
-	add_action_mapping("click", key_string_to_int("mouse1", "Mouse"), InputEventMouseButton)
-	add_action_mapping("dig", key_string_to_int("mouse2", "Mouse"), InputEventMouseButton)
-	add_action_mapping("brake", key_string_to_int("x", "Keyboard"), InputEventKey)
-	add_action_mapping("quit", key_string_to_int("esc", "Keyboard"), InputEventKey)
-	add_action_mapping("light", KEY_L, InputEventKey)
-	add_action_mapping("debug", KEY_B, InputEventKey)
+	add_action_mapping("jump", " ")
+	add_action_mapping("save_config", "i")
+	add_action_mapping("load_config", "o")
+	add_action_mapping("show_mappings", "p")
+
+	add_action_mapping("move_left", "a")
+	add_action_mapping("move_right", "d")
+	add_action_mapping("move_up", "w")
+	add_action_mapping("move_down", "s")
+	add_action_mapping("zoom_reset", "backspace")
+	add_action_mapping("zoom_in", "mwheeldown")
+	add_action_mapping("zoom_out", "mwheelup")
+	add_action_mapping("save_world", "m")
+	add_action_mapping("click", "mouse1")
+	add_action_mapping("dig", "mouse2")
+	add_action_mapping("brake", "x")
+	add_action_mapping("quit", "esc")
+	add_action_mapping("light", "l")
+	add_action_mapping("debug", "b")
+	add_action_mapping("toggle_fullscreen", "F11")
 
 func setup_aliases():
-	# TODO: No Axis Mappings yet. Though is this required?
-	var key_aliases = mapping_data["Keyboard"]["binds"]
+	var key_aliases = game_action_bindings[InputEventKey]["binds"]
 	key_aliases["a"] = KEY_A; key_aliases["b"] = KEY_B; key_aliases["c"] = KEY_C
 	key_aliases["d"] = KEY_D; key_aliases["e"] = KEY_E; key_aliases["f"] = KEY_F
 	key_aliases["g"] = KEY_G; key_aliases["h"] = KEY_H; key_aliases["i"] = KEY_I
@@ -115,7 +115,7 @@ func setup_aliases():
 	key_aliases["kp*"] = KEY_KP_MULTIPLY
 	key_aliases["kp/"] = KEY_KP_DIVIDE
 	
-	var joy_aliases = mapping_data["Joystick"]["binds"]
+	var joy_aliases = game_action_bindings[InputEventJoypadButton]["binds"]
 	joy_aliases["a"] = JOY_XBOX_A
 	joy_aliases["b"] = JOY_XBOX_B
 	joy_aliases["x"] = JOY_XBOX_X
@@ -133,7 +133,7 @@ func setup_aliases():
 	joy_aliases["start"] = JOY_START
 	joy_aliases["select"] = JOY_SELECT
 	
-	var mouse_aliases = mapping_data["Mouse"]["binds"]
+	var mouse_aliases = game_action_bindings[InputEventMouseButton]["binds"]
 	mouse_aliases["mouse1"] = BUTTON_LEFT
 	mouse_aliases["mouse2"] = BUTTON_RIGHT
 	mouse_aliases["mouse3"] = BUTTON_MIDDLE
@@ -142,7 +142,7 @@ func setup_aliases():
 	mouse_aliases["mwheelup"] = BUTTON_WHEEL_UP
 	mouse_aliases["mwheeldown"] = BUTTON_WHEEL_DOWN
 	
-	var axis_aliases = mapping_data["Axis"]["binds"]
+	var axis_aliases = game_action_bindings[InputEventJoypadMotion]["binds"]
 	axis_aliases["axis0"] = JOY_AXIS_0; axis_aliases["axis1"] = JOY_AXIS_1
 	axis_aliases["axis2"] = JOY_AXIS_2; axis_aliases["axis3"] = JOY_AXIS_3
 	axis_aliases["axis4"] = JOY_AXIS_4; axis_aliases["axis5"] = JOY_AXIS_5
@@ -150,12 +150,7 @@ func setup_aliases():
 	axis_aliases["axis8"] = JOY_AXIS_8; axis_aliases["axis9"] = JOY_AXIS_9
 
 func _input(event: InputEvent):
-	
-#	var result = get_event_key(event)
-#	if result:
-#		print(result)
 	if event.is_action_pressed("jump"):
-#		print("jumping")
 		pass
 	
 	if event.is_action_pressed("show_mappings"):
@@ -163,29 +158,44 @@ func _input(event: InputEvent):
 	
 	if event.is_action_pressed("save_config"):
 		print("Saving Config")
-		get_node("../ConfigHandler").save_action_mappings_config()
+		config_handler.save_action_mappings_config()
 		print("Saved Config")
 	
 	if event.is_action_pressed("load_config"):
-		get_node("../ConfigHandler").load_action_mappings_config()
+		print("Loading Config")
+		config_handler.load_action_mappings_config()
 		print("Loaded Config")
 
-func add_action_mapping(action: String, keycode: int, type):
+func add_action_mapping(game_action: String, key_string: String):
 	"""
 	Binds a key to an action. You also need to pass it the type of event this
 	keycode is so that it can be stored correctly.
 	Example usage:
-		add_action_mapping('move_down', KEY_S, InputEventKey)
-		add_action_mapping('zoom_reset', key_string_to_int('backspace', 'Keyboard'), InputEventKey)
-		add_action_mapping('zoom_in', key_string_to_int('mwheeldown', 'Mouse'), InputEventMouseButton)
+		add_action_mapping("move_down", "s")
+		add_action_mapping('zoom_reset', "backspace")
+		add_action_mapping('zoom_in', "mwheeldown")
 	"""
-	var event = type.new()
-	set_event_key(event, keycode)
+	var result = get_input_type_class_and_keycode_from_key_string(key_string)
+	if (result == null):
+		return
 	
-#	if !(action in InputMap.get_actions()):
-	if !(InputMap.has_action(action)):
-		InputMap.add_action(action)
-	InputMap.action_add_event(action, event)
+	var input_type_class = result[0]
+	var input_event = input_type_class.new()
+	var keycode = result[1]
+	set_input_event_key(input_event, keycode)
+	
+	if not InputMap.has_action(game_action):
+		InputMap.add_action(game_action)
+	InputMap.action_add_event(game_action, input_event)
+
+func get_input_type_class_and_keycode_from_key_string(key_string: String):
+	for input_type_class in game_action_bindings.keys():
+		var binds_dict = game_action_bindings[input_type_class]["binds"]
+		for bind in binds_dict.keys():
+			if (bind == key_string):
+				return [input_type_class, binds_dict[bind]]
+	return null
+	
 
 func show_mappings():
 	"""
@@ -194,7 +204,7 @@ func show_mappings():
 	for action in InputMap.get_actions():
 		print("Action: " + str(action) + ", Mappings: " + str(InputMap.get_action_list(action)))
 
-func get_action_mappings_as_saveable_dict():
+func get_bindings_as_saveable_dict():
 	"""
 	This function converts the mapping data (which is in the format above) to a disk
 	storable version that can be saved to a file. Pseudocode:
@@ -202,59 +212,73 @@ func get_action_mappings_as_saveable_dict():
 	dict = {}
 	foreach action:   # jump
 		foreach input_event tied to the action:   # [InputEventKey: 560]
-			foreach style_of_input:   # Keyboard
-				if the input_event is the style_of_input:
-					If the dict[action] doesn't exist yet make it default []
+			foreach style_of_input:   # KeyboardInputClass
+				if the input_event is not the style_of_input:
+					continue
+				
+				Get the input_events "integer" represenation so that we can
+				finding the binding associated with it.
+				
+				If the Dictionary or Array doesn't exist yet make it.
 					
-					Add the string rep of the input_event.button_int by calling the
-					the corresponding conversion callback functions tied
-					to each type.
+				Add the binding to the dictionary, with the key being a string
+				representation of the input_event class.
 	return dict
 	"""
 	
-	var action_mappings_dict = {}
-	
-	for input_type in mapping_data.keys(): # Keyboard
-		if !(input_type in action_mappings_dict):
-			action_mappings_dict[input_type] = {}
-	
-	for action in InputMap.get_actions():
-		for input_event in InputMap.get_action_list(action):
-			for input_type in mapping_data.keys():
-				if input_event is mapping_data[input_type]["input_event_type"]:
-					if !(action in action_mappings_dict[input_type]):
-						action_mappings_dict[input_type][action] = []
-					
-					var key_int = get_node(input_type).call(
-						mapping_data[input_type]["get_int"],
-						input_event
-					)
-					
-					action_mappings_dict[input_type][action].append(
-						key_int_to_string(key_int, input_type)
-					)
-	return action_mappings_dict
+	var bindings = {}
+	for game_action in InputMap.get_actions():
+		for input_for_game_action in InputMap.get_action_list(game_action):
+			for input_type_class in game_action_bindings.keys():
+				if not input_for_game_action is input_type_class:
+					continue
+				
+				# 'is' should work but doesn't for some reason :(
+				var key_int;
+				if str(input_type_class) == str(InputEventKey):
+					key_int = input_for_game_action.get_scancode()
+				elif str(input_type_class) == str(InputEventJoypadButton):
+					key_int = input_for_game_action.get_button_index()
+				elif str(input_type_class) == str(InputEventMouseButton):
+					key_int = input_for_game_action.get_button_index()
+				elif str(input_type_class) == str(InputEventJoypadMotion):
+					key_int = input_for_game_action.get_axis()
+				else:
+					print(input_type_class)
+					assert(false)
+				
+				# Give the action mappings dict some default values
+				var input_type_name = input_type_strings[input_type_class]
+				if not bindings.has(input_type_name):
+					bindings[input_type_name] = {}
+				if not bindings[input_type_name].has(game_action):
+					bindings[input_type_name][game_action] = []
+				
+				bindings[input_type_name][game_action].append(
+					key_int_to_string(key_int, input_type_class)
+				)
+	return bindings
 
-func key_int_to_string(key_int: int, input_type: String):
+func key_int_to_string(key_int: int, input_type_class):
 	"""
 	Converts KeyCode Enum values to readable string that can be stored in a file.
 	The strings are defined in setup_aliases().
 	"""
-	for key_string in mapping_data[input_type]["binds"].keys():
-		if mapping_data[input_type]["binds"][key_string] == key_int:
+	for key_string in game_action_bindings[input_type_class]["binds"].keys():
+		if game_action_bindings[input_type_class]["binds"][key_string] == key_int:
 			return key_string
 	return null
 
-func key_string_to_int(key_string: String, input_type: String):
+func key_string_to_int(key_string: String, input_type_class):
 	"""
 	Converts readable string representations of keys into the godot KeyCode Enum
 	values. The strings are defined in setup_aliases().
 	"""
-	if key_string in mapping_data[input_type]["binds"].keys():
-		return mapping_data[input_type]["binds"][key_string]
+	if key_string in game_action_bindings[input_type_class]["binds"].keys():
+		return game_action_bindings[input_type_class]["binds"][key_string]
 	return null
 
-func set_event_key(event, keycode: int):
+func set_input_event_key(event, keycode: int):
 	if "scancode" in event:
 		event.set_scancode(keycode)
 	elif "button_index" in event:
@@ -262,14 +286,5 @@ func set_event_key(event, keycode: int):
 	elif "axis" in event:
 		event.set_axis(keycode)
 	else:
-		print("Unknown event type")
-
-func get_event_key(event):
-	if "scancode" in event:
-		return event.get_scancode()
-	elif "button_index" in event:
-		return event.get_button_index()
-	elif "axis" in event:
-		return event.get_axis()
-		
-	return null
+		print("set_event_key: Unknown event type")
+		assert(false)
