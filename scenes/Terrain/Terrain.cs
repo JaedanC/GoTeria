@@ -8,7 +8,7 @@ public class Terrain : Node2D
     [Export]
     private readonly Vector2 _blockPixelSize = new Vector2(16, 16);
     [Export]
-    private readonly Vector2 _chunkBlockCount = new Vector2(512, 512);
+    private readonly Vector2 _chunkBlockCount = new Vector2(420, 400);
     private const int _loadMargin = 1;
     private const int _drawMargin = 0;
 
@@ -54,9 +54,9 @@ public class Terrain : Node2D
 
         // TODO: dynamically load the world
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/save_image.png");
-        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorld.png");
-        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
+        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/small.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/medium.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/hd.png");
@@ -143,6 +143,7 @@ public class Terrain : Node2D
             chunk.AllocateMemory((int)(ChunkBlockCount.x * ChunkBlockCount.y));
 
         Image chunkImage = chunk.ChunkImage;
+        chunkImage.Fill(Colors.Red);
         chunkImage.BlitRect(_worldImage, new Rect2(chunkPosition * ChunkBlockCount, ChunkBlockCount), Vector2.Zero);
         
         Block[] blocks = chunk.Blocks;

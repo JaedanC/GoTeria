@@ -2,8 +2,6 @@ using Godot;
 using Godot.Collections;
 using System;
 
-// TODO: Does this need to have the orphan T's unloaded?
-
 /* This class is a generic ObjectPool. This class stores an Array of objects in a pool, and
 when you request an instance with GetInstance(), an instance is created if the pool is empty,
 OR an instance from the pool is popped and returned. In either case, the T.Reset() method is
@@ -20,6 +18,15 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
         for (int i = 0; i < numberOfInstances; i++)
         {
             pool.Add(new T());
+        }
+    }
+
+    /* Unload the orphan T's when the game is closed. */
+    public override void _Notification(int what)
+    {
+        if (what == MainLoop.NotificationPredelete)
+        {
+            foreach (T instance in pool) instance.QueueFree();
         }
     }
 
@@ -50,4 +57,5 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
     {
         pool.Add(instance);
     }
+
 }

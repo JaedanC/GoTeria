@@ -37,6 +37,7 @@ ThreadPool="*res://scenes/Singletons/ThreadPool.cs"
 
 [debug]
 
+settings/stdout/verbose_stdout=true
 gdscript/warnings/narrowing_conversion=false
 gdscript/warnings/integer_division=false
 
