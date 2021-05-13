@@ -9,19 +9,13 @@
 config_version=4
 
 _global_script_classes=[ {
-"base": "Node",
+"base": "Reference",
 "class": "FutureThreadPool",
 "language": "GDScript",
 "path": "res://addons/thread_pool/future_thread_pool.gd"
-}, {
-"base": "Node",
-"class": "ThreadPool",
-"language": "GDScript",
-"path": "res://addons/thread_pool/thread_pool.gd"
 } ]
 _global_script_class_icons={
-"FutureThreadPool": "",
-"ThreadPool": ""
+"FutureThreadPool": ""
 }
 
 [application]
@@ -37,12 +31,13 @@ ThreadPool="*res://scenes/Singletons/ThreadPool.cs"
 
 [debug]
 
-settings/stdout/verbose_stdout=true
 gdscript/warnings/narrowing_conversion=false
 gdscript/warnings/integer_division=false
 
 [display]
 
+window/size/width=1600
+window/size/height=900
 window/vsync/use_vsync=false
 
 [editor_plugins]

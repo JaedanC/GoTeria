@@ -1,4 +1,4 @@
-class_name ThreadPool
+#class_name ThreadPool
 extends Node
 # A thread pool designed to perform your tasks efficiently
 

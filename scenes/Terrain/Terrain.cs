@@ -8,7 +8,7 @@ public class Terrain : Node2D
     [Export]
     private readonly Vector2 _blockPixelSize = new Vector2(16, 16);
     [Export]
-    private readonly Vector2 _chunkBlockCount = new Vector2(420, 400);
+    private readonly Vector2 _chunkBlockCount = new Vector2(42, 40);
     private const int _loadMargin = 1;
     private const int _drawMargin = 0;
 
@@ -31,6 +31,8 @@ public class Terrain : Node2D
     public Vector2 BlockPixelSize { get { return _blockPixelSize; } }
     public Vector2 ChunkPixelDimensions { get { return _chunkPixelDimensions; } }
     public Vector2 ChunkBlockCount { get { return _chunkBlockCount; } }
+    public Image WorldImage { get { return _worldImage; } }
+    public Image WorldImageLuminance { get { return _worldImageLuminance; } }
 
     public override void _Ready()
     {
@@ -54,9 +56,9 @@ public class Terrain : Node2D
 
         // TODO: dynamically load the world
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/save_image.png");
-        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
+        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorld.png");
-        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/small.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/medium.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/hd.png");
@@ -75,6 +77,7 @@ public class Terrain : Node2D
             else
                 _worldImageLuminance.SetPixel(i, j, Colors.Black);
         }
+        // _worldImageLuminance.Unlock();
 
         // TODO: initialise with a better number
         chunkPool = new ObjectPool<Chunk>(10);
