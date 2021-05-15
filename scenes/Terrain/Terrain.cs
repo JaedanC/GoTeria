@@ -61,9 +61,9 @@ public class Terrain : Node2D
 
         // TODO: dynamically load the world
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/save_image.png");
-        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorld.png");
-        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
+        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/small.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/medium.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/hd.png");

@@ -13,48 +13,42 @@ public class ChunkLighting
         this.terrain = terrain;
     }
 
-    private struct LightValue
-    {   
-        public Vector2 Position;
-        public Color Colour;
-        public LightValue(Vector2 position, Color colour) {
-            Position = position;
-            Colour = colour;
-        }
-    }
-
     public void ComputeLightingPass()
     {
-        System.Collections.Generic.Queue<LightValue> lightQueue = new System.Collections.Generic.Queue<LightValue>();
+        System.Collections.Generic.Queue<LightingEngine.LightBFSNode> lightQueue = new System.Collections.Generic.Queue<LightingEngine.LightBFSNode>();
 
-        Vector2 blockCount = terrain.ChunkBlockCount;
-        Vector2 topLeftPixel = chunk.ChunkPosition * blockCount;
+        Vector2 chunkBlockCount = terrain.ChunkBlockCount;
+        Vector2 topLeftPixel = chunk.ChunkPosition * chunkBlockCount;
 
-        for (int i = (int)topLeftPixel.x; i < topLeftPixel.x + blockCount.x; i++)
-        for (int j = (int)topLeftPixel.y; j < topLeftPixel.y + blockCount.y; j++)
+        // GD.Print("Chunk: ", topLeftPixel, chunkBlockCount);
+        for (int i = (int)topLeftPixel.x; i < topLeftPixel.x + chunkBlockCount.x; i++)
+        for (int j = (int)topLeftPixel.y; j < topLeftPixel.y + chunkBlockCount.y; j++)
         {
             Vector2 position = new Vector2(i, j);
+            if (Helper.OutOfBounds(position, terrain.GetWorldSize()))
+                continue;
+
             Color sourceColour = terrain.WorldLightSources.GetPixelv(position);
             if (sourceColour == Colors.White)
             {
-                lightQueue.Enqueue(new LightValue(position, Colors.White));
+                lightQueue.Enqueue(new LightingEngine.LightBFSNode(position, Colors.White));
             }
         }
 
 
         while (lightQueue.Count > 0)
         {
-            LightValue currentNode = lightQueue.Dequeue();
+            LightingEngine.LightBFSNode currentNode = lightQueue.Dequeue();
 
             // Exit condition: The current nodes color is brighter than us already.
-            Color existingColour = terrain.WorldLightLevels.GetPixelv(currentNode.Position);
+            Color existingColour = terrain.WorldLightLevels.GetPixelv(currentNode.WorldPosition);
             if (existingColour.r > currentNode.Colour.r)
             {
                 continue;
             }
 
             // Set the colour then
-            terrain.WorldLightLevels.SetPixelv(currentNode.Position, currentNode.Colour);
+            terrain.WorldLightLevels.SetPixelv(currentNode.WorldPosition, currentNode.Colour);
 
             float multiplier = Terrain.LIGHT_MULTIPLIER;
             Color newColour = new Color(
@@ -71,16 +65,16 @@ public class ChunkLighting
             }
 
             Vector2[] neighbourPositions = new Vector2[4];
-            neighbourPositions[0] = new Vector2(currentNode.Position.x - 1, currentNode.Position.y);
-            neighbourPositions[1] = new Vector2(currentNode.Position.x + 1, currentNode.Position.y);
-            neighbourPositions[2] = new Vector2(currentNode.Position.x, currentNode.Position.y - 1);
-            neighbourPositions[3] = new Vector2(currentNode.Position.x, currentNode.Position.y + 1);
+            neighbourPositions[0] = new Vector2(currentNode.WorldPosition.x - 1, currentNode.WorldPosition.y);
+            neighbourPositions[1] = new Vector2(currentNode.WorldPosition.x + 1, currentNode.WorldPosition.y);
+            neighbourPositions[2] = new Vector2(currentNode.WorldPosition.x, currentNode.WorldPosition.y - 1);
+            neighbourPositions[3] = new Vector2(currentNode.WorldPosition.x, currentNode.WorldPosition.y + 1);
 
             foreach (Vector2 neighbourPosition in neighbourPositions)
             {
                 if (Helper.InBounds(neighbourPosition, terrain.WorldLightLevels.GetSize()))
                 {
-                    lightQueue.Enqueue(new LightValue(neighbourPosition, newColour));
+                    lightQueue.Enqueue(new LightingEngine.LightBFSNode(neighbourPosition, newColour));
                 }
             }
 
