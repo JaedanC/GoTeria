@@ -13,6 +13,8 @@ By Marcos Zolnowski
 // TODO: Change this to user the futures implementation because stop reinventing the wheel.
 public class ThreadPool : Node
 {
+    private const bool SINGLE_THREADED = false;
+
     [Export]
     private bool discardFinishedTasks = false;
 
@@ -23,8 +25,8 @@ public class ThreadPool : Node
     private Semaphore __tasksWait;
     private Array<Task> __finishedTasks;
     private Mutex __finishedTasksLock;
-
     private Array<Thread> __pool;
+
 
     public override void _Ready()
     {
@@ -149,7 +151,13 @@ public class ThreadPool : Node
 
     private void __Start()
     {
-        if (!__started)
+        if (SINGLE_THREADED)
+        {
+            Task task = __DrainTask();
+            task.__ExecuteTask();
+            if (!(task.tag is Task))
+                __finishedTasks.Add(task);
+        } else if (!__started)
         {
             foreach (Thread t in __pool)
             {

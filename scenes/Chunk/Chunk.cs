@@ -37,6 +37,7 @@ public class Chunk : Node2D, IResettable
     and draw this chunk to the screen again. */
     public bool Drawn { get { return _drawn; } }
     public bool MemoryAllocated { get; set; }
+    public ChunkLighting ChunkLighting;
     
 
     public Chunk()
@@ -48,6 +49,7 @@ public class Chunk : Node2D, IResettable
     public override void _Ready()
     {
         _terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
+        ChunkLighting = new ChunkLighting(this, _terrain);
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */

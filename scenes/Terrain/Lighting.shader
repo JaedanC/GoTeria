@@ -63,7 +63,7 @@ void fragment() {
 	
 //	colour.a = distance(vec2(0.5), UV);
 	
-	COLOR = vec4(colour.xyz, 1.0);
+	COLOR = vec4(colour.xyz, 1);
 //	COLOR = vec4(colour.xyz, alpha);
 //	COLOR = vec4(vec3(0.0), alpha);
 }

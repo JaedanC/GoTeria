@@ -20,6 +20,7 @@ public class Player : Node2D, ICollidable
 	(which is actually the smoothing sprite's location) if you want the player's position on
 	any frame other than a physics frame. This is an linear interpolated Vector2. */
 	new public Vector2 Position { get { return (Vector2)_smoothing.Get("position"); } }
+	public Vector2 CameraZoom { get { return _camera.Zoom; } }
 
 
 
@@ -55,6 +56,8 @@ public class Player : Node2D, ICollidable
 			_terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
 		}
 
+		
+
 		Update();
 	}
 
@@ -84,11 +87,11 @@ public class Player : Node2D, ICollidable
 		{
 			_velocity = Vector2.Zero;
 		}
-		if (_inputLayering.PollActionPressed("debug"))
-		{
-			GD.Print("Printing Stray Nodes:");
-			PrintStrayNodes();
-		}
+		// if (_inputLayering.PollActionPressed("debug"))
+		// {
+		// 	GD.Print("Printing Stray Nodes:");
+		// 	PrintStrayNodes();
+		// }
     }
 
     public override void _Input(InputEvent @event)
@@ -136,8 +139,8 @@ public class Player : Node2D, ICollidable
 		// Expand this Rectangle to take into account camera zooming by using two
 		// Vector2's the point the the corners of the screen and using the Rect2.expand
 		// method.
-		viewportRectangle = viewportRectangle.Expand(smoothedPosition - (GetViewportRect().Size / 2) * GetCameraZoom());
-		viewportRectangle = viewportRectangle.Expand(smoothedPosition + (GetViewportRect().Size / 2) * GetCameraZoom());
+		viewportRectangle = viewportRectangle.Expand(smoothedPosition - (GetViewportRect().Size / 2) * CameraZoom);
+		viewportRectangle = viewportRectangle.Expand(smoothedPosition + (GetViewportRect().Size / 2) * CameraZoom);
 		
 		// Use this to temporarily reduce the size of the viewport loading rectangle
 		// to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
@@ -234,25 +237,14 @@ public class Player : Node2D, ICollidable
 		return visibilityPoints;
 	}
 	
-	// public Vector2 GetPlayerPosition()
-	// {
-	// 	return (Vector2)_smoothing.Get("position");
-	// }
-
-	/* This function returns the zoom factor of the player's camera. */
-	public Vector2 GetCameraZoom()
-	{
-		return _camera.Zoom;
-	}
-
 	/* This function converts a screen position to a world position.
 		- A screen position is a location inside the window. For example, The location
 		of the mouse is supplied to Godot as a screen position. */
 	public Vector2 ScreenToWorldPosition(Vector2 screenPosition)
 	{
 		// Vector2 worldPosition = GetPlayerPosition() + screenPosition * GetCameraZoom();
-		Vector2 worldPosition = Position + screenPosition * GetCameraZoom();
-		return worldPosition - GetCameraZoom() * GetViewportRect().Size / 2;
+		Vector2 worldPosition = Position + screenPosition * CameraZoom;
+		return worldPosition - CameraZoom * GetViewportRect().Size / 2;
 	}
 
 	public KinematicBody2D GetRigidBody()

@@ -47,6 +47,8 @@ func _ready():
 	add_action_mapping("light", "l")
 	add_action_mapping("debug", "b")
 	add_action_mapping("toggle_fullscreen", "F11")
+	add_action_mapping("place_light", "mouse4")
+	add_action_mapping("remove_light", "mouse5")
 
 func setup_aliases():
 	var key_aliases = game_action_bindings[InputEventKey]["binds"]

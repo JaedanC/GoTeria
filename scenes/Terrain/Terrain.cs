@@ -5,16 +5,19 @@ using System.Diagnostics;
 
 public class Terrain : Node2D
 {
+    public const float LIGHT_MULTIPLIER = 0.6f;
+    public const float LIGHT_CUTOFF = 0.01f;
+
     [Export]
     private readonly Vector2 _blockPixelSize = new Vector2(16, 16);
     [Export]
-    private readonly Vector2 _chunkBlockCount = new Vector2(42, 40);
+    private readonly Vector2 _chunkBlockCount = new Vector2(420, 400);
     private const int _loadMargin = 1;
     private const int _drawMargin = 0;
 
     private ThreadPool _threadPool;
     private Player _player;
-    private Godot.Object _lighting;
+    private LightingEngine _lighting;
     private InputLayering _inputLayering;
 
     private Vector2 _chunkPixelDimensions;
@@ -23,16 +26,18 @@ public class Terrain : Node2D
     private Dictionary<Vector2, Chunk> _lightlyLoadingDrawingChunks;
     private Dictionary<Vector2, Chunk> _lightlyLoadingBlocksChunks;
     private Image _worldImage;
-    private Image _worldImageLuminance;
+    private Image _worldLightSources;
+    private Image _worldLightLevels;
     private ObjectPool<Chunk> chunkPool;
-
 
     /* Returns the size of a block in pixels as a Vector2 */
     public Vector2 BlockPixelSize { get { return _blockPixelSize; } }
     public Vector2 ChunkPixelDimensions { get { return _chunkPixelDimensions; } }
     public Vector2 ChunkBlockCount { get { return _chunkBlockCount; } }
     public Image WorldImage { get { return _worldImage; } }
-    public Image WorldImageLuminance { get { return _worldImageLuminance; } }
+    public Image WorldLightSources { get { return _worldLightSources; } }
+    public Image WorldLightLevels { get { return _worldLightLevels; } }
+    private ImageTexture _worldLightLevelsTexture;
 
     public override void _Ready()
     {
@@ -51,7 +56,7 @@ public class Terrain : Node2D
 
         _threadPool = GetNode<ThreadPool>("/root/ThreadPool");
         _player = GetNode<Player>("/root/WorldSpawn/Player");
-        _lighting = GetNode<Godot.Object>("Lighting");
+        _lighting = GetNode<LightingEngine>("Lighting");
         _inputLayering = GetNode<InputLayering>("/root/InputLayering");
 
         // TODO: dynamically load the world
@@ -64,25 +69,33 @@ public class Terrain : Node2D
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/hd.png");
         _worldImage = worldTexture.GetData();
         _worldImage.Lock();
-        _worldImageLuminance = new Image();
-        _worldImageLuminance.Create(_worldImage.GetWidth(), _worldImage.GetHeight(), false, Image.Format.Rgba8);
-        _worldImageLuminance.Fill(Colors.Red);
-        _worldImageLuminance.Lock();
-        for (int i = 0; i < _worldImageLuminance.GetWidth(); i++)
-        for (int j = 0; j < _worldImageLuminance.GetHeight(); j++)
+
+
+
+        chunkPool = new ObjectPool<Chunk>(10);
+
+
+        _worldLightLevels = new Image();
+        _worldLightLevels.Create(_worldImage.GetWidth(), _worldImage.GetHeight(), false, Image.Format.Rgba8);
+        _worldLightLevels.Lock();
+
+
+        _worldLightSources = new Image();
+        _worldLightSources.Create(_worldImage.GetWidth(), _worldImage.GetHeight(), false, Image.Format.Rgba8);
+        _worldLightSources.Fill(Colors.Red);
+        _worldLightSources.Lock();
+        for (int i = 0; i < _worldLightSources.GetWidth(); i++)
+        for (int j = 0; j < _worldLightSources.GetHeight(); j++)
         {
             Color colour = _worldImage.GetPixel(i, j);
-            if (colour.a == 0)
-                _worldImageLuminance.SetPixel(i, j, Colors.White);
+            if (Helper.IsLight(colour))
+                _worldLightSources.SetPixel(i, j, Colors.White);
             else
-                _worldImageLuminance.SetPixel(i, j, Colors.Black);
+                _worldLightSources.SetPixel(i, j, Colors.Black);
         }
         // _worldImageLuminance.Unlock();
 
-        // TODO: initialise with a better number
-        chunkPool = new ObjectPool<Chunk>(10);
-
-        // GenerateWorld()
+        _worldLightLevelsTexture = new ImageTexture();
     }
 
     public override void _Process(float _delta)
@@ -129,6 +142,12 @@ public class Terrain : Node2D
 			
         foreach (Vector2 point in _urgentlyLoadingBlocksChunks.Keys)
 		    DrawRect(new Rect2(point * _chunkPixelDimensions, _chunkPixelDimensions), Colors.Red, false, thickness, false);
+
+        // if (_inputLayering.PollActionPressed("debug"))
+        // {
+        //     _worldLightLevelsTexture.CreateFromImage(_worldLightSources, 0);
+        //     DrawTexture(_worldLightLevelsTexture, Vector2.Zero);
+        // }
     }
 
     /* This method is run on the threadPool, and it generates all the data a chunk requires
@@ -178,6 +197,7 @@ public class Terrain : Node2D
         }
         
         chunk.Loaded = true;
+        chunk.ChunkLighting.ComputeLightingPass();
 	    return chunkPosition;
     }
 
@@ -544,22 +564,34 @@ public class Terrain : Node2D
         SetBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition, newBlock);
     }
 
-    public Image GetWorldImageLuminance()
-    {
-        return _worldImageLuminance;
-    }
-
     private void SetWorldImage(Vector2 worldBlockPosition, Color colour)
     {
         if (worldBlockPosition.x < 0 || worldBlockPosition.y < 0 ||
                 worldBlockPosition.x >= _worldImage.GetWidth() ||
                 worldBlockPosition.y >= _worldImage.GetHeight())
             return;
-        
         _worldImage.SetPixelv(worldBlockPosition, colour);
-        if (colour.a == 0)
-            _worldImageLuminance.SetPixelv(worldBlockPosition, Colors.White);
-        else
-            _worldImageLuminance.SetPixelv(worldBlockPosition, Colors.Black);
+
+        // CheckIfUpdateLighting(worldBlockPosition, colour);
     }
+
+    private void CheckIfUpdateLighting(Vector2 worldBlockPosition, Color colour)
+    {
+        Color coloursLightValue;
+        if (Helper.IsLight(colour))
+            coloursLightValue = Colors.White;
+        else
+            coloursLightValue = Colors.Black;
+
+        Color existingLightValue = _worldLightSources.GetPixelv(worldBlockPosition);
+        
+        // Just remove and re-add the light.
+        if (existingLightValue != colour){
+            _lighting.RemoveLight(worldBlockPosition);
+            _lighting.AddLight(worldBlockPosition, coloursLightValue);
+        }
+
+        // _worldLightSources.SetPixelv(worldBlockPosition, coloursLightValue);
+    }
+
 }
