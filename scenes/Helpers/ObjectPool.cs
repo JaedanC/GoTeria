@@ -12,12 +12,14 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
 {
     private Array<T> pool;
 
-    public ObjectPool(int numberOfInstances=0)
+    public ObjectPool(int numberOfInstances=0, params object[] memoryAllocationParameters)
     {
         pool = new Array<T>();
         for (int i = 0; i < numberOfInstances; i++)
         {
-            pool.Add(new T());
+            T item = new T();
+            pool.Add(item);
+            item.AllocateMemory(memoryAllocationParameters);
         }
     }
 

@@ -5,15 +5,23 @@ using System;
 public class ChunkLighting
 {
     private Terrain terrain;
+    private LightingEngine lightingEngine;
     private Chunk chunk;
 
     public ChunkLighting(Chunk chunk, Terrain terrain)
     {
         this.chunk = chunk;
         this.terrain = terrain;
+        this.lightingEngine = terrain.LightingEngine;
     }
 
     public void ComputeLightingPass()
+    {   
+        ChunkLightBFS();
+        lightingEngine.UpdateShader = true;
+    }
+
+    private void ChunkLightBFS()
     {
         System.Collections.Generic.Queue<LightingEngine.LightBFSNode> lightQueue = new System.Collections.Generic.Queue<LightingEngine.LightBFSNode>();
 
@@ -80,4 +88,5 @@ public class ChunkLighting
 
         }
     }
+
 }

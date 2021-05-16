@@ -56,6 +56,8 @@ public class LightingEngine : Node2D
     private Vector2 temporaryScale;
     private Vector2 temporaryPosition;
     private volatile bool inPhysicsLoop;
+    private Vector2 previousBlocksOnScreen;
+    public bool UpdateShader = true;
 
     public override void _Notification(int what)
     {
@@ -111,9 +113,12 @@ public class LightingEngine : Node2D
 
     public override void _PhysicsProcess(float delta)
     {
-		if (lightingThread.ThreadState == System.Threading.ThreadState.Unstarted)
-			lightingThread.Start();
+		// if (lightingThread.ThreadState == System.Threading.ThreadState.Unstarted)
+		// 	lightingThread.Start();
         inPhysicsLoop = true;
+
+        LightUpdatePass();
+        UpdateShaderTexture();
     }
 
     public override void _Process(float delta)
@@ -145,23 +150,7 @@ public class LightingEngine : Node2D
         lightUpdateQueueMutex.Unlock();
     }
 
-    private bool CanSkipLightPass()
-    {
-        Array<Vector2> chunkPositionCorners = player.GetVisibilityChunkPositionCorners();
-        Vector2 chunkPositionTopLeftInPixels = chunkPositionCorners[0] * terrain.ChunkPixelDimensions;
-        Vector2 chunkPositionBottomRightInPixels = (chunkPositionCorners[1] + Vector2.One) * terrain.ChunkPixelDimensions;
-        
-        // Calculate where to put the lighting but store them in a temporary scale and position. This is where
-        // the result will end up, but if we set the position and scale straight away, while the light calculation
-        // takes place the shader will scale and position itself immediately. Instead we wait for the calculation to
-        // complete, then only after do we assign the scale and position while we update the shader.
-        temporaryPosition = chunkPositionTopLeftInPixels;
-        temporaryScale = chunkPositionBottomRightInPixels - chunkPositionTopLeftInPixels;
-
-        // If nothing has changed
-        return lightRemoveQueue.Count > 0 && lightAddQueue.Count > 0 &&
-                temporaryPosition == Position && temporaryScale == Scale;
-    }
+    
 
     private void LightAddUpdateBFS(LightUpdate lightAddUpdate)
     {   
@@ -275,22 +264,38 @@ public class LightingEngine : Node2D
             if (inPhysicsLoop)
             {
                 LightUpdatePass();
-                UpdateShaderTexture();
+                // UpdateShaderTexture();
                 inPhysicsLoop = false;
                 OS.DelayMsec(1);
             }
         }
 	}
 
+    private bool DoRecomputeShader()
+    {
+        return temporaryPosition != Position || temporaryScale != Scale || UpdateShader;
+    }
+
+    private bool CanSkipLightPass()
+    {
+        // If nothing has changed
+        return lightRemoveQueue.Count == 0 && lightAddQueue.Count == 0;
+    }
+
     private void LightUpdatePass()
     {
-        if (CanSkipLightPass()) return;
+        if (CanSkipLightPass())
+        {
+            // GD.Print("Skipping");
+            return;
+        }
+
 
         // Perform all light updates
         // https://www.seedofandromeda.com/blogs/29-fast-flood-fill-lighting-in-a-blocky-voxel-game-pt-1
         // Firstly compute all the light's that need to be removed. The queues are Mutexed so the main thread
         // won't race with the queues if they want a BlockUpdate to happen.
-        lightUpdateQueueMutex.Lock();
+        // lightUpdateQueueMutex.Lock();
         while (lightRemoveQueue.Count > 0)
         {
             LightRemoveUpdateBFS(lightRemoveQueue.Dequeue());
@@ -302,29 +307,45 @@ public class LightingEngine : Node2D
         // Now compute the lights that need to be added.
         while (lightAddQueue.Count > 0)
             LightAddUpdateBFS(lightAddQueue.Dequeue());
-        lightUpdateQueueMutex.Unlock();
+        // lightUpdateQueueMutex.Unlock();
+
+        
+        UpdateShader = true;
     }
 
     private void UpdateShaderTexture()
     {
-        // Copy the image section from the terrain.WorldLightLevels that is visible to the player.
+        
         Array<Vector2> chunkPositionCorners = player.GetVisibilityChunkPositionCorners();
-        Vector2 topLeftBlock = chunkPositionCorners[0] * terrain.ChunkBlockCount;
-        Vector2 blocksOnScreen = temporaryScale / terrain.BlockPixelSize;
-        localLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8);
-        localLightLevels.BlitRect(terrain.WorldLightLevels, new Rect2(topLeftBlock, blocksOnScreen), Vector2.Zero);
+        Vector2 chunkPositionTopLeftInPixels = chunkPositionCorners[0] * terrain.ChunkPixelDimensions;
+        Vector2 chunkPositionBottomRightInPixels = (chunkPositionCorners[1] + Vector2.One) * terrain.ChunkPixelDimensions;
 
-        // Set our position to be the new location before we render it to the screen so that
+        temporaryPosition = chunkPositionTopLeftInPixels;
+        temporaryScale = chunkPositionBottomRightInPixels - chunkPositionTopLeftInPixels;
+
+        if (!DoRecomputeShader())
+            return;
+        UpdateShader = false;
+
+        // Set our position and scale to be the new location before we render it to the screen so that
         // it is in the correct location.
         Position = temporaryPosition;
         Scale = temporaryScale;
 
-        // This crashes it. TODO: Work for another time...
-        // OS.DelayMsec(10);
+        // Copy the image section from the terrain.WorldLightLevels that is visible to the player.
+        Vector2 topLeftBlock = chunkPositionCorners[0] * terrain.ChunkBlockCount;
+        Vector2 blocksOnScreen = Scale / terrain.BlockPixelSize;
 
-        // "Can't resize pool vector if locked"
-        // localLightLevelsShaderTexture.CreateFromImage(localLightLevels, (uint)ImageTexture.FlagsEnum.Mipmaps);
-        localLightLevelsShaderTexture.CreateFromImage(localLightLevels);
+        if (blocksOnScreen != previousBlocksOnScreen)
+        {
+            // "Can't resize pool vector if locked"
+            localLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8);
+            localLightLevelsShaderTexture.CreateFromImage(localLightLevels, 0);
+        }
+        previousBlocksOnScreen = blocksOnScreen;
+
+        localLightLevels.BlitRect(terrain.WorldLightLevels, new Rect2(topLeftBlock, blocksOnScreen), Vector2.Zero);
+        localLightLevelsShaderTexture.SetData(localLightLevels);
         (Material as ShaderMaterial).SetShaderParam("light_values_size", localLightLevelsShaderTexture.GetSize());
         (Material as ShaderMaterial).SetShaderParam("light_values", localLightLevelsShaderTexture);
     }

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 public class Player : Node2D, ICollidable
 {   
-	private const float _ZOOM_CLAMP = 10f;
+	private const float _ZOOM_CLAMP = 80f;
     private Terrain _terrain;
 	private Godot.Object _smoothing;
 	private Camera2D _camera;
@@ -21,7 +21,6 @@ public class Player : Node2D, ICollidable
 	any frame other than a physics frame. This is an linear interpolated Vector2. */
 	new public Vector2 Position { get { return (Vector2)_smoothing.Get("position"); } }
 	public Vector2 CameraZoom { get { return _camera.Zoom; } }
-
 
 
     public override void _Ready()

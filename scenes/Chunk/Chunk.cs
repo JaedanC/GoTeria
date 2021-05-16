@@ -57,8 +57,8 @@ public class Chunk : Node2D, IResettable
     {
         _worldImage = (Image)parameters[0];
         _chunkPosition = (Vector2)parameters[1];
-        _blockCount = (Vector2)parameters[2];
-        _blockPixelSize = (Vector2)parameters[3];
+        _blockPixelSize = (Vector2)parameters[2];
+        _blockCount = (Vector2)parameters[3];
         Loaded = false;
         _locked = false;
         _drawn = false;
@@ -67,8 +67,10 @@ public class Chunk : Node2D, IResettable
 
     /* This function should only be run once. This initialises a chunk to have the memory it requires
     to be allocated on the heap. */ 
-    public void AllocateMemory(int blocksInChunk)
+    public void AllocateMemory(params object[] memoryAllocationParameters)
     {
+        _blockCount = (Vector2)memoryAllocationParameters[0];
+        int blocksInChunk = (int)(_blockCount.x * _blockCount.y);
         _blocks = new Block[blocksInChunk];
         _chunkImage = new Image();
         _chunkImage.Create((int)_blockCount.x, (int)_blockCount.y, false, Image.Format.Rgba8);

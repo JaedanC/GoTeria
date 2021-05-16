@@ -5,8 +5,8 @@ using System.Diagnostics;
 
 public class Terrain : Node2D
 {
-    public const float LIGHT_MULTIPLIER = 0.6f;
-    public const float LIGHT_CUTOFF = 0.01f;
+    public const float LIGHT_MULTIPLIER = 0.5f;
+    public const float LIGHT_CUTOFF = 0.1f;
 
     [Export]
     private readonly Vector2 _blockPixelSize = new Vector2(16, 16);
@@ -17,7 +17,6 @@ public class Terrain : Node2D
 
     private ThreadPool _threadPool;
     private Player _player;
-    private LightingEngine _lighting;
     private InputLayering _inputLayering;
 
     private Vector2 _chunkPixelDimensions;
@@ -37,7 +36,7 @@ public class Terrain : Node2D
     public Image WorldImage { get { return _worldImage; } }
     public Image WorldLightSources { get { return _worldLightSources; } }
     public Image WorldLightLevels { get { return _worldLightLevels; } }
-    private ImageTexture _worldLightLevelsTexture;
+    public LightingEngine LightingEngine;
 
     public override void _Ready()
     {
@@ -56,7 +55,7 @@ public class Terrain : Node2D
 
         _threadPool = GetNode<ThreadPool>("/root/ThreadPool");
         _player = GetNode<Player>("/root/WorldSpawn/Player");
-        _lighting = GetNode<LightingEngine>("Lighting");
+        LightingEngine = GetNode<LightingEngine>("Lighting");
         _inputLayering = GetNode<InputLayering>("/root/InputLayering");
 
         // TODO: dynamically load the world
@@ -72,7 +71,7 @@ public class Terrain : Node2D
 
 
 
-        chunkPool = new ObjectPool<Chunk>(10);
+        chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
 
 
         _worldLightLevels = new Image();
@@ -94,8 +93,6 @@ public class Terrain : Node2D
                 _worldLightSources.SetPixel(i, j, Colors.Black);
         }
         // _worldImageLuminance.Unlock();
-
-        _worldLightLevelsTexture = new ImageTexture();
     }
 
     public override void _Process(float _delta)
@@ -162,7 +159,7 @@ public class Terrain : Node2D
         // This allocates the chunk's memory, and does so in this thread to improve performance
         // for the first couple times this needs to be run.
         if (!chunk.MemoryAllocated)
-            chunk.AllocateMemory((int)(ChunkBlockCount.x * ChunkBlockCount.y));
+            chunk.AllocateMemory(ChunkBlockCount);
 
         Image chunkImage = chunk.ChunkImage;
         chunkImage.Fill(Colors.Red);
@@ -219,7 +216,7 @@ public class Terrain : Node2D
             // Only create chunks that have not already been loaded in
             if (!_loadedChunks.ContainsKey(chunkPosition))
             {
-                Chunk chunk = chunkPool.GetInstance(_worldImage, chunkPosition, ChunkBlockCount, BlockPixelSize);
+                Chunk chunk = chunkPool.GetInstance(_worldImage, chunkPosition, BlockPixelSize, ChunkBlockCount);
                 AddChild(chunk);
                 _loadedChunks[chunkPosition] = chunk;
             }
@@ -587,8 +584,8 @@ public class Terrain : Node2D
         
         // Just remove and re-add the light.
         if (existingLightValue != colour){
-            _lighting.RemoveLight(worldBlockPosition);
-            _lighting.AddLight(worldBlockPosition, coloursLightValue);
+            LightingEngine.RemoveLight(worldBlockPosition);
+            LightingEngine.AddLight(worldBlockPosition, coloursLightValue);
         }
 
         // _worldLightSources.SetPixelv(worldBlockPosition, coloursLightValue);
