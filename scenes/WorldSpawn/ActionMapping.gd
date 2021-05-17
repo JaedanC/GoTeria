@@ -173,9 +173,9 @@ func add_action_mapping(game_action: String, key_string: String):
 	Binds a key to an action. You also need to pass it the type of event this
 	keycode is so that it can be stored correctly.
 	Example usage:
-		add_action_mapping("move_down", "s")
-		add_action_mapping('zoom_reset', "backspace")
-		add_action_mapping('zoom_in', "mwheeldown")
+		add_action_mapping('move_down', 's')
+		add_action_mapping('zoom_reset', 'backspace')
+		add_action_mapping('zoom_in', 'mwheeldown')
 	"""
 	var result = get_input_type_class_and_keycode_from_key_string(key_string)
 	if (result == null):

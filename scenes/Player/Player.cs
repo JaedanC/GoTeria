@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 public class Player : Node2D, ICollidable
 {   
-	private const float _ZOOM_CLAMP = 80f;
+	private const float _ZOOM_CLAMP = 20f;
     private Terrain _terrain;
 	private Godot.Object _smoothing;
 	private Camera2D _camera;
@@ -100,6 +100,9 @@ public class Player : Node2D, ICollidable
 
 		if (@event.IsActionPressed("zoom_out"))
 			_camera.Zoom -= new Vector2(0.5f, 0.5f);
+
+		if (@event.IsActionPressed("zoom_reset"))
+			_camera.Zoom = new Vector2(1, 1);
 
 		if (@event.IsActionPressed("quit"))
 			GetTree().Quit();
