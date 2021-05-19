@@ -1,14 +1,26 @@
+using Godot;
+using System;
+
 public class TerrainLayers {
-    public BlockList blocks;
-    public BlockList walls;
-    // public BlockList wires;
+    private ITerrainLayer walls;
+    private ITerrainLayer blocks;
 
-    public TerrainLayers()
+    public TerrainLayers(String blocksImagePath, String wallsImagePath)
     {
-        blocks = new BlockList();
+        walls = new WallLayer(wallsImagePath);
+        blocks = new BlockLayer(blocksImagePath);
 
-        blocks.AddBlock(new BlockMapping("Dirt", 151, 107, 75));
-        blocks.AddBlock(new BlockMapping("Sand", 255, 218, 56));
-        blocks.AddBlock(new BlockMapping("Stone", 128, 128, 128));
+        walls.Lock();
+        blocks.Lock();
+    }
+
+    public Image GetWorldBlocksImage()
+    {
+        return blocks.WorldImage;
+    }
+
+    public Image GetWorldWallsImage()
+    {
+        return walls.WorldImage;
     }
 }

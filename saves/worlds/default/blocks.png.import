@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/blocks.png-4ee1909b06aef7264c5357b64903534d.stex"
+path="res://.import/blocks.png-ea5e0a28798531d18793a446f3786dac.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://saves/worlds/blocks.png"
-dest_files=[ "res://.import/blocks.png-4ee1909b06aef7264c5357b64903534d.stex" ]
+source_file="res://saves/worlds/default/blocks.png"
+dest_files=[ "res://.import/blocks.png-ea5e0a28798531d18793a446f3786dac.stex" ]
 
 [params]
 
@@ -20,7 +20,7 @@ compress/hdr_mode=0
 compress/bptc_ldr=0
 compress/normal_map=0
 flags/repeat=0
-flags/filter=false
+flags/filter=true
 flags/mipmaps=false
 flags/anisotropic=false
 flags/srgb=2

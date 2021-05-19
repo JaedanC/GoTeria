@@ -5,8 +5,6 @@ using System.Diagnostics;
 
 public class Terrain : Node2D
 {
-    
-
     [Export]
     private readonly Vector2 _blockPixelSize = new Vector2(16, 16);
     [Export]
@@ -18,20 +16,21 @@ public class Terrain : Node2D
     private Player _player;
     private InputLayering _inputLayering;
     private LightingEngine _lightingEngine;
+    private TerrainLayers _terrainLayers;
 
     private Vector2 _chunkPixelDimensions;
     private Dictionary<Vector2, Chunk> _loadedChunks;
     private Dictionary<Vector2, Chunk> _urgentlyLoadingBlocksChunks;
     private Dictionary<Vector2, Chunk> _lightlyLoadingDrawingChunks;
     private Dictionary<Vector2, Chunk> _lightlyLoadingBlocksChunks;
-    private Image _worldImage;
     private ObjectPool<Chunk> chunkPool;
 
     /* Returns the size of a block in pixels as a Vector2 */
     public Vector2 BlockPixelSize { get { return _blockPixelSize; } }
     public Vector2 ChunkPixelDimensions { get { return _chunkPixelDimensions; } }
     public Vector2 ChunkBlockCount { get { return _chunkBlockCount; } }
-    public Image WorldImage { get { return _worldImage; } }
+    public Image WorldBlocksImage { get { return _terrainLayers.GetWorldBlocksImage(); } }
+    public Image WorldWallsImage { get { return _terrainLayers.GetWorldWallsImage(); } }
     public LightingEngine LightingEngine { get { return _lightingEngine; } }
     
 
@@ -56,23 +55,23 @@ public class Terrain : Node2D
         _lightingEngine = GetNode<LightingEngine>("Lighting");
 
         // TODO: dynamically load the world
+        _terrainLayers = new TerrainLayers(
+            "res://saves/worlds/default/blocks.png",
+            "res://saves/worlds/default/walls.png"
+        );
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/save_image.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorld.png");
-        Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
+        // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/LargeWorldAlpha.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/small.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/medium.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/hd.png");
-        _worldImage = worldTexture.GetData();
-        _worldImage.Lock();
+
         _lightingEngine.Initialise();
-
-
-
         chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
 
         
-        // _worldImageLuminance.Unlock();
+        // WorldBlocksImageLuminance.Unlock();
     }
 
     public override void _Process(float _delta)
@@ -138,7 +137,7 @@ public class Terrain : Node2D
 
         Image chunkImage = chunk.ChunkImage;
         chunkImage.Fill(Colors.Red);
-        chunkImage.BlitRect(_worldImage, new Rect2(chunkPosition * ChunkBlockCount, ChunkBlockCount), Vector2.Zero);
+        chunkImage.BlitRect(WorldBlocksImage, new Rect2(chunkPosition * ChunkBlockCount, ChunkBlockCount), Vector2.Zero);
         
         Block[] blocks = chunk.Blocks;
         for (int j = 0; j < ChunkBlockCount.y; j++)
@@ -152,13 +151,13 @@ public class Terrain : Node2D
             // not a multiple of the chunk size.
             Color pixel;
             if (worldBlockPosition.x < 0 || worldBlockPosition.y < 0 || 
-                worldBlockPosition.x >= _worldImage.GetWidth() ||
-                worldBlockPosition.y >= _worldImage.GetHeight())
+                worldBlockPosition.x >= WorldBlocksImage.GetWidth() ||
+                worldBlockPosition.y >= WorldBlocksImage.GetHeight())
             {
                 pixel = Colors.Red;
             }
             else
-                pixel = _worldImage.GetPixelv(worldBlockPosition);
+                pixel = WorldBlocksImage.GetPixelv(worldBlockPosition);
 
             int blockIndex = chunk.BlockPositionToBlockIndex(blockPosition);
             if (blocks[blockIndex] == null)
@@ -180,7 +179,7 @@ public class Terrain : Node2D
         Array<Vector2> visibleChunkPositions = _player.GetVisibilityChunkPositions(_loadMargin + _drawMargin);
         foreach (Vector2 chunkPosition in visibleChunkPositions)
         {
-            Vector2 worldImageInChunks = _worldImage.GetSize() / ChunkBlockCount;
+            Vector2 worldImageInChunks = WorldBlocksImage.GetSize() / ChunkBlockCount;
             if (chunkPosition.x < 0 || chunkPosition.y < 0 ||
                 chunkPosition.x >= worldImageInChunks.x ||
                 chunkPosition.y >= worldImageInChunks.y)
@@ -191,7 +190,7 @@ public class Terrain : Node2D
             // Only create chunks that have not already been loaded in
             if (!_loadedChunks.ContainsKey(chunkPosition))
             {
-                Chunk chunk = chunkPool.GetInstance(_worldImage, chunkPosition, BlockPixelSize, ChunkBlockCount);
+                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize, ChunkBlockCount);
                 AddChild(chunk);
                 _loadedChunks[chunkPosition] = chunk;
             }
@@ -390,7 +389,7 @@ public class Terrain : Node2D
     worldSizeInChunks variable when we create our own world. */
     public Vector2 GetWorldSize()
     {
-	    return _worldImage.GetSize();
+	    return WorldBlocksImage.GetSize();
         // return worldSizeInChunks;
     }
 
@@ -537,10 +536,10 @@ public class Terrain : Node2D
     private void SetWorldImage(Vector2 worldBlockPosition, Color colour)
     {
         if (worldBlockPosition.x < 0 || worldBlockPosition.y < 0 ||
-                worldBlockPosition.x >= _worldImage.GetWidth() ||
-                worldBlockPosition.y >= _worldImage.GetHeight())
+                worldBlockPosition.x >= WorldBlocksImage.GetWidth() ||
+                worldBlockPosition.y >= WorldBlocksImage.GetHeight())
             return;
-        _worldImage.SetPixelv(worldBlockPosition, colour);
+        WorldBlocksImage.SetPixelv(worldBlockPosition, colour);
 
         // CheckIfUpdateLighting(worldBlockPosition, colour);
     }

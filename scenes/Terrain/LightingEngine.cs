@@ -102,10 +102,10 @@ public class LightingEngine : Node2D
         _worldLightSources.Create((int)worldSize.x, (int)worldSize.y, false, Image.Format.Rgba8);
         _worldLightSources.Fill(Colors.Red);
         _worldLightSources.Lock();
-        for (int i = 0; i < _worldLightSources.GetWidth(); i++)
-        for (int j = 0; j < _worldLightSources.GetHeight(); j++)
+        for (int i = 0; i < worldSize.x; i++)
+        for (int j = 0; j < worldSize.y; j++)
         {
-            Color colour = terrain.WorldImage.GetPixel(i, j);
+            Color colour = terrain.WorldBlocksImage.GetPixel(i, j);
             if (Helper.IsLight(colour))
                 _worldLightSources.SetPixel(i, j, Colors.White);
             else
@@ -132,6 +132,10 @@ public class LightingEngine : Node2D
         if (Helper.OutOfBounds(worldBlockPosition, terrain.GetWorldSize()) ||
             WorldLightLevels.GetPixelv(worldBlockPosition).r == 0)
             return;
+
+        // TODO: Fix flickering remove lights.
+        // if (WorldLightSources.GetPixelv(worldBlockPosition).r == 0)
+        //     return;
         
         // Set the Remove Light Update to contain the current light level. This is 
         // required for the remove light function to work. The function will handle
@@ -243,6 +247,7 @@ public class LightingEngine : Node2D
 
             // Remove this blocks light. It doesn't have any light sources near it.
             WorldLightLevels.SetPixelv(node.WorldPosition, Colors.Black);
+            WorldLightSources.SetPixelv(node.WorldPosition, Colors.Black);
 
             // To use the same terminolody as the blog post.
             Color lightLevel = node.Colour;

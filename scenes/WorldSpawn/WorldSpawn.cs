@@ -9,8 +9,6 @@ public class WorldSpawn : Node
     public override void _Ready()
     {
         _inputLayering = GetNode<InputLayering>("/root/InputLayering");
-
-        new TerrainLayers();
     }
 
     public override void _Process(float delta)
