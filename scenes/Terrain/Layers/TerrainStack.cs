@@ -1,14 +1,14 @@
 using Godot;
 using System;
 
-public class TerrainLayers {
+public class TerrainStack {
     private ITerrainLayer walls;
     private ITerrainLayer blocks;
 
-    public TerrainLayers(String blocksImagePath, String wallsImagePath)
+    public TerrainStack(String blocksImagePath, String wallsImagePath)
     {
-        walls = new WallLayer(wallsImagePath);
-        blocks = new BlockLayer(blocksImagePath);
+        walls = new TerrainWallLayer(wallsImagePath);
+        blocks = new TerrainBlockLayer(blocksImagePath);
 
         walls.Lock();
         blocks.Lock();

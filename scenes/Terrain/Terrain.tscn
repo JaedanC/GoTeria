@@ -2,8 +2,8 @@
 
 [ext_resource path="res://scenes/Terrain/Terrain.cs" type="Script" id=1]
 [ext_resource path="res://assets/pixel_1x1.png" type="Texture" id=2]
-[ext_resource path="res://scenes/Terrain/LightingEngine.cs" type="Script" id=3]
-[ext_resource path="res://scenes/Terrain/Lighting.shader" type="Shader" id=4]
+[ext_resource path="res://scenes/Terrain/Lighting/LightingEngine.cs" type="Script" id=3]
+[ext_resource path="res://scenes/Terrain/Lighting/Lighting.shader" type="Shader" id=4]
 
 [sub_resource type="ShaderMaterial" id=1]
 shader = ExtResource( 4 )
@@ -14,7 +14,7 @@ script = ExtResource( 1 )
 
 [node name="Lighting" type="Sprite" parent="."]
 material = SubResource( 1 )
-z_index = 1
+z_index = 15
 texture = ExtResource( 2 )
 centered = false
 script = ExtResource( 3 )

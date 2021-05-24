@@ -16,7 +16,7 @@ public class Terrain : Node2D
     private Player _player;
     private InputLayering _inputLayering;
     private LightingEngine _lightingEngine;
-    private TerrainLayers _terrainLayers;
+    private TerrainStack _terrainStack;
 
     private Vector2 _chunkPixelDimensions;
     private Dictionary<Vector2, Chunk> _loadedChunks;
@@ -29,8 +29,8 @@ public class Terrain : Node2D
     public Vector2 BlockPixelSize { get { return _blockPixelSize; } }
     public Vector2 ChunkPixelDimensions { get { return _chunkPixelDimensions; } }
     public Vector2 ChunkBlockCount { get { return _chunkBlockCount; } }
-    public Image WorldBlocksImage { get { return _terrainLayers.GetWorldBlocksImage(); } }
-    public Image WorldWallsImage { get { return _terrainLayers.GetWorldWallsImage(); } }
+    public Image WorldBlocksImage { get { return _terrainStack.GetWorldBlocksImage(); } }
+    public Image WorldWallsImage { get { return _terrainStack.GetWorldWallsImage(); } }
     public LightingEngine LightingEngine { get { return _lightingEngine; } }
     
 
@@ -55,7 +55,7 @@ public class Terrain : Node2D
         _lightingEngine = GetNode<LightingEngine>("Lighting");
 
         // TODO: dynamically load the world
-        _terrainLayers = new TerrainLayers(
+        _terrainStack = new TerrainStack(
             "res://saves/worlds/default/blocks.png",
             "res://saves/worlds/default/walls.png"
         );
@@ -130,42 +130,10 @@ public class Terrain : Node2D
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
 
-        // This allocates the chunk's memory, and does so in this thread to improve performance
-        // for the first couple times this needs to be run.
         if (!chunk.MemoryAllocated)
-            chunk.AllocateMemory(ChunkBlockCount);
+            chunk.AllocateMemory(_chunkBlockCount);
 
-        Image chunkImage = chunk.ChunkImage;
-        chunkImage.Fill(Colors.Red);
-        chunkImage.BlitRect(WorldBlocksImage, new Rect2(chunkPosition * ChunkBlockCount, ChunkBlockCount), Vector2.Zero);
-        
-        Block[] blocks = chunk.Blocks;
-        for (int j = 0; j < ChunkBlockCount.y; j++)
-        for (int i = 0; i < ChunkBlockCount.x; i++)
-        {
-            Vector2 blockPosition = new Vector2(i, j);
-            Vector2 worldBlockPosition = chunkPosition * ChunkBlockCount + blockPosition;
-
-            // Grab the colour for the pixel from the world image. If the pixel
-            // goes out of bounds then just draw Red. This happens when the image is
-            // not a multiple of the chunk size.
-            Color pixel;
-            if (worldBlockPosition.x < 0 || worldBlockPosition.y < 0 || 
-                worldBlockPosition.x >= WorldBlocksImage.GetWidth() ||
-                worldBlockPosition.y >= WorldBlocksImage.GetHeight())
-            {
-                pixel = Colors.Red;
-            }
-            else
-                pixel = WorldBlocksImage.GetPixelv(worldBlockPosition);
-
-            int blockIndex = chunk.BlockPositionToBlockIndex(blockPosition);
-            if (blocks[blockIndex] == null)
-                blocks[blockIndex] = new Block();
-
-            blocks[blockIndex].Id = (int)pixel.a;
-            blocks[blockIndex].Colour = pixel;
-        }
+        chunk.Create(chunkPosition, _chunkBlockCount, WorldBlocksImage, WorldWallsImage);
         
         chunk.Loaded = true;
         chunk.ChunkLighting.ComputeLightingPass();

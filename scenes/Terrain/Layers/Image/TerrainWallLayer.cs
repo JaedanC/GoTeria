@@ -1,14 +1,14 @@
 using Godot;
 using System;
 
-public class WallLayer : ITerrainLayer
+public class TerrainWallLayer : ITerrainLayer
 {
     private Image wallsImage;
     private BlockMapping walls;
     public Image WorldImage { get { return wallsImage; } }
     public BlockMapping BlockList { get { return walls; } }
 
-    public WallLayer(String wallsImagePath)
+    public TerrainWallLayer(String wallsImagePath)
     {
         Texture worldWallsTexture = (Texture)GD.Load(wallsImagePath);
         wallsImage = worldWallsTexture.GetData();

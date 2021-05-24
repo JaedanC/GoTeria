@@ -7,18 +7,15 @@ public class Chunk : Node2D, IResettable
 {
     private Terrain _terrain;
     private Image _worldImage;
-    private Image _chunkImage;
-    private readonly ImageTexture _chunkTexture;
+    // private readonly ImageTexture _chunkTexture;
     private Vector2 _chunkPosition;
     private Vector2 _blockCount;
     private Vector2 _blockPixelSize;
-    private Block[] _blocks;
     private bool _locked;
     private bool _drawn;
+    private ChunkStack _chunkStack;
 
-    public Image ChunkImage { get { return _chunkImage; } }
     public Vector2 ChunkPosition { get { return _chunkPosition; } }
-    public Block[] Blocks { get { return _blocks; } }
     public bool Locked
     {
         get { return _locked; } 
@@ -38,18 +35,32 @@ public class Chunk : Node2D, IResettable
     public bool Drawn { get { return _drawn; } }
     public bool MemoryAllocated { get; set; }
     public ChunkLighting ChunkLighting;
+    public Block[] Blocks { get { return _chunkStack.Blocks; } }
+    public Wall[] Walls { get { return _chunkStack.Walls; } }
+    // public Image ChunkImage { get { return _chunkStack.GetRawChunkImage(); } }
     
+
+    public static int BlockPositionToBlockIndex(Vector2 chunkSize, Vector2 blockPosition)
+    {
+        return (int)(chunkSize.x * blockPosition.y + blockPosition.x);
+    }
 
     public Chunk()
     {
         Name = "Chunk";
-        _chunkTexture = new ImageTexture();
+        // _chunkTexture = new ImageTexture();
+        _chunkStack = new ChunkStack();
     }
 
     public override void _Ready()
     {
         _terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
         ChunkLighting = new ChunkLighting(this, _terrain);
+    }
+
+    public void Create(Vector2 chunkPosition, Vector2 chunkSize, Image worldBlocksImages, Image worldWallsImage)
+    {
+        _chunkStack.Create(chunkPosition, chunkSize, worldBlocksImages, worldWallsImage);
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */
@@ -59,9 +70,9 @@ public class Chunk : Node2D, IResettable
         _chunkPosition = (Vector2)parameters[1];
         _blockPixelSize = (Vector2)parameters[2];
         _blockCount = (Vector2)parameters[3];
-        Loaded = false;
         _locked = false;
         _drawn = false;
+        Loaded = false;
         Position = _blockPixelSize * _chunkPosition * _blockCount;
     }
 
@@ -70,10 +81,7 @@ public class Chunk : Node2D, IResettable
     public void AllocateMemory(params object[] memoryAllocationParameters)
     {
         _blockCount = (Vector2)memoryAllocationParameters[0];
-        int blocksInChunk = (int)(_blockCount.x * _blockCount.y);
-        _blocks = new Block[blocksInChunk];
-        _chunkImage = new Image();
-        _chunkImage.Create((int)_blockCount.x, (int)_blockCount.y, false, Image.Format.Rgba8);
+        _chunkStack.AllocateMemory(_blockCount);
         MemoryAllocated = true;
     }
 
@@ -102,6 +110,12 @@ public class Chunk : Node2D, IResettable
         chunkFile.Close();
     }
 
+    public override void _Draw()
+    {
+        // DrawCircle(Vector2.Zero, 2, Color.aquamarine);
+        DrawChunk();
+    }
+
     /* Draw the chunk to the screen using my special colour formula. This function
     Is run when a chunk is created however, we only want it to count as being
     run after all the blocks have been loaded.*/
@@ -111,9 +125,11 @@ public class Chunk : Node2D, IResettable
             return;
         _drawn = true;
 
-        _chunkTexture.CreateFromImage(ChunkImage, (int)Texture.FlagsEnum.Mipmaps | (int)Texture.FlagsEnum.AnisotropicFilter);
         DrawSetTransform(Vector2.Zero, 0, _blockPixelSize);
-        DrawTexture(_chunkTexture, Vector2.Zero);
+        foreach (ImageTexture texture in _chunkStack.ComputeAndGetTextures())
+        {
+            DrawTexture(texture, Vector2.Zero);
+        }
         DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
 
@@ -128,31 +144,48 @@ public class Chunk : Node2D, IResettable
 	    return (int)(_blockCount.x * blockPosition.y + blockPosition.x);
     }
 
-    public Block GetBlockFromBlockPosition(Vector2 blockPosition)
+    private IBlock GetIBlockFromBlockPosition(IBlock[] blocks, Vector2 blockPosition)
     {
         if (!IsValidBlockPosition(blockPosition))
             return null;
-        return _blocks[BlockPositionToBlockIndex(blockPosition)];
+        return blocks[BlockPositionToBlockIndex(blockPosition)];
     }
 
-    public void SetBlockFromBlockPosition(Vector2 blockPosition, Block newBlock)
+    public Block GetBlockFromBlockPosition(Vector2 blockPosition)
+    {
+        return (Block)GetIBlockFromBlockPosition(_chunkStack.Blocks, blockPosition);
+    }
+
+    public Wall GetWallFromBlockPosition(Vector2 blockPosition)
+    {
+        return (Wall)GetIBlockFromBlockPosition(_chunkStack.Walls, blockPosition);
+    }
+
+    private void SetIBlockFromBlockPosition(IBlock[] blocks, Image chunkLayerImage, Vector2 blockPosition, IBlock newBlock)
     {
         if (!IsValidBlockPosition(blockPosition))
             return;
 
-        _blocks[BlockPositionToBlockIndex(blockPosition)] = newBlock;
-        _chunkImage.Lock();
+        Color newColour;
         if (newBlock.IsSolid())
-            _chunkImage.SetPixelv(blockPosition, newBlock.Colour);
+            newColour = newBlock.Colour;
         else
-            _chunkImage.SetPixelv(blockPosition, new Color(0, 0, 0, 0));
-        _chunkImage.Unlock();
+            newColour = new Color(0, 0, 0, 0);
+
+        blocks[BlockPositionToBlockIndex(blockPosition)] = newBlock;
+        chunkLayerImage.Lock();
+        chunkLayerImage.SetPixelv(blockPosition, newColour);
+        chunkLayerImage.Unlock();
         Update();
     }
 
-    public override void _Draw()
+    public void SetBlockFromBlockPosition(Vector2 blockPosition, Block newBlock)
     {
-        // DrawCircle(Vector2.Zero, 2, Color.aquamarine);
-        DrawChunk();
+        SetIBlockFromBlockPosition(_chunkStack.Blocks, _chunkStack.GetBlocksImage(), blockPosition, newBlock);
+    }
+
+    public void SetWallFromBlockPosition(Vector2 blockPosition, Wall newWall)
+    {
+        SetIBlockFromBlockPosition(_chunkStack.Walls, _chunkStack.GetWallsImage(), blockPosition, newWall);
     }
 }
