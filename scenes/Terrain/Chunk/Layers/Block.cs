@@ -19,4 +19,9 @@ public class Block : IBlock
     public bool IsSolid() {
         return Id > 0;
     }
+
+    public float GetTransparency()
+    {
+        return 0.1f;
+    }
 }

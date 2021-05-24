@@ -41,7 +41,7 @@ public class LightingEngine : Node2D
     }
 
     public const float LIGHT_MULTIPLIER = 0.5f;
-    public const float LIGHT_CUTOFF = 0.1f;
+    public const float LIGHT_CUTOFF = 0.01f;
 
     private InputLayering inputLayering;
     private Terrain terrain;
@@ -50,9 +50,12 @@ public class LightingEngine : Node2D
 	private Image _screenLightLevels;
     private ImageTexture _screenLightLevelsShaderTexture;
 	private System.Threading.Thread _lightingThread;
-    private Queue<LightUpdate> _lightUpdateAddQueue;
-    private Queue<LightUpdate> _lightUpdateRemoveQueue;
-    private Queue<LightUpdate> _lightUpdateRemoveToAddQueue;
+    private Godot.Collections.Dictionary<Vector2, Color> _lightUpdateAddExisting;
+    private Godot.Collections.Dictionary<Vector2, object> _lightUpdateRemoveExisting;
+    private Godot.Collections.Dictionary<Vector2, Color> _lightUpdateRemoveToAddExisting;
+    private QueueSet<LightUpdate> _lightUpdateAddQueue;
+    private QueueSet<LightUpdate> _lightUpdateRemoveQueue;
+    private QueueSet<LightUpdate> _lightUpdateRemoveToAddQueue;
     private Godot.Mutex _lightUpdateQueueMutex;
     private Vector2 _nextScale;
     private Vector2 _nextPosition;
@@ -84,10 +87,13 @@ public class LightingEngine : Node2D
         _screenLightLevels = new Image();
         _screenLightLevelsShaderTexture = new ImageTexture();
 		_lightingThread = new System.Threading.Thread(new System.Threading.ThreadStart(SpawnThread));
-        _lightUpdateAddQueue = new Queue<LightUpdate>();
-        _lightUpdateRemoveQueue = new Queue<LightUpdate>();
-        _lightUpdateRemoveToAddQueue = new Queue<LightUpdate>();
+        _lightUpdateAddQueue = new QueueSet<LightUpdate>();
+        _lightUpdateRemoveQueue = new QueueSet<LightUpdate>();
+        _lightUpdateRemoveToAddQueue = new QueueSet<LightUpdate>();
         _lightUpdateQueueMutex = new Godot.Mutex();
+        _lightUpdateAddExisting = new Godot.Collections.Dictionary<Vector2, Color>();
+        _lightUpdateRemoveExisting = new Godot.Collections.Dictionary<Vector2, object>();
+        _lightUpdateRemoveToAddExisting = new Godot.Collections.Dictionary<Vector2, Color>();
     }
 
     public void Initialise()
@@ -105,16 +111,22 @@ public class LightingEngine : Node2D
         for (int i = 0; i < worldSize.x; i++)
         for (int j = 0; j < worldSize.y; j++)
         {
-            Color colour = terrain.WorldBlocksImage.GetPixel(i, j);
-            if (Helper.IsLight(colour))
-                _worldLightSources.SetPixel(i, j, Colors.White);
+            Color blockColour = terrain.WorldBlocksImage.GetPixel(i, j);
+            Color wallColour = terrain.WorldWallsImage.GetPixel(i, j);
+            Color lightValue;
+            if (Helper.IsLight(blockColour) && Helper.IsLight(wallColour))
+                lightValue = Colors.White;
             else
-                _worldLightSources.SetPixel(i, j, Colors.Black);
+                lightValue = Colors.Black;
+            _worldLightSources.SetPixel(i, j, lightValue);
         }
+
+        _worldLightLevels.BlitRect(_worldLightSources, new Rect2(Vector2.Zero, terrain.GetWorldSize()), Vector2.Zero);
     }
 
     public void AddLight(Vector2 worldBlockPosition, Color lightValue)
     {
+        worldBlockPosition = worldBlockPosition.Floor();
         // Return if the position is out of bounds.
         // Return if the lightValue does not beat what's already present.
         if (Helper.OutOfBounds(worldBlockPosition, terrain.GetWorldSize()) || 
@@ -122,11 +134,18 @@ public class LightingEngine : Node2D
             return;
 
         // Queue the light update to be computed by the worker thread.
+        if (_lightUpdateAddExisting.ContainsKey(worldBlockPosition) && 
+            _lightUpdateAddExisting[worldBlockPosition].r >= lightValue.r)
+            return;
+        _lightUpdateAddExisting[worldBlockPosition] = lightValue;
+
         EnqueueAddLightUpdate(new LightUpdate(worldBlockPosition, lightValue));
     }
 
     public void RemoveLight(Vector2 worldBlockPosition)
     {
+        worldBlockPosition = worldBlockPosition.Floor();
+
         // Return if the position is out of bounds.
         // Return if the light at that block is already 0.
         if (Helper.OutOfBounds(worldBlockPosition, terrain.GetWorldSize()) ||
@@ -140,6 +159,11 @@ public class LightingEngine : Node2D
         // Set the Remove Light Update to contain the current light level. This is 
         // required for the remove light function to work. The function will handle
         // the setting of pixels.
+        // Queue the light update to be computed by the worker thread.
+        if (_lightUpdateRemoveExisting.ContainsKey(worldBlockPosition))
+            return;
+        _lightUpdateRemoveExisting[worldBlockPosition] = null;
+
         Color existingColour = WorldLightLevels.GetPixelv(worldBlockPosition);
         EnqueueRemoveLightUpdate(new LightUpdate(worldBlockPosition, existingColour));
     }
@@ -149,6 +173,29 @@ public class LightingEngine : Node2D
 		if (_lightingThread.ThreadState == System.Threading.ThreadState.Unstarted)
 			_lightingThread.Start();
         _inPhysicsLoop = true;
+
+        if (inputLayering.PollAction("light_debug"))
+        {
+            GD.Print("Add: " + _lightUpdateAddQueue.Count);
+        }
+        if (inputLayering.PollAction("remove_light_debug"))
+        {
+            GD.Print("Remove: " + _lightUpdateRemoveQueue.Count);
+        }
+        if (inputLayering.PollAction("remove_light_add_debug"))
+        {
+            GD.Print("RemoveAdd: " + _lightUpdateRemoveToAddQueue.Count);
+        }
+        if (inputLayering.PollActionPressed("debug"))
+        {
+            foreach (KeyValuePair<Vector2, Color> item in _lightUpdateRemoveToAddExisting)
+            {
+                GD.Print("Item: " + item.Key + " " + item.Value);
+            }
+            GD.Print("Pausing...");
+        }
+
+
 
         // LightUpdatePass();
         UpdateShaderTexture();
@@ -185,12 +232,13 @@ public class LightingEngine : Node2D
 
     private void DoAddLightUpdates(LightUpdate lightAddUpdate)
     {   
-        Queue<LightBFSNode> lightValuesFringe = new Queue<LightBFSNode>();
+        QueueSet<LightBFSNode> lightValuesFringe = new QueueSet<LightBFSNode>();
+        // Queue<LightBFSNode> lightValuesFringe = new Queue<LightBFSNode>();
         lightValuesFringe.Enqueue(new LightBFSNode(lightAddUpdate));
         LightUpdateBFS(lightValuesFringe);
     }   
 
-    public void LightUpdateBFS(Queue<LightBFSNode> lightValuesFringe)
+    public void LightUpdateBFS(QueueSet<LightBFSNode> lightValuesFringe)
     {
         while (lightValuesFringe.Count > 0)
         {
@@ -205,16 +253,33 @@ public class LightingEngine : Node2D
 
             // Set the colour then
             WorldLightLevels.SetPixelv(node.WorldPosition, node.Colour);
-            float multiplier = LIGHT_MULTIPLIER;
+
+            // IBlock topBlock = terrain.GetTopIBlockFromWorldBlockPosition(node.WorldPosition);
+            // if (topBlock == null)
+            // {
+            //     continue;
+            // }
+
+            // float multiplier = topBlock.GetTransparency();
+            // float multiplier = 0.9f;
+            // Color newColour = new Color(
+            //     node.Colour.r * multiplier,
+            //     node.Colour.g * multiplier,
+            //     node.Colour.b * multiplier,
+            //     1
+            // );
+            float reduction = 0.02f;
+            // float reduction = topBlock.GetTransparency();
             Color newColour = new Color(
-                node.Colour.r * multiplier,
-                node.Colour.g * multiplier,
-                node.Colour.b * multiplier,
+                node.Colour.r - reduction,
+                node.Colour.g - reduction,
+                node.Colour.b - reduction,
                 1
             );
 
             // Exit condition: The next colour would be too dark anyway
-            if (newColour.r < LIGHT_CUTOFF)
+            // if (newColour.r < LIGHT_CUTOFF)
+            if (newColour.r <= 0)
             {
                 continue;
             }
@@ -229,20 +294,37 @@ public class LightingEngine : Node2D
             {   
                 if (Helper.InBounds(neighbourPosition, terrain.GetWorldSize()))
                 {
-                    lightValuesFringe.Enqueue(new LightBFSNode(neighbourPosition, newColour));
+                    Color neighbourExistingColour = WorldLightLevels.GetPixelv(neighbourPosition);
+                    if (neighbourExistingColour.r < node.Colour.r)
+                    {
+                        lightValuesFringe.Enqueue(new LightBFSNode(neighbourPosition, newColour));
+                    }
                 }
             }
         }
     }
 
+    private void AddRemoveLight(LightUpdate lightUpdate)
+    {
+        if (_lightUpdateRemoveToAddExisting.ContainsKey(lightUpdate.WorldPosition) &&
+            _lightUpdateRemoveToAddExisting[lightUpdate.WorldPosition].r < lightUpdate.Colour.r)
+            return;
+
+        _lightUpdateRemoveToAddExisting[lightUpdate.WorldPosition] = lightUpdate.Colour;
+        _lightUpdateRemoveToAddQueue.Enqueue(lightUpdate);
+    }
+
     private void DoRemoveLightUpdates(LightUpdate lightRemoveUpdate)
     {   
-        
-        System.Collections.Generic.Queue<LightBFSNode> fringe = new System.Collections.Generic.Queue<LightBFSNode>();
+        QueueSet<LightBFSNode> fringe = new QueueSet<LightBFSNode>();
         fringe.Enqueue(new LightBFSNode(lightRemoveUpdate));
 
         while (fringe.Count > 0)
         {
+            // if (inputLayering.PollAction("remove_light_debug"))
+            // {
+            //     GD.Print("Fringe: " + fringe.Count);
+            // }
             LightBFSNode node = fringe.Dequeue();
 
             // Remove this blocks light. It doesn't have any light sources near it.
@@ -281,6 +363,7 @@ public class LightingEngine : Node2D
                     // neighbour has recieved its light from another source. We then need to consider that
                     // this block which is having its light source removed may be filled in by another block
                     // instead.
+                    // AddRemoveLight(new LightUpdate(neighbourPosition, neighboursLevel));
                     _lightUpdateRemoveToAddQueue.Enqueue(new LightUpdate(neighbourPosition, neighboursLevel));
                 }
             }
@@ -318,15 +401,32 @@ public class LightingEngine : Node2D
         // lightUpdateQueueMutex.Lock();
         while (_lightUpdateRemoveQueue.Count > 0)
         {
-            DoRemoveLightUpdates(_lightUpdateRemoveQueue.Dequeue());
+            LightUpdate lightUpdate = _lightUpdateRemoveQueue.Dequeue();
+            DoRemoveLightUpdates(lightUpdate);
+
             // During the operation of removing lights we treat the edges as small light sources
             // They need to be computed first.
             while (_lightUpdateRemoveToAddQueue.Count > 0)
-                DoAddLightUpdates(_lightUpdateRemoveToAddQueue.Dequeue());
+            {
+                LightUpdate removeAddLightUpdate = _lightUpdateRemoveToAddQueue.Dequeue();
+                DoAddLightUpdates(removeAddLightUpdate);
+
+                if (_lightUpdateRemoveToAddExisting.ContainsKey(lightUpdate.WorldPosition))
+                    _lightUpdateRemoveToAddExisting.Remove(lightUpdate.WorldPosition);
+            }
+
+            if (_lightUpdateRemoveExisting.ContainsKey(lightUpdate.WorldPosition))
+                _lightUpdateRemoveExisting.Remove(lightUpdate.WorldPosition);
         }
         // Now compute the lights that need to be added.
         while (_lightUpdateAddQueue.Count > 0)
-            DoAddLightUpdates(_lightUpdateAddQueue.Dequeue());
+        {
+            LightUpdate lightUpdate = _lightUpdateAddQueue.Dequeue();
+            DoAddLightUpdates(lightUpdate);
+
+            if (_lightUpdateAddExisting.ContainsKey(lightUpdate.WorldPosition))
+                _lightUpdateAddExisting.Remove(lightUpdate.WorldPosition);
+        }
         // lightUpdateQueueMutex.Unlock();
 
         

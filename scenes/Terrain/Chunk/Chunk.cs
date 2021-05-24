@@ -13,6 +13,7 @@ public class Chunk : Node2D, IResettable
     private Vector2 _blockPixelSize;
     private bool _locked;
     private bool _drawn;
+    private bool _memoryAllocated;
     private ChunkStack _chunkStack;
 
     public Vector2 ChunkPosition { get { return _chunkPosition; } }
@@ -33,8 +34,7 @@ public class Chunk : Node2D, IResettable
     This is so the chunks draw call is cached and the terrain knows not to try
     and draw this chunk to the screen again. */
     public bool Drawn { get { return _drawn; } }
-    public bool MemoryAllocated { get; set; }
-    public ChunkLighting ChunkLighting;
+    private ChunkLighting _chunkLighting;
     public Block[] Blocks { get { return _chunkStack.Blocks; } }
     public Wall[] Walls { get { return _chunkStack.Walls; } }
     // public Image ChunkImage { get { return _chunkStack.GetRawChunkImage(); } }
@@ -52,15 +52,29 @@ public class Chunk : Node2D, IResettable
         _chunkStack = new ChunkStack();
     }
 
+    /* This function should only be run once. This initialises a chunk to have the memory it requires
+    to be allocated on the heap. */ 
+    public void AllocateMemory(params object[] memoryAllocationParameters)
+    {
+        _blockCount = (Vector2)memoryAllocationParameters[0];
+        _chunkStack.AllocateMemory(_blockCount);
+        _memoryAllocated = true;
+    }
+
     public override void _Ready()
     {
         _terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
-        ChunkLighting = new ChunkLighting(this, _terrain);
+        _chunkLighting = new ChunkLighting(this, _terrain);
     }
 
-    public void Create(Vector2 chunkPosition, Vector2 chunkSize, Image worldBlocksImages, Image worldWallsImage)
+    public void Create(Vector2 chunkPosition, Vector2 blockCount, Image worldBlocksImages, Image worldWallsImage)
     {
-        _chunkStack.Create(chunkPosition, chunkSize, worldBlocksImages, worldWallsImage);
+        if (!_memoryAllocated)
+            AllocateMemory(blockCount);
+        
+        _chunkStack.Create(chunkPosition, blockCount, worldBlocksImages, worldWallsImage);
+        Loaded = true;
+        _chunkLighting.ComputeLightingPass();
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */
@@ -76,14 +90,6 @@ public class Chunk : Node2D, IResettable
         Position = _blockPixelSize * _chunkPosition * _blockCount;
     }
 
-    /* This function should only be run once. This initialises a chunk to have the memory it requires
-    to be allocated on the heap. */ 
-    public void AllocateMemory(params object[] memoryAllocationParameters)
-    {
-        _blockCount = (Vector2)memoryAllocationParameters[0];
-        _chunkStack.AllocateMemory(_blockCount);
-        MemoryAllocated = true;
-    }
 
     /* This method will save all the data in a chunk to disk. Currently it is being
     done using compression, however this can be changed below. TODO: Change this
@@ -142,6 +148,13 @@ public class Chunk : Node2D, IResettable
     public int BlockPositionToBlockIndex(Vector2 blockPosition)
     {
 	    return (int)(_blockCount.x * blockPosition.y + blockPosition.x);
+    }
+
+    public IBlock GetTopIBlockFromBlockPosition(Vector2 blockPosition)
+    {
+        if (!IsValidBlockPosition(blockPosition))
+            return null;
+        return _chunkStack.GetTopIBlock(blockPosition);
     }
 
     private IBlock GetIBlockFromBlockPosition(IBlock[] blocks, Vector2 blockPosition)

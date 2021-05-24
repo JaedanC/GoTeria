@@ -18,6 +18,7 @@ public class Terrain : Node2D
     private LightingEngine _lightingEngine;
     private TerrainStack _terrainStack;
 
+    private Mutex _loadedChunksMutex;
     private Vector2 _chunkPixelDimensions;
     private Dictionary<Vector2, Chunk> _loadedChunks;
     private Dictionary<Vector2, Chunk> _urgentlyLoadingBlocksChunks;
@@ -44,6 +45,7 @@ public class Terrain : Node2D
         Debug.Assert(ChunkBlockCount.y > 0, "ChunkBlockCount.y is 0");
         Debug.Assert(ChunkBlockCount.y > 0, "ChunkBlockCount.y is 0");
 
+        _loadedChunksMutex = new Mutex();
         _loadedChunks = new Dictionary<Vector2, Chunk>();
         _urgentlyLoadingBlocksChunks = new Dictionary<Vector2, Chunk>();
         _lightlyLoadingDrawingChunks = new Dictionary<Vector2, Chunk>();
@@ -87,10 +89,12 @@ public class Terrain : Node2D
             GD.Print("Finished Saving to file");
         }
         
+        _loadedChunksMutex.Lock();
         DeleteInvisibleChunks();
         LoadVisibleChunks();
         CreateChunkStreamingRegions();
         ContinueStreamingRegions();
+        _loadedChunksMutex.Unlock();
         
         // Draw the chunk borders
         Update();
@@ -130,13 +134,8 @@ public class Terrain : Node2D
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
 
-        if (!chunk.MemoryAllocated)
-            chunk.AllocateMemory(_chunkBlockCount);
-
         chunk.Create(chunkPosition, _chunkBlockCount, WorldBlocksImage, WorldWallsImage);
         
-        chunk.Loaded = true;
-        chunk.ChunkLighting.ComputeLightingPass();
 	    return chunkPosition;
     }
 
@@ -369,11 +368,14 @@ public class Terrain : Node2D
     public Chunk GetChunkFromChunkPosition(Vector2 chunkPosition)
     {
         // if (CreateChunk(chunkPosition))
+        Chunk chunk = null;
+
+        _loadedChunksMutex.Lock();
         if (_loadedChunks.ContainsKey(chunkPosition))
-        {
-            return _loadedChunks[chunkPosition];
-        }
-        return null;
+            chunk = _loadedChunks[chunkPosition];
+        _loadedChunksMutex.Unlock();
+
+        return chunk;
     }
 	
 	/* Returns a Chunk if it exists at the given world_position in the world.
@@ -418,6 +420,23 @@ public class Terrain : Node2D
         if (!chunk.Loaded)
             return null;
         return chunk.GetBlockFromBlockPosition(blockPosition);
+    }
+
+    public IBlock GetTopIBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition)
+    {
+        Chunk chunk = GetChunkFromChunkPosition(chunkPosition);
+        if (chunk == null)
+            return null;
+        if (!chunk.Loaded)
+            return null;
+        return chunk.GetTopIBlockFromBlockPosition(blockPosition);
+    }
+
+    public IBlock GetTopIBlockFromWorldBlockPosition(Vector2 worldBlockPosition)
+    {
+        Vector2 chunkPosition = (worldBlockPosition / _chunkBlockCount).Floor();
+        Vector2 blockPosition = worldBlockPosition - chunkPosition * _chunkBlockCount;
+        return GetTopIBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition);
     }
 		
     /* Returns a block if it exists using the given world_position.

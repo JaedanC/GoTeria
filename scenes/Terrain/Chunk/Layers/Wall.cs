@@ -17,4 +17,9 @@ public class Wall : IBlock
     public bool IsSolid() {
         return false;
     }
+
+    public float GetTransparency()
+    {
+        return 0.02f;
+    }
 }

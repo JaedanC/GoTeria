@@ -12,14 +12,14 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
 {
     private Array<T> pool;
 
-    public ObjectPool(int numberOfInstances=0, params object[] memoryAllocationParameters)
+    public ObjectPool(int numberOfInstances, params object[] memoryAllocationParameters)
     {
         pool = new Array<T>();
         for (int i = 0; i < numberOfInstances; i++)
         {
             T item = new T();
-            pool.Add(item);
             item.AllocateMemory(memoryAllocationParameters);
+            pool.Add(item);
         }
     }
 
@@ -35,7 +35,8 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
     /* This method returns a new instance of T is the Pool is not empty. Otherwise it will
     return a reset old T from the pool. The either case, the T.Reset() method is called on T.
     The parameters to this function are passed in using an object[]. Note: You are still
-    responsible for adding the instance to the tree! */
+    responsible for adding the instance to the tree, and allocating the memory this requires
+    later on. */
     public T GetInstance(params object[] resetParameters)
     {
         T item;

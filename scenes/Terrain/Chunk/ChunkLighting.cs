@@ -23,7 +23,7 @@ public class ChunkLighting
 
     private void ChunkLightBFS()
     {
-        System.Collections.Generic.Queue<LightingEngine.LightBFSNode> lightQueue = new System.Collections.Generic.Queue<LightingEngine.LightBFSNode>();
+        QueueSet<LightingEngine.LightBFSNode> lightQueue = new QueueSet<LightingEngine.LightBFSNode>();
 
         Vector2 chunkBlockCount = terrain.ChunkBlockCount;
         Vector2 topLeftPixel = chunk.ChunkPosition * chunkBlockCount;
