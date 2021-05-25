@@ -3,14 +3,14 @@ using System.Collections.Generic;
 public class QueueSet<T>
 {
     private Queue<T> queue;
-    private HashSet<T> set;
+    private HashSet<object> set;
     public int Count { get { return queue.Count; }}
 
 
     public QueueSet()
     {
         queue = new Queue<T>();
-        set = new HashSet<T>();
+        set = new HashSet<object>();
     }
 
     public void Enqueue(T item)
@@ -19,7 +19,7 @@ public class QueueSet<T>
         set.Add(item);
         queue.Enqueue(item);
     }
-
+    
     public T Dequeue()
     {
         T item = queue.Dequeue();
