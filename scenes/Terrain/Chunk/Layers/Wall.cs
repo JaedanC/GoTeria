@@ -20,6 +20,6 @@ public class Wall : IBlock
 
     public float GetTransparency()
     {
-        return 0.02f;
+        return 0.01f;
     }
 }

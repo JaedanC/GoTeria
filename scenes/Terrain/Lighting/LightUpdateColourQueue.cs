@@ -15,19 +15,30 @@ public class LightUpdateColourQueue
 
     public void Enqueue(LightingEngine.LightUpdate lightUpdate)
     {
-        Vector2 worldBlockPosition = lightUpdate.WorldPosition;
-        if (updateDictionary.ContainsKey(worldBlockPosition) && 
-            updateDictionary[worldBlockPosition].r >= lightUpdate.Colour.r)
-            return;
-
-        updateDictionary[worldBlockPosition] = lightUpdate.Colour;
         updateQueue.Enqueue(lightUpdate);
     }
 
     public LightingEngine.LightUpdate Dequeue()
     {
         LightingEngine.LightUpdate lightUpdate = updateQueue.Dequeue();
-        updateDictionary.Remove(lightUpdate.WorldPosition);
         return lightUpdate;
     }
+
+    // public void Enqueue(LightingEngine.LightUpdate lightUpdate)
+    // {
+    //     Vector2 worldBlockPosition = lightUpdate.WorldPosition;
+    //     if (updateDictionary.ContainsKey(worldBlockPosition) && 
+    //         updateDictionary[worldBlockPosition].r >= lightUpdate.Colour.r)
+    //         return;
+
+    //     updateDictionary[worldBlockPosition] = lightUpdate.Colour;
+    //     updateQueue.Enqueue(lightUpdate);
+    // }
+
+    // public LightingEngine.LightUpdate Dequeue()
+    // {
+    //     LightingEngine.LightUpdate lightUpdate = updateQueue.Dequeue();
+    //     updateDictionary.Remove(lightUpdate.WorldPosition);
+    //     return lightUpdate;
+    // }
 }

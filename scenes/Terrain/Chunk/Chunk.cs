@@ -74,7 +74,7 @@ public class Chunk : Node2D, IResettable
         
         _chunkStack.Create(chunkPosition, blockCount, worldBlocksImages, worldWallsImage);
         Loaded = true;
-        _chunkLighting.ComputeLightingPass();
+        // _chunkLighting.ComputeLightingPass();
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */
@@ -131,6 +131,7 @@ public class Chunk : Node2D, IResettable
             return;
         _drawn = true;
 
+        _chunkLighting.ComputeLightingPass();
         DrawSetTransform(Vector2.Zero, 0, _blockPixelSize);
         foreach (ImageTexture texture in _chunkStack.ComputeAndGetTextures())
         {

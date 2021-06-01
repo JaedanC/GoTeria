@@ -8,9 +8,10 @@ public class Terrain : Node2D
     [Export]
     private readonly Vector2 _blockPixelSize = new Vector2(16, 16);
     [Export]
-    private readonly Vector2 _chunkBlockCount = new Vector2(420, 400);
+    // private readonly Vector2 _chunkBlockCount = new Vector2(42, 40);
+    private readonly Vector2 _chunkBlockCount = new Vector2(84, 80);
     private const int _loadMargin = 2;
-    private const int _drawMargin = 0;
+    private const int _drawMargin = 1;
 
     private ThreadPool _threadPool;
     private Player _player;

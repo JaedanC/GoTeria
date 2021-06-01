@@ -146,9 +146,9 @@ public class Player : Node2D, ICollidable
 		
 		// Use this to temporarily reduce the size of the viewport loading rectangle
 		// to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-		// float viewportModifier = 0.4f;
+		float viewportModifier = 0.4f;
 		// float viewportModifier = 0.2f;
-		float viewportModifier = 0f;
+		// float viewportModifier = 0f;
 		Vector2 size = viewportRectangle.Size * new Vector2(viewportModifier, viewportModifier);
 		viewportRectangle = viewportRectangle.GrowIndividual(-size.x, -size.y, -size.x, -size.y);
 		

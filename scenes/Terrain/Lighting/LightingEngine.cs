@@ -53,7 +53,7 @@ public class LightingEngine : Node2D
     private LightUpdateColourQueue _lightUpdateAddQueue;
     private LightUpdateQueueSet _lightUpdateRemoveQueue;
     private LightUpdateColourQueue _lightUpdateRemoveToAddQueue;
-    private Godot.Mutex _lightUpdateMutex;
+    private Mutex _lightUpdateMutex;
     private Vector2 _nextScale;
     private Vector2 _nextPosition;
     private volatile bool _inPhysicsLoop;
@@ -87,7 +87,7 @@ public class LightingEngine : Node2D
         _lightUpdateAddQueue = new LightUpdateColourQueue();
         _lightUpdateRemoveQueue = new LightUpdateQueueSet();
         _lightUpdateRemoveToAddQueue =  new LightUpdateColourQueue();
-        _lightUpdateMutex = new Godot.Mutex();
+        _lightUpdateMutex = new Mutex();
     }
 
     public void Initialise()
@@ -175,14 +175,6 @@ public class LightingEngine : Node2D
         {
             GD.Print("RemoveAdd: " + _lightUpdateRemoveToAddQueue.Count);
         }
-        if (inputLayering.PollActionPressed("debug"))
-        {
-            // foreach (KeyValuePair<Vector2, Color> item in _lightUpdateRemoveToAddExisting)
-            // {
-            //     GD.Print("Item: " + item.Key + " " + item.Value);
-            // }
-            GD.Print("Pausing...");
-        }
 
         // LightUpdatePass();
         UpdateShaderTexture();
@@ -226,11 +218,11 @@ public class LightingEngine : Node2D
             // Set the colour then
             WorldLightLevels.SetPixelv(node.WorldPosition, node.Colour);
 
-            // IBlock topBlock = terrain.GetTopIBlockFromWorldBlockPosition(node.WorldPosition);
-            // if (topBlock == null)
-            // {
-            //     continue;
-            // }
+            IBlock topBlock = terrain.GetTopIBlockFromWorldBlockPosition(node.WorldPosition);
+            if (topBlock == null)
+            {
+                continue;
+            }
 
             // float multiplier = topBlock.GetTransparency();
             // float multiplier = 0.9f;
@@ -240,8 +232,8 @@ public class LightingEngine : Node2D
             //     node.Colour.b * multiplier,
             //     1
             // );
-            float reduction = 0.1f;
-            // float reduction = topBlock.GetTransparency();
+            // float reduction = 0.1f;
+            float reduction = topBlock.GetTransparency();
             Color newColour = new Color(
                 node.Colour.r - reduction,
                 node.Colour.g - reduction,
