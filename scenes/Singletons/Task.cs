@@ -64,7 +64,7 @@ public class Task : Resource
 
         if (__noArgument)
         {
-            result = method.Invoke(targetInstance, new object[]{});
+            result = method.Invoke(targetInstance, new object[] { });
         }
         else if (__arrayArgument)
         {
@@ -73,7 +73,7 @@ public class Task : Resource
         }
         else
         {
-            result = method.Invoke(targetInstance, new object[]{targetArgument});
+            result = method.Invoke(targetInstance, new object[] { targetArgument });
         }
     }
 }

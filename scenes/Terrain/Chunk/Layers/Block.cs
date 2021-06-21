@@ -8,7 +8,7 @@ public class Block : IBlock
     public int Id { get; set; }
     public Color Colour { get; set; }
 
-    public Block() {}
+    public Block() { }
 
     public Block(int id, Color colour)
     {
@@ -16,7 +16,8 @@ public class Block : IBlock
         this.Colour = colour;
     }
 
-    public bool IsSolid() {
+    public bool IsSolid()
+    {
         return Id > 0;
     }
 

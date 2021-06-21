@@ -15,7 +15,7 @@ public class ChunkLayer<T> where T : IBlock, new()
     {
         _image.Fill(Colors.Red);
         _image.BlitRect(worldLayerImage, new Rect2(chunkPosition * chunkSize, chunkSize), Vector2.Zero);
-        
+
         for (int j = 0; j < chunkSize.y; j++)
         for (int i = 0; i < chunkSize.x; i++)
         {
@@ -26,7 +26,7 @@ public class ChunkLayer<T> where T : IBlock, new()
             // goes out of bounds then just draw Red. This happens when the image is
             // not a multiple of the chunk size.
             Color pixel;
-            if (worldBlockPosition.x < 0 || worldBlockPosition.y < 0 || 
+            if (worldBlockPosition.x < 0 || worldBlockPosition.y < 0 ||
                 worldBlockPosition.x >= worldLayerImage.GetWidth() ||
                 worldBlockPosition.y >= worldLayerImage.GetHeight())
             {

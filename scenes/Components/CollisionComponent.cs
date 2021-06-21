@@ -67,7 +67,7 @@ public class CollisionComponent : Node2D
         {
             if (loadedBlocks.ContainsKey(visibleBlockPoint))
                 continue;
-            
+
             Block existingBlock = terrain.GetBlockFromWorldPosition(visibleBlockPoint * terrain.BlockPixelSize);
 
             // Don't add collision for air.
@@ -86,7 +86,8 @@ public class CollisionComponent : Node2D
     }
 
     /* Free blocks from the SceneTree that are no longer inside the mergedParentHitboxRect. */
-    private void DeleteInvisibleBlocksHitboxes() {
+    private void DeleteInvisibleBlocksHitboxes()
+    {
         Dictionary<Vector2, StaticBody2D> visibleBlocks = new Dictionary<Vector2, StaticBody2D>();
         Array<Vector2> visibleBlockPoints = GetHitboxBlockVisibilityPoints(mergedParentHitboxRect);
         foreach (Vector2 visibleBlockPoint in visibleBlockPoints)
@@ -102,7 +103,7 @@ public class CollisionComponent : Node2D
                 // Dictionary.
                 if (!existingBlock.IsSolid())
                     continue;
-                
+
                 visibleBlocks[visibleBlockPoint] = loadedBlocks[visibleBlockPoint];
 
                 // Make sure we did indeed remove a block.
@@ -118,7 +119,7 @@ public class CollisionComponent : Node2D
             loadedBlocks[invisibleBlock].QueueFree();
             // loadedBlocks[invisibleBlock].Free();
         }
-        
+
         // Update the blocks that are loaded.
         // loadedBlocks = new Dictionary<Vector2, StaticBody2D>(visibleBlocks);
         loadedBlocks = visibleBlocks;
@@ -131,10 +132,10 @@ public class CollisionComponent : Node2D
         Vector2 bottomRight = ((area.Position + area.Size) / terrain.BlockPixelSize).Floor();
         Array<Vector2> visibilityPoints = new Array<Vector2>();
         for (int i = (int)topLeft.x; i < (int)bottomRight.x + 1; i++)
-        for (int j = (int)topLeft.y; j < (int)bottomRight.y + 1; j++)
-        {
-            visibilityPoints.Add(new Vector2(i, j));
-        }
+            for (int j = (int)topLeft.y; j < (int)bottomRight.y + 1; j++)
+            {
+                visibilityPoints.Add(new Vector2(i, j));
+            }
         return visibilityPoints;
     }
 
@@ -142,7 +143,7 @@ public class CollisionComponent : Node2D
     {
         // Fixes infinite velocity Portal 2 style
         Vector2 oldParentPosition = parent.GetRigidBody().Position;
-        
+
         // Let's do the collision in two parts. This seems to fix many edge case with movement hitting
         // zero randomly on slopes when sliding.
         Vector2 firstResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(vector.x, 0), Vector2.Up);

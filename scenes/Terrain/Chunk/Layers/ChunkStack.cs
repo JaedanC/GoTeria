@@ -2,7 +2,8 @@ using Godot;
 using Godot.Collections;
 using System;
 
-public class ChunkStack {
+public class ChunkStack
+{
     private ChunkLayer<Block> _blocks;
     private ChunkLayer<Wall> _walls;
     private Array<ImageTexture> _textures;

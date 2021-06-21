@@ -31,7 +31,7 @@ public class InputLayering : Node
     }
 
     /* Checks whether an action was triggered and it was allowed to be read without
-	changing it's readability status. */
+    changing it's readability status. */
     public bool PollAction(String action)
     {
         return Input.IsActionPressed(action) && !consumedActions.ContainsKey(action);

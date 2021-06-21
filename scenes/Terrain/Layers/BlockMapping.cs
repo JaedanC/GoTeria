@@ -2,7 +2,6 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-
 public class BlockMapping
 {
     private HashSet<BlockInformation> blocks;
@@ -31,6 +30,4 @@ public class BlockMapping
         blockInformation.SetSaveableColour(nextSaveableColour);
         // GD.Print(String.Format("Red: {0}, Green: {1}, Blue: {2}, Type: {3}", red, green, blue, blockMapping.Name));
     }
-
-    
 }

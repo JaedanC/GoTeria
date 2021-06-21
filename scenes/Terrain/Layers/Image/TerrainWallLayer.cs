@@ -28,5 +28,4 @@ public class TerrainWallLayer : ITerrainLayer
         walls.AddBlock(new BlockInformation("Stone Wall", 85, 102, 103));
         walls.AddBlock(new BlockInformation("Mud Wall", 52, 43, 45));
     }
-
 }

@@ -1,7 +1,8 @@
 using Godot;
 using System;
 
-public class TerrainStack {
+public class TerrainStack
+{
     private ITerrainLayer walls;
     private ITerrainLayer blocks;
 

@@ -55,17 +55,17 @@ public class ThreadPool : Node
         base.QueueFree();
     }
 
-    public void SubmitTask(object instance, String method, object parameter, object taskTag=null, object taskTagSpecific=null)
+    public void SubmitTask(object instance, String method, object parameter, object taskTag = null, object taskTagSpecific = null)
     {
         __EnqueueTask(instance, method, parameter, null, taskTag, taskTagSpecific, false, false);
     }
 
-    public void SubmitTaskUnparameterized(object instance, String method, object taskTag=null, object taskTagSpecific=null)
+    public void SubmitTaskUnparameterized(object instance, String method, object taskTag = null, object taskTagSpecific = null)
     {
         __EnqueueTask(instance, method, null, null, taskTag, taskTagSpecific, true, false);
     }
 
-    public void SubmitTaskArrayParameterized(object instance, String method, Array<object> parameter, object taskTag=null, object taskTagSpecific=null)
+    public void SubmitTaskArrayParameterized(object instance, String method, Array<object> parameter, object taskTag = null, object taskTagSpecific = null)
     {
         __EnqueueTask(instance, method, null, parameter, taskTag, taskTagSpecific, false, true);
     }
@@ -81,14 +81,14 @@ public class ThreadPool : Node
         __tasks.Clear();
         __tasksLock.Unlock();
     }
-    
+
     public Array<Task> FetchFinishedTasks()
     {
         __finishedTasksLock.Lock();
         Array<Task> result = __finishedTasks;
         __finishedTasks = new Array<Task>();
         __finishedTasksLock.Unlock();
-    	return result;
+        return result;
     }
 
     public Array<Task> FetchFinishedTasksByTag(object tag)
@@ -111,18 +111,18 @@ public class ThreadPool : Node
 
     private void DoNothing(object arg)
     {
-	    // GD.Print("doing nothing");
+        // GD.Print("doing nothing");
         OS.DelayMsec(1); // if there is nothing to do, go sleep
     }
 
-    private void __EnqueueTask(object instance, String method, object parameter, Array<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument=false, bool arrayArgument=false)
+    private void __EnqueueTask(object instance, String method, object parameter, Array<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument = false, bool arrayArgument = false)
     {
-	    if (__finished)
+        if (__finished)
             return;
         __tasksLock.Lock();
         // __tasks.push_front(Task.new(instance, method, parameter, task_tag, task_tag_specific, no_argument, array_argument))
         __tasks.Add(new Task(instance, method, parameter, arrayParameter, taskTag, taskTagSpecific, noArgument, arrayArgument));
-        GD.Print("Tasks size:" + __tasks.Count);
+        // GD.Print("Tasks size:" + __tasks.Count);
         __tasksWait.Post();
         __Start();
         __tasksLock.Unlock();
@@ -131,7 +131,7 @@ public class ThreadPool : Node
 
     private void __WaitForShutdown()
     {
-	    Shutdown();
+        Shutdown();
         foreach (Thread t in __pool)
         {
             if (t.IsActive())
@@ -143,9 +143,10 @@ public class ThreadPool : Node
     {
         Array<Thread> result = new Array<Thread>();
         // for (int i = 0; i < OS.GetProcessorCount(); i++)
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < OS.GetProcessorCount() / 2; i++)
+        // for (int i = 0; i < 1; i++)
         {
-		    result.Add(new Thread());
+            result.Add(new Thread());
         }
         return result;
     }
@@ -158,7 +159,8 @@ public class ThreadPool : Node
             task.__ExecuteTask();
             if (!(task.tag is Task))
                 __finishedTasks.Add(task);
-        } else if (!__started)
+        }
+        else if (!__started)
         {
             foreach (Thread t in __pool)
             {
@@ -186,7 +188,7 @@ public class ThreadPool : Node
             OS.DelayMsec(1);
         }
     }
-    
+
     private Task __DrainTask()
     {
         __tasksLock.Lock();
@@ -205,7 +207,7 @@ public class ThreadPool : Node
         return result;
     }
 
-    private void  __ExecuteTasks(Thread argThread)
+    private void __ExecuteTasks(Thread argThread)
     {
         // GD.Print(arg_thread);
         while (!__finished)
@@ -234,5 +236,4 @@ public class ThreadPool : Node
             }
         }
     }
-
 }

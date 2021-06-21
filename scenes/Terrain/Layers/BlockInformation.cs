@@ -1,7 +1,8 @@
 using Godot;
 using System;
 
-public class BlockInformation {
+public class BlockInformation
+{
     public String Name;
     public Color ReadableColour;
     public Color SaveableColour;

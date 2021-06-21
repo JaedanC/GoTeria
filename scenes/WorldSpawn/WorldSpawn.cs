@@ -15,7 +15,8 @@ public class WorldSpawn : Node
     {
         OS.SetWindowTitle(String.Format("{0} | FPS: {1}", title, Engine.GetFramesPerSecond()));
 
-        if (_inputLayering.PopActionPressed("toggle_fullscreen")) {
+        if (_inputLayering.PopActionPressed("toggle_fullscreen"))
+        {
             OS.WindowFullscreen = !OS.WindowFullscreen;
         }
     }

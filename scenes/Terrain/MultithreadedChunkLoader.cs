@@ -33,19 +33,21 @@ class MultithreadedChunkLoader
 
     public LoadingPhase GetChunkPhase(Chunk chunk)
     {
-        if (!chunk.Loaded)
+        if (!chunk.LoadingDone)
             return LoadingPhase.NeedsLoading;
-        
+
         if (!chunk.LightingDone)
             return LoadingPhase.NeedsLighting;
-        
+
         return LoadingPhase.ReadyToDraw;
     }
 
-    public void beginLoadingChunk(Chunk chunk, Vector2 chunkPosition)
+    public void BeginLoadingChunk(Chunk chunk, Vector2 chunkPosition)
     {
         if (chunksLoading.Contains(chunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLoading)
             return;
+
+        // GD.Print("Loading: " + chunkPosition);
 
         chunksLoading.Add(chunkPosition);
 
@@ -54,11 +56,10 @@ class MultithreadedChunkLoader
             chunk
         };
 
-        GD.Print("Task Load");
         threadPool.SubmitTask(this, "LoadChunk", chunkData, "loadingChunk", chunkPosition);
     }
 
-    public void beginLightingChunk(Chunk chunk, Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks)
+    public void BeginLightingChunk(Chunk chunk, Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks)
     {
         if (chunksLighting.Contains(chunk.ChunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLighting)
             return;
@@ -91,7 +92,7 @@ class MultithreadedChunkLoader
             Chunk dependencyChunk = loadedChunks[chunkToLoadDependency];
             if (!chunksLoading.Contains(chunkToLoadDependency) && GetChunkPhase(chunk) == LoadingPhase.NeedsLoading)
             {
-                beginLoadingChunk(loadedChunks[chunkToLoadDependency], chunkToLoadDependency);
+                BeginLoadingChunk(loadedChunks[chunkToLoadDependency], chunkToLoadDependency);
             }
         }
 
@@ -100,7 +101,6 @@ class MultithreadedChunkLoader
             chunk
         };
 
-        GD.Print("Task Light");
         threadPool.SubmitTask(this, "LightChunk", chunkData, "lightingChunk", chunk.ChunkPosition);
     }
 
@@ -110,7 +110,7 @@ class MultithreadedChunkLoader
         Chunk chunk = (Chunk)data[1];
 
         chunk.Create(chunkPosition, chunkBlockCount, worldBlocksImage, worldWallsImage);
-        
+
         return chunkPosition;
     }
 
@@ -120,8 +120,8 @@ class MultithreadedChunkLoader
         Chunk chunk = (Chunk)data[1];
 
         chunk.ComputeLightingPass();
-        
-	    return chunkPosition;
+
+        return chunkPosition;
     }
 
     public void FinishLoadingChunkForcefully(Vector2 chunkPosition)
@@ -171,9 +171,9 @@ class MultithreadedChunkLoader
 
             if (!loadedChunks.ContainsKey(completedChunkPosition))
                 continue;
-            
+
             Chunk completedChunk = loadedChunks[completedChunkPosition];
-            completedChunk.Loaded = true;
+            completedChunk.LoadingDone = true;
             finishedChunks.Add(completedChunk);
         }
 
@@ -191,7 +191,7 @@ class MultithreadedChunkLoader
 
             if (!loadedChunks.ContainsKey(completedChunkPosition))
                 continue;
-            
+
             Chunk completedChunk = loadedChunks[completedChunkPosition];
             completedChunk.LightingDone = true;
             finishedChunks.Add(completedChunk);

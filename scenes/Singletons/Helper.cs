@@ -9,7 +9,7 @@ public class Helper
     {
         return colour.a == Helper.Light.a;
     }
-    
+
     public readonly static Color Light = new Color(0, 0, 0, 0);
 
     public static bool InBounds(Vector2 position, Vector2 bounds)

@@ -5,7 +5,7 @@ public class QueueSet<T>
 {
     private Queue<T> queue;
     private HashSet<T> set;
-    public int Count { get { return queue.Count; }}
+    public int Count { get { return queue.Count; } }
 
 
     public QueueSet()
@@ -20,7 +20,7 @@ public class QueueSet<T>
         set.Add(item);
         queue.Enqueue(item);
     }
-    
+
     public T Dequeue()
     {
         T item = queue.Dequeue();

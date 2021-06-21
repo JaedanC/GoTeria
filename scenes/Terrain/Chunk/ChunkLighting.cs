@@ -16,7 +16,7 @@ public class ChunkLighting
     }
 
     public void ComputeLightingPass()
-    {   
+    {
         ChunkLightBFS();
         lightingEngine.SetUpdateShader(true);
     }

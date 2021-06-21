@@ -6,7 +6,7 @@ public class Wall : IBlock
     public int Id { get; set; }
     public Color Colour { get; set; }
 
-    public Wall() {}
+    public Wall() { }
 
     public Wall(int id, Color colour)
     {
@@ -14,7 +14,8 @@ public class Wall : IBlock
         this.Colour = colour;
     }
 
-    public bool IsSolid() {
+    public bool IsSolid()
+    {
         return false;
     }
 

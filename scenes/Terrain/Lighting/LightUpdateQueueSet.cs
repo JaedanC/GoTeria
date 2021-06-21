@@ -13,28 +13,28 @@ public class LightUpdateQueueSet
         updateSet = new HashSet<Vector2>();
     }
 
-    public void Enqueue(LightingEngine.LightUpdate update)
-    {
-        updateQueue.Enqueue(update);
-    }
-
-    public LightingEngine.LightUpdate Dequeue()
-    {
-        LightingEngine.LightUpdate lightUpdate = updateQueue.Dequeue();
-        return lightUpdate;
-    }
-
     // public void Enqueue(LightingEngine.LightUpdate update)
     // {
-    //     if (updateSet.Contains(update.WorldPosition)) return;
-    //     updateSet.Add(update.WorldPosition);
     //     updateQueue.Enqueue(update);
     // }
 
     // public LightingEngine.LightUpdate Dequeue()
     // {
     //     LightingEngine.LightUpdate lightUpdate = updateQueue.Dequeue();
-    //     updateSet.Remove(lightUpdate.WorldPosition);
     //     return lightUpdate;
     // }
+
+    public void Enqueue(LightingEngine.LightUpdate update)
+    {
+        if (updateSet.Contains(update.WorldPosition)) return;
+        updateSet.Add(update.WorldPosition);
+        updateQueue.Enqueue(update);
+    }
+
+    public LightingEngine.LightUpdate Dequeue()
+    {
+        LightingEngine.LightUpdate lightUpdate = updateQueue.Dequeue();
+        updateSet.Remove(lightUpdate.WorldPosition);
+        return lightUpdate;
+    }
 }
