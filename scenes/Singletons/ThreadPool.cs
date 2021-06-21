@@ -122,7 +122,7 @@ public class ThreadPool : Node
         __tasksLock.Lock();
         // __tasks.push_front(Task.new(instance, method, parameter, task_tag, task_tag_specific, no_argument, array_argument))
         __tasks.Add(new Task(instance, method, parameter, arrayParameter, taskTag, taskTagSpecific, noArgument, arrayArgument));
-        // GD.Print("Tasks size:" + str(__tasks.size()));
+        GD.Print("Tasks size:" + __tasks.Count);
         __tasksWait.Post();
         __Start();
         __tasksLock.Unlock();
@@ -142,7 +142,8 @@ public class ThreadPool : Node
     private Array<Thread> __CreatePool()
     {
         Array<Thread> result = new Array<Thread>();
-        for (int i = 0; i < OS.GetProcessorCount(); i++)
+        // for (int i = 0; i < OS.GetProcessorCount(); i++)
+        for (int i = 0; i < 1; i++)
         {
 		    result.Add(new Thread());
         }

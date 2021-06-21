@@ -8,8 +8,8 @@ public class Terrain : Node2D
     [Export]
     private readonly Vector2 _blockPixelSize = new Vector2(16, 16);
     [Export]
-    // private readonly Vector2 _chunkBlockCount = new Vector2(42, 40);
-    private readonly Vector2 _chunkBlockCount = new Vector2(84, 80);
+    // private readonly Vector2 _chunkBlockCount = new Vector2(420, 400);
+    private readonly Vector2 _chunkBlockCount = new Vector2(168, 160);
     private const int _loadMargin = 2;
     private const int _drawMargin = 1;
 
@@ -22,9 +22,9 @@ public class Terrain : Node2D
     private Mutex _loadedChunksMutex;
     private Vector2 _chunkPixelDimensions;
     private Dictionary<Vector2, Chunk> _loadedChunks;
-    private Dictionary<Vector2, Chunk> _urgentlyLoadingBlocksChunks;
-    private Dictionary<Vector2, Chunk> _lightlyLoadingDrawingChunks;
-    private Dictionary<Vector2, Chunk> _lightlyLoadingBlocksChunks;
+    private Dictionary<Vector2, Chunk> _urgentChunks;
+    private Dictionary<Vector2, Chunk> _lightDrawChunks;
+    private Dictionary<Vector2, Chunk> _lightLoadingChunks;
     private ObjectPool<Chunk> chunkPool;
 
     /* Returns the size of a block in pixels as a Vector2 */
@@ -35,6 +35,7 @@ public class Terrain : Node2D
     public Image WorldWallsImage { get { return _terrainStack.GetWorldWallsImage(); } }
     public LightingEngine LightingEngine { get { return _lightingEngine; } }
     
+    private MultithreadedChunkLoader chunkLoader;
 
     public override void _Ready()
     {
@@ -48,9 +49,9 @@ public class Terrain : Node2D
 
         _loadedChunksMutex = new Mutex();
         _loadedChunks = new Dictionary<Vector2, Chunk>();
-        _urgentlyLoadingBlocksChunks = new Dictionary<Vector2, Chunk>();
-        _lightlyLoadingDrawingChunks = new Dictionary<Vector2, Chunk>();
-        _lightlyLoadingBlocksChunks = new Dictionary<Vector2, Chunk>();
+        _urgentChunks = new Dictionary<Vector2, Chunk>();
+        _lightDrawChunks = new Dictionary<Vector2, Chunk>();
+        _lightLoadingChunks = new Dictionary<Vector2, Chunk>();
 
         _threadPool = GetNode<ThreadPool>("/root/ThreadPool");
         _player = GetNode<Player>("/root/WorldSpawn/Player");
@@ -58,9 +59,11 @@ public class Terrain : Node2D
         _lightingEngine = GetNode<LightingEngine>("Lighting");
 
         // TODO: dynamically load the world
+        String worldName = "default";
+        // String worldName = "light_test";
         _terrainStack = new TerrainStack(
-            "res://saves/worlds/default/blocks.png",
-            "res://saves/worlds/default/walls.png"
+            "res://saves/worlds/" + worldName + "/blocks.png",
+            "res://saves/worlds/" + worldName + "/walls.png"
         );
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/save_image.png");
         // Texture worldTexture = (Texture)GD.Load("res://saves/worlds/blocks.png");
@@ -72,7 +75,7 @@ public class Terrain : Node2D
 
         _lightingEngine.Initialise();
         chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
-
+        chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, _threadPool, WorldBlocksImage, WorldWallsImage);
         
         // WorldBlocksImageLuminance.Unlock();
     }
@@ -93,9 +96,9 @@ public class Terrain : Node2D
         _loadedChunksMutex.Lock();
         DeleteInvisibleChunks();
         LoadVisibleChunks();
+        _loadedChunksMutex.Unlock();
         CreateChunkStreamingRegions();
         ContinueStreamingRegions();
-        _loadedChunksMutex.Unlock();
         
         // Draw the chunk borders
         Update();
@@ -115,13 +118,13 @@ public class Terrain : Node2D
     public override void _Draw()
     {
         int thickness = 10;
-	    foreach (Vector2 point in _lightlyLoadingBlocksChunks.Keys)
+	    foreach (Vector2 point in _lightLoadingChunks.Keys)
             DrawRect(new Rect2(point * _chunkPixelDimensions, _chunkPixelDimensions), Colors.Green, false, thickness, false);
 
-        foreach (Vector2 point in _lightlyLoadingDrawingChunks.Keys)
+        foreach (Vector2 point in _lightDrawChunks.Keys)
             DrawRect(new Rect2(point * _chunkPixelDimensions, _chunkPixelDimensions), Colors.Orange, false, thickness, false);
 			
-        foreach (Vector2 point in _urgentlyLoadingBlocksChunks.Keys)
+        foreach (Vector2 point in _urgentChunks.Keys)
 		    DrawRect(new Rect2(point * _chunkPixelDimensions, _chunkPixelDimensions), Colors.Red, false, thickness, false);
 
     }
@@ -136,6 +139,20 @@ public class Terrain : Node2D
         Chunk chunk = (Chunk)data[1];
 
         chunk.Create(chunkPosition, _chunkBlockCount, WorldBlocksImage, WorldWallsImage);
+        
+	    return chunkPosition;
+    }
+
+    /* This method is run on the threadPool, and it generates all the data a chunk requires
+    for it to work. This function can only take one paramater, thus we take in an away of objects.
+    We return the chunkPosition so that we can retrieve the Chunk from the threadPool forcefully
+    if it is taking too much time, and the player is getting too close. */
+    public Vector2 ComputeChunkLighting(Array<object> data)
+    {
+        Vector2 chunkPosition = (Vector2)data[0];
+        Chunk chunk = (Chunk)data[1];
+
+        chunk.ComputeLightingPass();
         
 	    return chunkPosition;
     }
@@ -203,9 +220,9 @@ public class Terrain : Node2D
 
         // Also reset the region loading dictionaries. These will be repopulated
         // later.
-        _urgentlyLoadingBlocksChunks.Clear();
-        _lightlyLoadingDrawingChunks.Clear();
-        _lightlyLoadingBlocksChunks.Clear();
+        _urgentChunks.Clear();
+        _lightDrawChunks.Clear();
+        _lightLoadingChunks.Clear();
     }
 	
     private void CreateChunkStreamingRegions()
@@ -221,21 +238,21 @@ public class Terrain : Node2D
         {
             Chunk chunk = GetChunkFromChunkPosition(point);
             if (chunk != null)
-                _urgentlyLoadingBlocksChunks.Add(point, chunk);
+                _urgentChunks.Add(point, chunk);
         }
         
         foreach (Vector2 point in drawVisibilityPoints)
         {
             Chunk chunk = GetChunkFromChunkPosition(point);
             if (chunk != null)
-                _lightlyLoadingDrawingChunks.Add(point, chunk);
+                _lightDrawChunks.Add(point, chunk);
         }
 
         foreach (Vector2 point in loadVisibilityPoints)
         {
         Chunk chunk = GetChunkFromChunkPosition(point);
             if (chunk != null)
-                _lightlyLoadingBlocksChunks.Add(point, chunk);
+                _lightLoadingChunks.Add(point, chunk);
         }
     }
 
@@ -272,83 +289,50 @@ public class Terrain : Node2D
     TODO: Make them editable in a configuration file in the future. */
     private void ContinueStreamingRegions()
     {
-	    Array<Vector2> forceLoad = new Array<Vector2>();
-        
-        // First we check if the chunks need to be forced to load their blocks
-        Array<Vector2> chunkPoints = new Array<Vector2>(_urgentlyLoadingBlocksChunks.Keys) +
-                                    new Array<Vector2>(_lightlyLoadingDrawingChunks.Keys);
-        foreach (Vector2 chunkPoint in chunkPoints)
+        // Loading chunks
+        Array<Vector2> chunksToLoad = new Array<Vector2>(_urgentChunks.Keys) +
+                                      new Array<Vector2>(_lightDrawChunks.Keys) + 
+                                      new Array<Vector2>(_lightLoadingChunks.Keys);
+        foreach (Vector2 chunkPosition in chunksToLoad)
         {
-            Chunk chunk = _loadedChunks[chunkPoint];
+            Chunk chunk = _loadedChunks[chunkPosition];
+
             if (!chunk.Loaded)
-            {
-                forceLoad.Add(chunkPoint);
-            }
+                chunkLoader.beginLoadingChunk(chunk, chunkPosition);
         }
 
-        // Next we check the draw conditions
-        int chunksToDraw = 1;
-        foreach (Chunk chunk in _urgentlyLoadingBlocksChunks.Values)
+        // Force load close chunks
+        Array<Vector2> chunksToForceLoad = new Array<Vector2>(_urgentChunks.Keys) +
+                                           new Array<Vector2>(_lightDrawChunks.Keys);
+        foreach (Vector2 chunkPosition in chunksToForceLoad)
         {
-            if (!chunk.Drawn)
-            {
-                chunk.Update();
-                chunksToDraw -= 1;
-            }
-        }
-        foreach (Chunk chunk in _lightlyLoadingDrawingChunks.Values)
-        {
-            if (chunksToDraw <= 0)
-                break;
-            if (!chunk.Drawn)
-            {
-                chunk.Update();
-                chunksToDraw -= 1;
-            }
+            chunkLoader.FinishLoadingChunkForcefully(chunkPosition);
         }
 
-        // Finally, start the thread pool with the next batch as long as they haven't
-        // been locked already. Don't start the chunks again that were found to have
-        // finished in the thread pool.
-        Array<Vector2> chunksToLoad = new Array<Vector2>(_lightlyLoadingBlocksChunks.Keys) + forceLoad;
+        chunkLoader.GetFinishedLoadingChunks(_loadedChunks);
 
-        foreach (Vector2 chunkPoint in chunksToLoad)
+        // Lighting chunks
+        Array<Vector2> chunksToLight = new Array<Vector2>(_urgentChunks.Keys) +
+                                       new Array<Vector2>(_lightDrawChunks.Keys);
+        foreach (Vector2 chunkPosition in chunksToLight)
         {
-            Chunk chunk = _loadedChunks[chunkPoint];
-            if (chunk.Locked || chunk.Loaded)
-                continue;
+            Chunk chunk = _loadedChunks[chunkPosition];
 
-            chunk.Locked = true;
-            Array<object> chunkData = new Array<object>{
-                chunkPoint,
-                chunk
-            };
-            _threadPool.SubmitTask(this, "CreateChunk", chunkData, "chunk", chunkPoint);
-        }
-
-        // Next, we obtain the completed blocks that have loaded and start the
-        // next batch of block loads. During this process, wait until the force_load
-        // blocks have been done as they are required to be completed by now.
-        foreach (Vector2 chunkPosition in forceLoad)
-        {
-            _threadPool.WaitForTaskSpecific(chunkPosition);
-            // Now all tasks that need to be done should be ready
+            if (chunk.Loaded && !chunk.LightingDone)
+                chunkLoader.beginLightingChunk(chunk, _loadedChunks);
         }
         
-        // Obtain the tasks completed that has the chunks that are being
-        // loaded inside the thread pool. If they have completed, then we can send
-        // this data to the chunk to automatically mark it as completed.
-        Godot.Collections.Array completedChunkTasks = (Godot.Collections.Array)_threadPool.FetchFinishedTasksByTag("chunk");
-        foreach (Task completedChunkTask in completedChunkTasks)
+        // Force light close chunks
+        Array<Vector2> chunksToForceLight = new Array<Vector2>(_urgentChunks.Keys);
+        foreach (Vector2 chunkPosition in chunksToForceLight)
         {
-            Vector2 chunkPoint = (Vector2)completedChunkTask.GetResult();
-            // In the case that the chunk has already been freed, don't assign the
-            // chunk any data.
-            if (!_loadedChunks.ContainsKey(chunkPoint))
-                continue;
+            chunkLoader.FinishLightingChunkForcefully(chunkPosition);
+        }
 
-            // Give the chunk it's data
-            Chunk chunk = _loadedChunks[chunkPoint];
+        // Draw ready chunks
+        foreach (Chunk chunk in chunkLoader.GetFinishedLightingChunks(_loadedChunks))
+        {
+            Debug.Assert(chunkLoader.GetChunkPhase(chunk) == MultithreadedChunkLoader.LoadingPhase.ReadyToDraw);
             chunk.Update();
         }
     }
@@ -412,7 +396,6 @@ public class Terrain : Node2D
     documentation in the Chunk scene.
 
     Fastest function to get blocks.*/
-    // public Dictionary<String, object> GetBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition)
     public Block GetBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition)
     {
         Chunk chunk = GetChunkFromChunkPosition(chunkPosition);
@@ -447,7 +430,6 @@ public class Terrain : Node2D
     documentation in the Chunk scene.
 
     Slowest function to get blocks.*/
-    // public Dictionary<String, object> GetBlockFromWorldPosition(Vector2 worldPosition)
     public Block GetBlockFromWorldPosition(Vector2 worldPosition)
     {
         Vector2 chunkPosition = GetChunkPositionFromWorldPosition(worldPosition);
@@ -494,7 +476,6 @@ public class Terrain : Node2D
         Block documentation in the Chunk scene.
 
     Fastest function to set blocks. */
-    // public void SetBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition, Dictionary<String, object> newBlock)
     public void SetBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition, Block newBlock)
     {
         Chunk chunk = GetChunkFromChunkPosition(chunkPosition);
@@ -512,12 +493,10 @@ public class Terrain : Node2D
         Block documentation in the Chunk scene.
 
     Slowest function to set blocks. */
-    // public void SetBlockAtWorldPosition(Vector2 worldPosition, Dictionary<String, object> newBlock)
     public void SetBlockAtWorldPosition(Vector2 worldPosition, Block newBlock)
     {
         Vector2 chunkPosition = GetChunkPositionFromWorldPosition(worldPosition);
         Vector2 blockPosition = GetBlockPositionFromWorldPositionAndChunkPosition(worldPosition, chunkPosition);
-        // SetBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition, newBlock);
         SetBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition, newBlock);
     }
 
@@ -529,7 +508,7 @@ public class Terrain : Node2D
             return;
         WorldBlocksImage.SetPixelv(worldBlockPosition, colour);
 
-        // CheckIfUpdateLighting(worldBlockPosition, colour);
+        CheckIfUpdateLighting(worldBlockPosition, colour);
     }
 
     private void CheckIfUpdateLighting(Vector2 worldBlockPosition, Color colour)
@@ -545,10 +524,6 @@ public class Terrain : Node2D
         // Just remove and re-add the light.
         if (existingLightValue != colour){
             _lightingEngine.RemoveLight(worldBlockPosition);
-            _lightingEngine.AddLight(worldBlockPosition, coloursLightValue);
         }
-
-        // _worldLightSources.SetPixelv(worldBlockPosition, coloursLightValue);
     }
-
 }

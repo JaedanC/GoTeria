@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/wallsOriginal.png-a3a677a264e69cba09b4a9e3cc6768ba.stex"
+path="res://.import/walls.png-9831f4d98c263e2b9ea45d3cf0e178f5.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://saves/worlds/default/wallsOriginal.png"
-dest_files=[ "res://.import/wallsOriginal.png-a3a677a264e69cba09b4a9e3cc6768ba.stex" ]
+source_file="res://saves/worlds/light_test/walls.png"
+dest_files=[ "res://.import/walls.png-9831f4d98c263e2b9ea45d3cf0e178f5.stex" ]
 
 [params]
 

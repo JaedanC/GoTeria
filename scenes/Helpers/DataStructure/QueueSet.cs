@@ -1,16 +1,17 @@
 using System.Collections.Generic;
+using System.Linq;
 
 public class QueueSet<T>
 {
     private Queue<T> queue;
-    private HashSet<object> set;
+    private HashSet<T> set;
     public int Count { get { return queue.Count; }}
 
 
     public QueueSet()
     {
         queue = new Queue<T>();
-        set = new HashSet<object>();
+        set = new HashSet<T>();
     }
 
     public void Enqueue(T item)
@@ -25,5 +26,10 @@ public class QueueSet<T>
         T item = queue.Dequeue();
         set.Remove(item);
         return item;
+    }
+
+    public List<T> ToList()
+    {
+        return set.ToList();
     }
 }

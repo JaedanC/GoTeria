@@ -69,7 +69,7 @@ public class Task : Resource
         else if (__arrayArgument)
         {
             // Array Argument as object.
-            result = method.Invoke(targetInstance,  targetArrayArgument.ToArray());
+            result = method.Invoke(targetInstance, targetArrayArgument.ToArray());
         }
         else
         {

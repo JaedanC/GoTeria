@@ -22,6 +22,6 @@ public class Block : IBlock
 
     public float GetTransparency()
     {
-        return 0.1f;
+        return 0.2f;
     }
 }

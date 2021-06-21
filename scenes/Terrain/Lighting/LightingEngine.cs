@@ -40,9 +40,6 @@ public class LightingEngine : Node2D
         }
     }
 
-    public const float LIGHT_MULTIPLIER = 0.5f;
-    public const float LIGHT_CUTOFF = 0.01f;
-
     private InputLayering inputLayering;
     private Terrain terrain;
     private Player player;
@@ -204,6 +201,12 @@ public class LightingEngine : Node2D
 
     public void LightUpdateBFS(QueueSet<LightBFSNode> lightValuesFringe)
     {
+        // This precomputation prevents a lot of neighbour exploration for a large fringe.
+        foreach (LightBFSNode node in lightValuesFringe.ToList())
+        {
+            WorldLightLevels.SetPixelv(node.WorldPosition, node.Colour);
+        }
+
         while (lightValuesFringe.Count > 0)
         {
             LightBFSNode node = lightValuesFringe.Dequeue();
@@ -224,15 +227,6 @@ public class LightingEngine : Node2D
                 continue;
             }
 
-            // float multiplier = topBlock.GetTransparency();
-            // float multiplier = 0.9f;
-            // Color newColour = new Color(
-            //     node.Colour.r * multiplier,
-            //     node.Colour.g * multiplier,
-            //     node.Colour.b * multiplier,
-            //     1
-            // );
-            // float reduction = 0.1f;
             float reduction = topBlock.GetTransparency();
             Color newColour = new Color(
                 node.Colour.r - reduction,
@@ -242,7 +236,6 @@ public class LightingEngine : Node2D
             );
 
             // Exit condition: The next colour would be too dark anyway
-            // if (newColour.r < LIGHT_CUTOFF)
             if (newColour.r <= 0)
             {
                 continue;
@@ -273,6 +266,8 @@ public class LightingEngine : Node2D
         QueueSet<LightBFSNode> fringe = new QueueSet<LightBFSNode>();
         fringe.Enqueue(new LightBFSNode(lightRemoveUpdate));
 
+        List<LightUpdate> removeAddLightUpdateList = new List<LightUpdate>();
+
         while (fringe.Count > 0)
         {
             // if (inputLayering.PollAction("remove_light_debug"))
@@ -301,7 +296,7 @@ public class LightingEngine : Node2D
             neighbourPositions[2] = new Vector2(node.WorldPosition.x, node.WorldPosition.y - 1);
             neighbourPositions[3] = new Vector2(node.WorldPosition.x, node.WorldPosition.y + 1);
             foreach (Vector2 neighbourPosition in neighbourPositions)
-            {   
+            {
                 // First check to make sure the position is not out-of-bounds
                 if (Helper.OutOfBounds(neighbourPosition, terrain.GetWorldSize()))
                     continue;
@@ -317,8 +312,18 @@ public class LightingEngine : Node2D
                     // neighbour has recieved its light from another source. We then need to consider that
                     // this block which is having its light source removed may be filled in by another block
                     // instead.
-                    _lightUpdateRemoveToAddQueue.Enqueue(new LightUpdate(neighbourPosition, neighboursLevel));
+                    // This is causing lighting issues because these are being added to the fringe when they clearly are not lights.
+                    // _lightUpdateRemoveToAddQueue.Enqueue(new LightUpdate(neighbourPosition, neighboursLevel));
+                    removeAddLightUpdateList.Add(new LightUpdate(neighbourPosition, neighboursLevel));
                 }
+            }
+        }
+
+        foreach (LightUpdate update in removeAddLightUpdateList)
+        {
+            if (WorldLightLevels.GetPixelv(update.WorldPosition).r > 0)
+            {
+                 _lightUpdateRemoveToAddQueue.Enqueue(update);
             }
         }
     }

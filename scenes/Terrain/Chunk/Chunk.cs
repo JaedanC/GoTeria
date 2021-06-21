@@ -11,29 +11,43 @@ public class Chunk : Node2D, IResettable
     private Vector2 _chunkPosition;
     private Vector2 _blockCount;
     private Vector2 _blockPixelSize;
-    private bool _locked;
-    private bool _drawn;
+    private bool _doneLightingPass;
+    private bool _loadLocked;
+    private bool _lightingLocked;
     private bool _memoryAllocated;
     private ChunkStack _chunkStack;
 
     public Vector2 ChunkPosition { get { return _chunkPosition; } }
-    public bool Locked
+    public bool LoadLocked
     {
-        get { return _locked; } 
+        get { return _loadLocked; } 
         set
         {
             if (value)
             {
-                Debug.Assert(!_locked);
+                Debug.Assert(!_loadLocked);
             }
-            _locked = value;
+            _loadLocked = value;
         }
     }
+    public bool LightingLocked
+    {
+        get { return _lightingLocked; } 
+        set
+        {
+            if (value)
+            {
+                Debug.Assert(!_lightingLocked);
+            }
+            _lightingLocked = value;
+        }
+    }
+
     public bool Loaded { get; set; }
     /* This variable is true only after a chunk has been fully loaded AND then drawn.
     This is so the chunks draw call is cached and the terrain knows not to try
     and draw this chunk to the screen again. */
-    public bool Drawn { get { return _drawn; } }
+    public bool LightingDone { get; set; }
     private ChunkLighting _chunkLighting;
     public Block[] Blocks { get { return _chunkStack.Blocks; } }
     public Wall[] Walls { get { return _chunkStack.Walls; } }
@@ -84,8 +98,10 @@ public class Chunk : Node2D, IResettable
         _chunkPosition = (Vector2)parameters[1];
         _blockPixelSize = (Vector2)parameters[2];
         _blockCount = (Vector2)parameters[3];
-        _locked = false;
-        _drawn = false;
+        _doneLightingPass = false;
+        _loadLocked = false;
+        _lightingLocked = false;
+        LightingDone = false;
         Loaded = false;
         Position = _blockPixelSize * _chunkPosition * _blockCount;
     }
@@ -122,16 +138,21 @@ public class Chunk : Node2D, IResettable
         DrawChunk();
     }
 
+    public void ComputeLightingPass()
+    {
+        GD.Print("Computed Lighting for chunk: " + ChunkPosition);
+        _chunkLighting.ComputeLightingPass();
+        LightingDone = true;
+    }
+
     /* Draw the chunk to the screen using my special colour formula. This function
     Is run when a chunk is created however, we only want it to count as being
     run after all the blocks have been loaded.*/
     private void DrawChunk()
     {
-        if (!Loaded)
+        if (!Loaded || !LightingDone)
             return;
-        _drawn = true;
-
-        _chunkLighting.ComputeLightingPass();
+        
         DrawSetTransform(Vector2.Zero, 0, _blockPixelSize);
         foreach (ImageTexture texture in _chunkStack.ComputeAndGetTextures())
         {
