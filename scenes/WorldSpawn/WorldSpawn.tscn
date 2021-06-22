@@ -1,10 +1,10 @@
 [gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://scenes/Player/Player.tscn" type="PackedScene" id=1]
+[ext_resource path="res://scenes/Input/ActionMapping.cs" type="Script" id=2]
 [ext_resource path="res://scenes/WorldSpawn/WorldSpawn.cs" type="Script" id=6]
 [ext_resource path="res://scenes/Terrain/Terrain.tscn" type="PackedScene" id=7]
 [ext_resource path="res://scenes/WorldSpawn/FPSCounter.gd" type="Script" id=9]
-[ext_resource path="res://scenes/WorldSpawn/ActionMapping.gd" type="Script" id=11]
 [ext_resource path="res://scenes/WorldSpawn/ConfigHandler.gd" type="Script" id=12]
 
 [node name="WorldSpawn" type="Node"]
@@ -24,7 +24,7 @@ __meta__ = {
 script = ExtResource( 12 )
 
 [node name="ActionMapping" type="Node" parent="."]
-script = ExtResource( 11 )
+script = ExtResource( 2 )
 
 [node name="Player" parent="." instance=ExtResource( 1 )]
 

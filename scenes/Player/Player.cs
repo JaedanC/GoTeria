@@ -5,54 +5,74 @@ using System.Diagnostics;
 
 public class Player : Node2D, ICollidable
 {
-    private const float _ZOOM_CLAMP = 20f;
-    private Terrain _terrain;
-    private Godot.Object _smoothing;
-    private Camera2D _camera;
-    private InputLayering _inputLayering;
-    private KinematicBody2D _rigidBody;
-    private CollisionShape2D _hitbox;
+    private const float ZOOM_CLAMP = 20f;
+    private Terrain terrain;
+    private Godot.Object smoothing;
+    private Camera2D camera;
+    private InputLayering inputLayering;
+    private KinematicBody2D rigidBody;
+    private CollisionShape2D hitbox;
 
-    private Vector2 _velocity;
-    public Vector2 Velocity { get { return _velocity; } set { _velocity = value; } }
+    private Vector2 velocity;
+    public Vector2 Velocity { get { return velocity; } set { velocity = value; } }
 
     /* Hide the player's position with the smoothing one. This returns the player's position
     (which is actually the smoothing sprite's location) if you want the player's position on
     any frame other than a physics frame. This is an linear interpolated Vector2. */
-    new public Vector2 Position { get { return (Vector2)_smoothing.Get("position"); } }
-    public Vector2 CameraZoom { get { return _camera.Zoom; } }
+    new public Vector2 Position { get { return (Vector2)smoothing.Get("position"); } }
+    public Vector2 CameraZoom { get { return camera.Zoom; } }
 
 
     public override void _Ready()
     {
         Name = "Player";
 
-        _terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
-        _rigidBody = GetNode<KinematicBody2D>("RigidBody");
-        _hitbox = _rigidBody.GetNode<CollisionShape2D>("Hitbox");
-        _smoothing = GetNode<Godot.Object>("Smoothing");
-        _camera = GetNode<Camera2D>("Smoothing/Camera");
-        _inputLayering = GetNode<InputLayering>("/root/InputLayering");
-        _velocity = Vector2.Zero;
+        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
+        rigidBody = GetNode<KinematicBody2D>("RigidBody");
+        hitbox = rigidBody.GetNode<CollisionShape2D>("Hitbox");
+        smoothing = GetNode<Godot.Object>("Smoothing");
+        camera = GetNode<Camera2D>("Smoothing/Camera");
+        inputLayering = GetNode<InputLayering>("/root/InputLayering");
+        velocity = Vector2.Zero;
     }
 
     public override void _Process(float delta)
     {
-        if (_inputLayering.PopAction("zoom_reset"))
-            _camera.Zoom = Vector2.Zero;
+        if (inputLayering.PopAction("zoom_reset"))
+            camera.Zoom = Vector2.Zero;
 
-        if (_inputLayering.PopAction("click"))
+        if (inputLayering.PopAction("click"))
         {
             Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Block newBlock = new Block(1, new Color(1, 1, 0, 1));
-            _terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
+            terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
         }
 
-        if (_inputLayering.PopAction("dig"))
+        if (inputLayering.PopAction("dig"))
         {
             Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Block newBlock = new Block(0, new Color(0, 0, 0, 0));
-            _terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
+            terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
+        }
+
+        if (inputLayering.PopAction("jump"))
+        {
+            velocity.y = -1000;
+        }
+
+        float axis = Input.GetJoyAxis(0, 0);
+
+        float left = inputLayering.PollActionStrength("move_left");
+        float right = inputLayering.PollActionStrength("move_right");
+        float up = inputLayering.PollActionStrength("move_up");
+        float down = inputLayering.PollActionStrength("move_down");
+        float leftRight = Input.GetJoyAxis(0, 0);
+        float upDown = Input.GetJoyAxis(0, 1);
+        // GD.Print(left + " " + right + " " + up + " " + down + " " + leftRight + " " + upDown);
+        
+        if (inputLayering.PopAction("brake"))
+        {
+            velocity = Vector2.Zero;
         }
 
         Update();
@@ -60,54 +80,42 @@ public class Player : Node2D, ICollidable
 
     public override void _PhysicsProcess(float delta)
     {
-        if (_inputLayering.PopAction("move_left"))
+        if (inputLayering.PollAction("move_left"))
         {
-            _velocity.x -= 50;
+            velocity.x -= 50;
         }
-        if (_inputLayering.PopAction("move_right"))
+        if (inputLayering.PollAction("move_right"))
         {
-            _velocity.x += 50;
+            velocity.x += 50;
         }
-        if (_inputLayering.PopAction("move_up"))
+        if (inputLayering.PollAction("move_up"))
         {
-            _velocity.y -= 50;
+            velocity.y -= 50;
         }
-        if (_inputLayering.PopAction("move_down"))
+        if (inputLayering.PollAction("move_down"))
         {
-            _velocity.y += 50;
+            velocity.y += 50;
         }
-        if (_inputLayering.PopAction("jump"))
-        {
-            _velocity.y = -1000;
-        }
-        if (_inputLayering.PopAction("brake"))
-        {
-            _velocity = Vector2.Zero;
-        }
-        // if (_inputLayering.PollActionPressed("debug"))
-        // {
-        // 	GD.Print("Printing Stray Nodes:");
-        // 	PrintStrayNodes();
-        // }
     }
 
     public override void _Input(InputEvent @event)
     {
         if (@event.IsActionPressed("zoom_in"))
-            _camera.Zoom += new Vector2(0.5f, 0.5f);
+            camera.Zoom += new Vector2(0.5f, 0.5f);
 
         if (@event.IsActionPressed("zoom_out"))
-            _camera.Zoom -= new Vector2(0.5f, 0.5f);
+            camera.Zoom -= new Vector2(0.5f, 0.5f);
 
         if (@event.IsActionPressed("zoom_reset"))
-            _camera.Zoom = new Vector2(1, 1);
+            camera.Zoom = new Vector2(1, 1);
 
         if (@event.IsActionPressed("quit"))
             GetTree().Quit();
+            
 
-        _camera.Zoom = new Vector2(
-            Mathf.Clamp(_camera.Zoom.x, 1, _ZOOM_CLAMP),
-            Mathf.Clamp(_camera.Zoom.y, 1, _ZOOM_CLAMP)
+        camera.Zoom = new Vector2(
+            Mathf.Clamp(camera.Zoom.x, 1, ZOOM_CLAMP),
+            Mathf.Clamp(camera.Zoom.y, 1, ZOOM_CLAMP)
         );
     }
 
@@ -167,8 +175,8 @@ public class Player : Node2D, ICollidable
     {
         Array<Vector2> corners = GetVisibilityWorldPositionCorners();
         return new Array<Vector2>(
-            (corners[0] / _terrain.BlockPixelSize).Floor(),
-            (corners[1] / _terrain.BlockPixelSize).Floor()
+            (corners[0] / terrain.BlockPixelSize).Floor(),
+            (corners[1] / terrain.BlockPixelSize).Floor()
         );
     }
 
@@ -178,8 +186,8 @@ public class Player : Node2D, ICollidable
     public Array<Vector2> GetVisibilityChunkPositionCorners()
     {
         Array<Vector2> worldPositionCorners = GetVisibilityWorldPositionCorners();
-        var chunkPositionTopLeft = (worldPositionCorners[0] / _terrain.ChunkPixelDimensions).Floor();
-        var chunkPositionBottomRight = (worldPositionCorners[1] / _terrain.ChunkPixelDimensions).Floor();
+        var chunkPositionTopLeft = (worldPositionCorners[0] / terrain.ChunkPixelDimensions).Floor();
+        var chunkPositionBottomRight = (worldPositionCorners[1] / terrain.ChunkPixelDimensions).Floor();
         return new Array<Vector2>(chunkPositionTopLeft, chunkPositionBottomRight);
     }
 
@@ -249,12 +257,12 @@ public class Player : Node2D, ICollidable
 
     public KinematicBody2D GetRigidBody()
     {
-        return _rigidBody;
+        return rigidBody;
     }
 
     public CollisionShape2D GetHitbox()
     {
-        return _hitbox;
+        return hitbox;
     }
 
     public override void _Draw()

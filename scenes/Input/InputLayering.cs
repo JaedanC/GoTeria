@@ -1,14 +1,15 @@
 using Godot;
-using Godot.Collections;
 using System;
+using System.Collections.Generic;
 
 public class InputLayering : Node
 {
-    private Dictionary<String, object> consumedActions;
+    private HashSet<String> consumedActions;
+    private float DEAD_ZONE = 0.2f;
 
     public override void _Ready()
     {
-        consumedActions = new Dictionary<String, object>();
+        consumedActions = new HashSet<String>();
     }
 
     public override void _Process(float delta)
@@ -24,7 +25,7 @@ public class InputLayering : Node
     {
         if (PollAction(action))
         {
-            consumedActions[action] = null;
+            consumedActions.Add(action);
             return true;
         }
         return false;
@@ -34,7 +35,7 @@ public class InputLayering : Node
     changing it's readability status. */
     public bool PollAction(String action)
     {
-        return Input.IsActionPressed(action) && !consumedActions.ContainsKey(action);
+        return Input.IsActionPressed(action) && !consumedActions.Contains(action);
     }
 
     /* Same as PopAction but will only return true on the first frame this was
@@ -43,7 +44,7 @@ public class InputLayering : Node
     {
         if (PollActionPressed(action))
         {
-            consumedActions[action] = null;
+            consumedActions.Add(action);
             return true;
         }
         return false;
@@ -53,6 +54,24 @@ public class InputLayering : Node
     called. */
     public bool PollActionPressed(String action)
     {
-        return Input.IsActionJustPressed(action) && !consumedActions.ContainsKey(action);
+        InputEventAction blah = new InputEventAction();
+        
+        return Input.IsActionJustPressed(action) && !consumedActions.Contains(action);
+    }
+
+    public float PollActionStrength(String action)
+    {
+        if (!consumedActions.Contains(action))
+        {
+            return Input.GetActionStrength(action);
+        }
+        return 0;
+    }
+
+    public float PopActionStrength(String action)
+    {
+        float actionStrength = PollActionStrength(action);
+        consumedActions.Add(action);
+        return actionStrength;
     }
 }

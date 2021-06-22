@@ -23,7 +23,7 @@ public class CollisionComponent : Node2D
 
         // The block scene is used exclusively for collision detection. See Chunk for more
         // information on how blocks are actually stored in memory.
-        blockScene = (PackedScene)ResourceLoader.Load("res://scenes/BlockHitbox/BlockHitbox.tscn");
+        blockScene = (PackedScene)ResourceLoader.Load("res://scenes/Terrain/Chunk/Layers/BlockHitbox/BlockHitbox.tscn");
 
         // These are the blocks locally created by this script. TODO: Maybe in future
         // have these blocks be stored someone else so that blocks are not instanced twice

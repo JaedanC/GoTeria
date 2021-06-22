@@ -10,7 +10,6 @@ public class Chunk : Node2D, IResettable
     private Vector2 chunkPosition;
     private Vector2 blockCount;
     private Vector2 blockPixelSize;
-    private bool doneLightingPass;
     private bool loadLocked;
     private bool lightingLocked;
     private bool memoryAllocated;
@@ -91,7 +90,6 @@ public class Chunk : Node2D, IResettable
         chunkPosition = (Vector2)parameters[1];
         blockPixelSize = (Vector2)parameters[2];
         blockCount = (Vector2)parameters[3];
-        doneLightingPass = false;
         loadLocked = false;
         lightingLocked = false;
         LightingDone = false;

@@ -17,7 +17,8 @@ public class Terrain : Node2D
     private Player player;
     private InputLayering inputLayering;
     private LightingEngine lightingEngine;
-    private TerrainStack terrainStack;
+    private ITerrainStack terrainStack;
+    private WorldFile worldFile;
 
     private Mutex loadedChunksMutex;
     private Vector2 chunkPixelDimensions;
@@ -32,8 +33,8 @@ public class Terrain : Node2D
     public Vector2 BlockPixelSize { get { return blockPixelSize; } }
     public Vector2 ChunkPixelDimensions { get { return chunkPixelDimensions; } }
     public Vector2 ChunkBlockCount { get { return chunkBlockCount; } }
-    public Image WorldBlocksImage { get { return terrainStack.GetWorldBlocksImage(); } }
-    public Image WorldWallsImage { get { return terrainStack.GetWorldWallsImage(); } }
+    public Image WorldBlocksImage { get { return terrainStack.WorldBlocksImage; } }
+    public Image WorldWallsImage { get { return terrainStack.WorldWallsImage; } }
     public LightingEngine LightingEngine { get { return lightingEngine; } }
 
 
@@ -59,31 +60,22 @@ public class Terrain : Node2D
         lightingEngine = GetNode<LightingEngine>("Lighting");
 
         // TODO: dynamically load the world
-        String worldName = "default";
-        // String worldName = "light_test";
-        terrainStack = new TerrainStack(
-            "res://saves/worlds/" + worldName + "/blocks.png",
-            "res://saves/worlds/" + worldName + "/walls.png"
-        );
+
+        // worldFile = new WorldFile("SavedWorld");
+        worldFile = new WorldFile("light_test");
+        terrainStack = worldFile.GetITerrainStack();
 
         lightingEngine.Initialise();
         chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
         chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
-
-        // WorldBlocksImageLuminance.Unlock();
     }
 
     public override void _Process(float _delta)
     {
         // Save the all chunks loaded in memory to a file.
-        // TODO: This won't work
-        if (inputLayering.PopAction("save_world"))
+        if (inputLayering.PopActionPressed("save_world"))
         {
-            foreach (Chunk chunk in GetChildren())
-            {
-                chunk.SaveChunk();
-            }
-            GD.Print("Finished Saving to file");
+            worldFile.SaveWorld("SavedWorld");
         }
 
         loadedChunksMutex.Lock();
