@@ -18,7 +18,7 @@ public class JoypadInput : IInputMethod
     public String GetInputMethodName()
     {
         return "Joypad";
-    } 
+    }
 
     public bool IsInputEventInstance(InputEvent @event)
     {

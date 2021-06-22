@@ -5,10 +5,11 @@ using System.Collections.Generic;
 public class InputLayering : Node
 {
     private HashSet<String> consumedActions;
-    private float DEAD_ZONE = 0.2f;
+    private AnalogMapping analogMapping;
 
     public override void _Ready()
     {
+        analogMapping = GetNode<ActionMapping>("/root/WorldSpawn/ActionMapping").GetAnalogMapping();
         consumedActions = new HashSet<String>();
     }
 
@@ -55,19 +56,28 @@ public class InputLayering : Node
     public bool PollActionPressed(String action)
     {
         InputEventAction blah = new InputEventAction();
-        
+
         return Input.IsActionJustPressed(action) && !consumedActions.Contains(action);
     }
 
+    /* Accesses the Dual Axis Actions if one exists. Returns a value in the range [0, 1]
+    depending on the strength of the action. */
     public float PollActionStrength(String action)
     {
-        if (!consumedActions.Contains(action))
+        if (consumedActions.Contains(action))
         {
-            return Input.GetActionStrength(action);
+            return 0;
         }
-        return 0;
+        // If another button is pressed then return the maximum action (for use
+        // alongside digital inputs).
+        return Mathf.Max(
+            Input.GetActionStrength(action),
+            analogMapping.GetDualActionStrength(action)
+        );
     }
 
+    /* Same as PollActionStrength() but pops the action so nothing else can read it
+    when done. */
     public float PopActionStrength(String action)
     {
         float actionStrength = PollActionStrength(action);

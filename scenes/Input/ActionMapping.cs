@@ -22,6 +22,13 @@ public class ActionMapping : Node
     private MouseInput mouseInput;
     private JoypadInput joypadInput;
     private JoypadAxisInput joypadAxisInput;
+    private AnalogMapping controllerMapping;
+
+    public ActionMapping()
+    {
+        controllerMapping = new AnalogMapping();
+    }
+
     public override void _Ready()
     {
         actionBindings = new Dictionary<IInputMethod, Dictionary<String, int>>();
@@ -29,7 +36,6 @@ public class ActionMapping : Node
         mouseInput = new MouseInput();
         joypadInput = new JoypadInput();
         joypadAxisInput = new JoypadAxisInput();
-
         actionBindings[keyboardInput] = new Dictionary<String, int>();
         actionBindings[mouseInput] = new Dictionary<String, int>();
         actionBindings[joypadInput] = new Dictionary<String, int>();
@@ -39,25 +45,28 @@ public class ActionMapping : Node
         SetupActionMappings();
     }
 
+    /* Create bindings for game events. "*/
     private void SetupActionMappings()
     {
         AddActionMapping("jump", " ");
-        AddActionMapping("jump", "joy_a");
-        AddActionMapping("save_config", "i");
-        AddActionMapping("load_config", "o");
-        AddActionMapping("show_mappings", "p");
-
         AddActionMapping("move_left", "a");
         AddActionMapping("move_right", "d");
         AddActionMapping("move_up", "w");
         AddActionMapping("move_down", "s");
-        
-        // AddActionMappingAxis("move_left", "move_right", 0);
-        // AddActionMappingAxis("move_up", "move_down", 1);
-
         AddActionMapping("zoom_reset", "backspace");
         AddActionMapping("zoom_in", "mwheeldown");
         AddActionMapping("zoom_out", "mwheelup");
+
+        AddActionMapping("jump", "joy_a");
+        AddActionMapping("brake", "joy_b");
+        AddActionMappingAxis("move_left", "move_right", 0, 0, true);
+        AddActionMappingAxis("move_up", "move_down", 0, 1, true);
+        AddActionMapping("quit", "select");
+        AddActionMapping("toggle_fullscreen", "start");
+
+        AddActionMapping("save_config", "i");
+        AddActionMapping("load_config", "o");
+        AddActionMapping("show_mappings", "p");
         AddActionMapping("save_world", "F5");
         AddActionMapping("load_saved_world", "F9");
         AddActionMapping("click", "mouse1");
@@ -77,6 +86,8 @@ public class ActionMapping : Node
         AddActionMapping("remove_light", ".");
     }
 
+    /* Remap Godot keys to strings to use in bindings. Ensure the keys are unique even
+    across input methods. */
     private void SetupAliases()
     {
         Dictionary<String, int> keys = actionBindings[keyboardInput];
@@ -90,9 +101,9 @@ public class ActionMapping : Node
         keys.Add("v", (int)KeyList.V); keys.Add("w", (int)KeyList.W); keys.Add("x", (int)KeyList.X);
         keys.Add("y", (int)KeyList.Y); keys.Add("z", (int)KeyList.Z);
 
-        keys.Add("0", (int)KeyList.Key0); keys.Add("1", (int)KeyList.Key1); keys.Add("2", (int)KeyList.Key2); 
-        keys.Add("3", (int)KeyList.Key3); keys.Add("4", (int)KeyList.Key4); keys.Add("5", (int)KeyList.Key5); 
-        keys.Add("6", (int)KeyList.Key6); keys.Add("7", (int)KeyList.Key7); keys.Add("8", (int)KeyList.Key8); 
+        keys.Add("0", (int)KeyList.Key0); keys.Add("1", (int)KeyList.Key1); keys.Add("2", (int)KeyList.Key2);
+        keys.Add("3", (int)KeyList.Key3); keys.Add("4", (int)KeyList.Key4); keys.Add("5", (int)KeyList.Key5);
+        keys.Add("6", (int)KeyList.Key6); keys.Add("7", (int)KeyList.Key7); keys.Add("8", (int)KeyList.Key8);
         keys.Add("9", (int)KeyList.Key9);
 
         keys.Add("F1", (int)KeyList.F1); keys.Add("F2", (int)KeyList.F2); keys.Add("F3", (int)KeyList.F3);
@@ -127,12 +138,12 @@ public class ActionMapping : Node
         keys.Add("end", (int)KeyList.End);
         keys.Add("pageup", (int)KeyList.Pageup);
         keys.Add("pagedown", (int)KeyList.Pagedown);
-        
+
         keys.Add("left", (int)KeyList.Left);
         keys.Add("right", (int)KeyList.Right);
         keys.Add("up", (int)KeyList.Up);
         keys.Add("down", (int)KeyList.Down);
-        
+
         keys.Add("kp0", (int)KeyList.Kp0); keys.Add("kp1", (int)KeyList.Kp1); keys.Add("kp2", (int)KeyList.Kp2);
         keys.Add("kp3", (int)KeyList.Kp3); keys.Add("kp4", (int)KeyList.Kp4); keys.Add("kp5", (int)KeyList.Kp5);
         keys.Add("kp6", (int)KeyList.Kp6); keys.Add("kp7", (int)KeyList.Kp7); keys.Add("kp8", (int)KeyList.Kp8);
@@ -184,15 +195,26 @@ public class ActionMapping : Node
         axis.Add("axis9", (int)JoystickList.Axis9);
     }
 
-    
-    /* Binds a key to an action. You also need to pass it the type of event this
-	keycode is so that it can be stored correctly. */
+    /* See AnalogMapping for more information. */
+    private void AddActionMappingAxis(String firstAction, String secondAction, int device, int joyAxis, bool useDeadZone)
+    {
+        controllerMapping.AddDualAxisAction(firstAction, secondAction, device, joyAxis, useDeadZone);
+    }
+
+    /* Used by InputLaying to gain access to AnalogMapping. I could make AnalogMapping static,
+    but that makes making bindings tie to a save really difficult. */
+    public AnalogMapping GetAnalogMapping()
+    {
+        return controllerMapping;
+    }
+
+    /* Binds a key to an action. */
     private void AddActionMapping(String gameAction, String keyString)
     {
         ClassPair inputClassAndKeyCode = GetClassPairFromKeyString(keyString);
         if (inputClassAndKeyCode == null)
             return;
-        
+
         IInputMethod inputMethod = inputClassAndKeyCode.InputMethod;
         InputEvent inputEvent = inputMethod.GetInputEvent(inputClassAndKeyCode.KeyCode);
 
@@ -201,6 +223,8 @@ public class ActionMapping : Node
         InputMap.ActionAddEvent(gameAction, inputEvent);
     }
 
+    /* Finds the input method and Godot integer representing the key for the
+    keyString binding. */
     private ClassPair GetClassPairFromKeyString(String keyStringToMatch)
     {
         foreach (IInputMethod inputMethod in actionBindings.Keys)
@@ -208,10 +232,11 @@ public class ActionMapping : Node
             Dictionary<String, int> inputClassBindings = actionBindings[inputMethod];
             foreach (String keyString in inputClassBindings.Keys)
             {
-                if (keyString.Equals(keyStringToMatch)) {
+                if (keyString.Equals(keyStringToMatch))
+                {
                     return new ClassPair(inputMethod, inputClassBindings[keyStringToMatch]);
                 }
-            }            
+            }
         }
         return null;
     }
@@ -231,8 +256,8 @@ public class ActionMapping : Node
 	dict = {}
 	foreach action:   # jump
 		foreach input_event tied to the action:   # [InputEventKey: 560]
-			foreach style_of_input:   # KeyboardInputClass
-				if the input_event is not the style_of_input:
+			foreach input_method:   # KeyboardInput
+				if the input_event is not the type of input_method:
 					continue
 				
 				Get the input_events 'integer' representation so that we can
@@ -272,7 +297,7 @@ public class ActionMapping : Node
 
                     bindings[inputTypeName][gameAction].Add(KeyIntToString(keyCodeValue, inputMethod));
                 }
-            }   
+            }
         }
         return bindings;
     }
@@ -308,7 +333,7 @@ public class ActionMapping : Node
         {
             ShowMappings();
         }
-    
+
         if (@event.IsActionPressed("save_config"))
         {
             GD.Print("Saving Config");

@@ -60,16 +60,6 @@ public class Player : Node2D, ICollidable
             velocity.y = -1000;
         }
 
-        float axis = Input.GetJoyAxis(0, 0);
-
-        float left = inputLayering.PollActionStrength("move_left");
-        float right = inputLayering.PollActionStrength("move_right");
-        float up = inputLayering.PollActionStrength("move_up");
-        float down = inputLayering.PollActionStrength("move_down");
-        float leftRight = Input.GetJoyAxis(0, 0);
-        float upDown = Input.GetJoyAxis(0, 1);
-        // GD.Print(left + " " + right + " " + up + " " + down + " " + leftRight + " " + upDown);
-        
         if (inputLayering.PopAction("brake"))
         {
             velocity = Vector2.Zero;
@@ -80,26 +70,18 @@ public class Player : Node2D, ICollidable
 
     public override void _PhysicsProcess(float delta)
     {
-        if (inputLayering.PollAction("move_left"))
-        {
-            velocity.x -= 50;
-        }
-        if (inputLayering.PollAction("move_right"))
-        {
-            velocity.x += 50;
-        }
-        if (inputLayering.PollAction("move_up"))
-        {
-            velocity.y -= 50;
-        }
-        if (inputLayering.PollAction("move_down"))
-        {
-            velocity.y += 50;
-        }
+        float horizontalMoveSpeed = 50f;
+        float horizontalAction = inputLayering.PollActionStrength("move_right") - inputLayering.PollActionStrength("move_left");
+        velocity.x += horizontalAction * horizontalMoveSpeed;
+
+        float veriticalMoveSpeed = 50f;
+        float verticalAction = inputLayering.PollActionStrength("move_down") - inputLayering.PollActionStrength("move_up");
+        velocity.y += verticalAction * veriticalMoveSpeed;
     }
 
     public override void _Input(InputEvent @event)
     {
+
         if (@event.IsActionPressed("zoom_in"))
             camera.Zoom += new Vector2(0.5f, 0.5f);
 
@@ -111,7 +93,6 @@ public class Player : Node2D, ICollidable
 
         if (@event.IsActionPressed("quit"))
             GetTree().Quit();
-            
 
         camera.Zoom = new Vector2(
             Mathf.Clamp(camera.Zoom.x, 1, ZOOM_CLAMP),
