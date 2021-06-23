@@ -4,17 +4,17 @@ using System.Diagnostics;
 
 public class ChunkLayer<T> where T : IBlock, new()
 {
-    private T[] _blocks;
-    private Image _image;
-    private Vector2 _chunkSize;
-    public T[] Blocks { get { return _blocks; } }
-    public Image ChunkLayerImage { get { return _image; } }
+    private T[] blocks;
+    private Image image;
+    private Vector2 chunkSize;
+    public T[] Blocks { get { return blocks; } }
+    public Image ChunkLayerImage { get { return image; } }
     private bool allocated = false;
 
     public void Create(Vector2 chunkPosition, Vector2 chunkSize, Image worldLayerImage)
     {
-        _image.Fill(Colors.Red);
-        _image.BlitRect(worldLayerImage, new Rect2(chunkPosition * chunkSize, chunkSize), Vector2.Zero);
+        image.Fill(Colors.Red);
+        image.BlitRect(worldLayerImage, new Rect2(chunkPosition * chunkSize, chunkSize), Vector2.Zero);
 
         for (int j = 0; j < chunkSize.y; j++)
         for (int i = 0; i < chunkSize.x; i++)
@@ -36,11 +36,11 @@ public class ChunkLayer<T> where T : IBlock, new()
                 pixel = worldLayerImage.GetPixelv(worldBlockPosition);
 
             int blockIndex = Chunk.BlockPositionToBlockIndex(chunkSize, blockPosition);
-            if (_blocks[blockIndex] == null)
-                _blocks[blockIndex] = new T();
+            if (blocks[blockIndex] == null)
+                blocks[blockIndex] = new T();
 
-            _blocks[blockIndex].Id = (int)pixel.a;
-            _blocks[blockIndex].Colour = pixel;
+            blocks[blockIndex].Id = (int)pixel.a;
+            blocks[blockIndex].Colour = pixel;
         }
     }
 
@@ -53,11 +53,11 @@ public class ChunkLayer<T> where T : IBlock, new()
             GD.Print("What?");
         }
 
-        _chunkSize = chunkSize;
-        _blocks = new T[(int)(chunkSize.x * chunkSize.y)];
-        _image = new Image();
-        _image.Create((int)chunkSize.x, (int)chunkSize.y, false, Image.Format.Rgba8);
-        _image.Lock();
+        this.chunkSize = chunkSize;
+        blocks = new T[(int)(chunkSize.x * chunkSize.y)];
+        image = new Image();
+        image.Create((int)chunkSize.x, (int)chunkSize.y, false, Image.Format.Rgba8);
+        image.Lock();
         allocated = true;
     }
 }

@@ -36,7 +36,7 @@ public class CollisionComponent : Node2D
         UpdateCollisionVisiblityRect(delta);
         DeleteInvisibleBlocksHitboxes();
         CreateVisibleBlocksHitboxes();
-        Move(parent.Velocity);
+        Move(parent.GetVelocity());
     }
 
     /* This function expands a Rect2 to include the player and where the player would be
@@ -48,10 +48,10 @@ public class CollisionComponent : Node2D
         Vector2 hitboxSize = shape.Extents;
         // TODO: In future, take into account that some entities may be
         // defined by more than one Hitbox.
-        Vector2 collision_visibility = parent.GetHitbox().Position - hitboxSize;
-        previousParentHitboxRect = new Rect2(collision_visibility + parent.GetRigidBody().Position, 2 * hitboxSize);
+        Vector2 collisionVisibility = parent.GetHitbox().Position - hitboxSize;
+        previousParentHitboxRect = new Rect2(collisionVisibility + parent.GetRigidBody().Position, 2 * hitboxSize);
         nextParentHitboxRect = previousParentHitboxRect;
-        nextParentHitboxRect.Position += parent.Velocity * delta;
+        nextParentHitboxRect.Position += parent.GetVelocity() * delta;
         // Expand the Rect2 to include their nextPosition
         mergedParentHitboxRect = nextParentHitboxRect.Merge(previousParentHitboxRect);
         // TODO: Maybe in future return a value?
@@ -148,11 +148,11 @@ public class CollisionComponent : Node2D
         // zero randomly on slopes when sliding.
         Vector2 firstResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(vector.x, 0), Vector2.Up);
         Vector2 secondResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(0, vector.y), Vector2.Up);
-        parent.Velocity = firstResponse + secondResponse;
+        parent.SetVelocity(firstResponse + secondResponse);
 
         // Portal 2 fix pt.2        
         if (parent.GetRigidBody().Position == oldParentPosition)
-            parent.Velocity = Vector2.Zero;
+            parent.SetVelocity(Vector2.Zero);
     }
 
     // public override void _Process(float delta)

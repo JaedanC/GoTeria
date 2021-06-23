@@ -3,7 +3,7 @@ using System;
 
 public class GravityComponent : Node2D
 {
-    private bool enabled = false;
+    private bool enabled = true;
 
     public override void _Ready()
     {
@@ -16,7 +16,7 @@ public class GravityComponent : Node2D
         if (enabled)
         {
             ICollidable parent = GetParent<ICollidable>();
-            parent.Velocity = parent.Velocity + new Vector2(0, 98);
+            parent.SetVelocity(parent.GetVelocity() + new Vector2(0, 98));
         }
     }
 }

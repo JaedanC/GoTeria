@@ -6,6 +6,7 @@
 extents = Vector2( 1, 1 )
 
 [node name="BlockHitbox" type="StaticBody2D"]
+collision_mask = 0
 
 [node name="Hitbox" type="CollisionShape2D" parent="."]
 shape = SubResource( 1 )

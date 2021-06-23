@@ -98,8 +98,8 @@ public class Terrain : Node2D
     // }
 
     /* This currently colours the chunks with a border donoting the kind of chunk it
-    is and how it should be streamed in. Reducing the viewport_rectangle in the
-    Player.get_visibility_points method will allow you to see this process in action. */
+    is and how it should be streamed in. Reducing the viewportRectangle in the
+    Player.GetVisibilityPoints method will allow you to see this process in action. */
     public override void _Draw()
     {
         int thickness = 10;
@@ -143,7 +143,7 @@ public class Terrain : Node2D
     unloaded from memory. */
     private void DeleteInvisibleChunks()
     {
-        // First we grab a set the world_positions that should be loaded in the game 
+        // First we grab a set the worldPositions that should be loaded in the game 
         Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(loadMargin + lightingMargin);
 
         // Create a temporary dictionary to store chunks that are already loaded
@@ -151,7 +151,7 @@ public class Terrain : Node2D
         Dictionary<Vector2, Chunk> visibleChunks = new Dictionary<Vector2, Chunk>();
 
         // Loop through the loaded chunks and store the ones that we should keep in
-        // visible_chunks while erasing them from the old loaded_chunks dictionary. 
+        // visibleChunks while erasing them from the old loadedChunks dictionary. 
         foreach (Vector2 visiblePoint in visibleChunkPositions)
         {
             if (loadedChunks.ContainsKey(visiblePoint))
@@ -161,7 +161,7 @@ public class Terrain : Node2D
             }
         }
 
-        // Now the remaining chunks in loaded_chunks are invisible to the player
+        // Now the remaining chunks in loadedChunks are invisible to the player
         // and can be deleted from memory.
         foreach (Vector2 invisibleChunkPosition in loadedChunks.Keys)
         {
@@ -216,31 +216,26 @@ public class Terrain : Node2D
     /* This method continues to load in the chunks based on the three regions
     outlined at the top of this script. To tweak performance consider changing
     these variables:
-        - blocks_to_load. Blocks to stream in every frame. Should be ~around the
-        number of blocks in a chunk.
-        - chunks_to_draw. The number of chunks to draw every frame. Set to 0 and no
-        chunks will be streamed. This should be set 1 but experiment with more
-        values.
-        - draw_margin. This is the number of extra chunk layers outside the view of
+        - drawMargin. This is the number of extra chunk layers outside the view of
         screen that will drawn (by streaming) such that a player moving into new
         chunks won't experience lag spikes
-        - load_margin. This is the number of extra chunk layers past the draw_margin
+        - loadMargin. This is the number of extra chunk layers past the drawMargin
         that will only stream in blocks.
-        - 'Chunk Block Count'. This is the number of blocks in each chunk. This
+        - 'ChunkBlockCount'. This is the number of blocks in each chunk. This
         should be set to a reasonable value like (16, 16) or (32, 32). Experiment
         with others.
 
     The premise behind these dictionaries are to improve performance when streaming
     in chunks behind the scenes.
-        - lightly_loading_blocks_chunks. These are slowly loading in their blocks
+        - lightLoadingChunks. These are slowly loading in their blocks
         over a series of frames. These happen from a large distance away. Mediumly
         off the screen.
-        - lightly_loading_drawing_chunks. These chunks are drawing their blocks.
+        - lightDrawChunks. These chunks are drawing their blocks.
         These happen from a short distance away, just off the screen
-        - urgently_loading_chunks. These chunks are so close to the player that
+        - urgentChunks. These chunks are so close to the player that
         they need to have their blocks loaded in right away. The drawing can happen
         later though
-        - loaded_chunks. These chunks are fully drawn and visible to the player.
+        - loadedChunks. These chunks are fully drawn and visible to the player.
 
     Tweaking these values on different computers may result in better performance.
     TODO: Make them editable in a configuration file in the future. */
@@ -297,7 +292,7 @@ public class Terrain : Node2D
         // return worldSizeInChunks;
     }
 
-    /* Returns a Chunk if it exists at the given chunk_position in the world.
+    /* Returns a Chunk if it exists at the given chunkPosition in the world.
     - Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
     index in the world.
 
@@ -315,7 +310,7 @@ public class Terrain : Node2D
         return chunk;
     }
 
-    /* Returns a Chunk if it exists at the given world_position in the world.
+    /* Returns a Chunk if it exists at the given worldPosition in the world.
     World positions are locations represented by pixels. Entities in the world
     are stored using this value.
 
@@ -326,7 +321,7 @@ public class Terrain : Node2D
         return GetChunkFromChunkPosition(chunkPosition);
     }
 
-    /* Returns a chunk position from the given world_position.
+    /* Returns a chunk position from the given worldPosition.
         - World positions are locations represented by pixels. Entities in the world
         are stored using this value.
     Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
@@ -338,12 +333,12 @@ public class Terrain : Node2D
         return (worldPosition / chunkPixelDimensions).Floor();
     }
 
-    /* Returns a block if it exists using the given chunk_position and block_position
+    /* Returns a block if it exists using the given chunkPosition and blockPosition
     values.
         - Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
         index in the world.
         - Block positions are the position of the block relative to the chunk it is
-        in. It cannot be larger than the chunk's block_size.
+        in. It cannot be larger than the chunk's blockSize.
     Blocks are Dictionaries containing a set of standard variables. See the Block
     documentation in the Chunk scene.
 
@@ -375,7 +370,7 @@ public class Terrain : Node2D
         return GetTopIBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition);
     }
 
-    /* Returns a block if it exists using the given world_position.
+    /* Returns a block if it exists using the given worldPosition.
         - World positions are locations represented by pixels. Entities in the world
         are stored using this value.
     Blocks are Dictionaries containing a set of standard variables. See the Block
@@ -388,14 +383,14 @@ public class Terrain : Node2D
         return GetBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition);
     }
 
-    /* Returns a block position using the given world_position and chunk_position
+    /* Returns a block position using the given worldPosition and chunkPosition
     values.
         - World positions are locations represented by pixels. Entities in the world
         are stored using this value.
         - Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
         index in the world.
     Block positions are the position of the block relative to the chunk it is in. It
-    cannot be larger than the chunk's block_size.
+    cannot be larger than the chunk's blockSize.
     Fastest function to get block positions.*/
     public Vector2 GetBlockPositionFromWorldPositionAndChunkPosition(Vector2 worldPosition, Vector2 chunkPosition)
     {
@@ -403,11 +398,11 @@ public class Terrain : Node2D
         return (blockPosition / BlockPixelSize).Floor();
     }
 
-    /* Returns a block position using the given world_position.
+    /* Returns a block position using the given worldPosition.
         - World positions are locations represented by pixels. Entities in the world
         are stored using this value.
     Block positions are the position of the block relative to the chunk it is in. It
-    cannot be larger than the chunk's block_size.
+    cannot be larger than the chunk's blockSize.
     Slowest function to get block positions. */
     public Vector2 GetBlockPositionFromWorldPosition(Vector2 worldPosition)
     {
@@ -415,12 +410,12 @@ public class Terrain : Node2D
         return GetBlockPositionFromWorldPositionAndChunkPosition(worldPosition, chunkPosition);
     }
 
-    /* Sets a block at the given chunk_position and block_position to be the
-    new_block if it exists.
+    /* Sets a block at the given chunkPosition and blockPosition to be the
+    newBlock if it exists.
         - Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
         index in the world.
         - Block positions are the position of the block relative to the chunk it is
-        in. It cannot be larger than the chunk's block_size.
+        in. It cannot be larger than the chunk's blockSize.
         - Blocks are Dictionaries containing a set of standard variables. See the
         Block documentation in the Chunk scene.
     Fastest function to set blocks. */
@@ -434,7 +429,7 @@ public class Terrain : Node2D
         SetWorldImage(worldBlockPosition, newBlock.Colour);
     }
 
-    /* Sets a block at the given world_position to be the new_block if it exists.
+    /* Sets a block at the given worldPosition to be the newBlock if it exists.
         - World positions are locations represented by pixels. Entities in the world
         are stored using this value.
         - Blocks are Dictionaries containing a set of standard variables. See the

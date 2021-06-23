@@ -4,18 +4,18 @@ using System;
 public class WorldSpawn : Node
 {
     private const String title = "Teria";
-    private InputLayering _inputLayering;
+    private InputLayering inputLayering;
 
     public override void _Ready()
     {
-        _inputLayering = GetNode<InputLayering>("/root/InputLayering");
+        inputLayering = GetNode<InputLayering>("/root/InputLayering");
     }
 
     public override void _Process(float delta)
     {
         OS.SetWindowTitle(String.Format("{0} | FPS: {1}", title, Engine.GetFramesPerSecond()));
 
-        if (_inputLayering.PopActionPressed("toggle_fullscreen"))
+        if (inputLayering.PopActionPressed("toggle_fullscreen"))
         {
             OS.WindowFullscreen = !OS.WindowFullscreen;
         }

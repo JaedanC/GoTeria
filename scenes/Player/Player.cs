@@ -3,61 +3,58 @@ using Godot.Collections;
 using System;
 using System.Diagnostics;
 
-public class Player : Node2D, ICollidable
+public class Player : Entity, ICollidable
 {
     private const float ZOOM_CLAMP = 20f;
     private Terrain terrain;
-    private Godot.Object smoothing;
     private Camera2D camera;
     private InputLayering inputLayering;
-    private KinematicBody2D rigidBody;
-    private CollisionShape2D hitbox;
-
-    private Vector2 velocity;
-    public Vector2 Velocity { get { return velocity; } set { velocity = value; } }
 
     /* Hide the player's position with the smoothing one. This returns the player's position
     (which is actually the smoothing sprite's location) if you want the player's position on
     any frame other than a physics frame. This is an linear interpolated Vector2. */
-    new public Vector2 Position { get { return (Vector2)smoothing.Get("position"); } }
     public Vector2 CameraZoom { get { return camera.Zoom; } }
 
+    PackedScene slimeScene = (PackedScene)ResourceLoader.Load("res://scenes/Enemies/AI/SlimeAI/Slime.tscn");
 
     public override void _Ready()
     {
+        base._Ready();
         Name = "Player";
 
         terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
         rigidBody = GetNode<KinematicBody2D>("RigidBody");
         hitbox = rigidBody.GetNode<CollisionShape2D>("Hitbox");
-        smoothing = GetNode<Godot.Object>("Smoothing");
+        // smoothing = GetNode<Godot.Object>("Smoothing");
         camera = GetNode<Camera2D>("Smoothing/Camera");
         inputLayering = GetNode<InputLayering>("/root/InputLayering");
-        velocity = Vector2.Zero;
     }
 
     public override void _Process(float delta)
     {
         if (inputLayering.PopAction("zoom_reset"))
             camera.Zoom = Vector2.Zero;
+        
+        if (inputLayering.PopAction("quit"))
+            GetTree().Quit();
 
         if (inputLayering.PopAction("click"))
         {
-            Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
+            Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Block newBlock = new Block(1, new Color(1, 1, 0, 1));
-            terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
+            terrain.SetBlockAtWorldPosition(mouseWorldPosition, newBlock);
         }
 
         if (inputLayering.PopAction("dig"))
         {
-            Vector2 worldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
+            Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Block newBlock = new Block(0, new Color(0, 0, 0, 0));
-            terrain.SetBlockAtWorldPosition(worldPosition, newBlock);
+            terrain.SetBlockAtWorldPosition(mouseWorldPosition, newBlock);
         }
 
-        if (inputLayering.PopAction("jump"))
+        if (inputLayering.PopActionPressed("teleport"))
         {
-            velocity.y = -1000;
+            Teleport(ScreenToWorldPosition(GetViewport().GetMousePosition()));
         }
 
         if (inputLayering.PopAction("brake"))
@@ -70,6 +67,11 @@ public class Player : Node2D, ICollidable
 
     public override void _PhysicsProcess(float delta)
     {
+        if (inputLayering.PopAction("jump"))
+        {
+            velocity.y = -1000;
+        }
+
         float horizontalMoveSpeed = 50f;
         float horizontalAction = inputLayering.PollActionStrength("move_right") - inputLayering.PollActionStrength("move_left");
         velocity.x += horizontalAction * horizontalMoveSpeed;
@@ -77,22 +79,30 @@ public class Player : Node2D, ICollidable
         float veriticalMoveSpeed = 50f;
         float verticalAction = inputLayering.PollActionStrength("move_down") - inputLayering.PollActionStrength("move_up");
         velocity.y += verticalAction * veriticalMoveSpeed;
+
+        if (inputLayering.PollAction("zoom_in"))
+            camera.Zoom += new Vector2(0.5f, 0.5f);
+
+        if (inputLayering.PollAction("zoom_out"))
+            camera.Zoom -= new Vector2(0.5f, 0.5f);
+        
+        if (inputLayering.PollActionPressed("spawn_slime"))
+        {
+            Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
+            Slime slime = (Slime)slimeScene.Instance();
+            AddChild(slime);
+            slime.Teleport(mouseWorldPosition);
+        }
+        
     }
 
     public override void _Input(InputEvent @event)
     {
-
         if (@event.IsActionPressed("zoom_in"))
             camera.Zoom += new Vector2(0.5f, 0.5f);
 
         if (@event.IsActionPressed("zoom_out"))
             camera.Zoom -= new Vector2(0.5f, 0.5f);
-
-        if (@event.IsActionPressed("zoom_reset"))
-            camera.Zoom = new Vector2(1, 1);
-
-        if (@event.IsActionPressed("quit"))
-            GetTree().Quit();
 
         camera.Zoom = new Vector2(
             Mathf.Clamp(camera.Zoom.x, 1, ZOOM_CLAMP),
@@ -236,25 +246,15 @@ public class Player : Node2D, ICollidable
         return worldPosition - CameraZoom * GetViewportRect().Size / 2;
     }
 
-    public KinematicBody2D GetRigidBody()
-    {
-        return rigidBody;
-    }
-
-    public CollisionShape2D GetHitbox()
-    {
-        return hitbox;
-    }
-
     public override void _Draw()
     {
         // foreach (Vector2 chunkPoint in GetVisibilityChunkPositions())
         // {
-        // 	DrawCircle(
-        // 		chunkPoint * terrain.GetChunkPixelDimensions(),
-        // 		15,
-        // 		new Color(0, 1, 0, 1)
-        // 	);
+        //     DrawCircle(
+        //         chunkPoint * terrain.GetChunkPixelDimensions(),
+        //         15,
+        //         new Color(0, 1, 0, 1)
+        //     );
         // }
 
         DrawCircle(
@@ -265,7 +265,7 @@ public class Player : Node2D, ICollidable
 
         DrawLine(
             ScreenToWorldPosition(GetViewport().Size / 2),
-            ScreenToWorldPosition(GetViewport().Size / 2 + Velocity / 10),
+            ScreenToWorldPosition(GetViewport().Size / 2 + velocity / 10),
             new Color(1, 0, 0)
         );
     }

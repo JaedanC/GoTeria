@@ -1,0 +1,38 @@
+[gd_scene load_steps=8 format=2]
+
+[ext_resource path="res://scenes/Player/Components/GravityComponent.tscn" type="PackedScene" id=1]
+[ext_resource path="res://scenes/Player/Components/CollisionComponent.tscn" type="PackedScene" id=2]
+[ext_resource path="res://addons/smoothing/smoothing_2d.gd" type="Script" id=3]
+[ext_resource path="res://assets/Enemies/Slime.png" type="Texture" id=4]
+[ext_resource path="res://scenes/Enemies/AI/SlimeAI/SlimeAIMachine.cs" type="Script" id=5]
+[ext_resource path="res://scenes/Enemies/AI/SlimeAI/Slime.cs" type="Script" id=6]
+
+[sub_resource type="RectangleShape2D" id=1]
+extents = Vector2( 17.1612, 11.6696 )
+
+[node name="Slime" type="Node2D"]
+script = ExtResource( 6 )
+
+[node name="SlimeAI" type="Node" parent="."]
+script = ExtResource( 5 )
+
+[node name="RigidBody" type="KinematicBody2D" parent="."]
+collision_layer = 2
+collision/safe_margin = 0.008
+
+[node name="Hitbox" type="CollisionShape2D" parent="RigidBody"]
+shape = SubResource( 1 )
+one_way_collision = true
+
+[node name="Smoothing" type="Node2D" parent="."]
+script = ExtResource( 3 )
+target = NodePath("../RigidBody")
+
+[node name="SlimeSprite" type="Sprite" parent="Smoothing"]
+position = Vector2( 0, -9.53674e-07 )
+scale = Vector2( 0.240918, 0.240918 )
+texture = ExtResource( 4 )
+
+[node name="CollisionComponent" parent="." instance=ExtResource( 2 )]
+
+[node name="GravityComponent" parent="." instance=ExtResource( 1 )]

@@ -54,8 +54,17 @@ public class ActionMapping : Node
         AddActionMapping("move_up", "w");
         AddActionMapping("move_down", "s");
         AddActionMapping("zoom_reset", "backspace");
+        AddActionMapping("zoom_in", "=");
         AddActionMapping("zoom_in", "mwheeldown");
+        AddActionMapping("zoom_out", "-");
         AddActionMapping("zoom_out", "mwheelup");
+
+        AddActionMapping("spawn_slime", "mouse3");
+        AddActionMapping("teleport", "tab");
+        AddActionMapping("place_light", "mouse4");
+        AddActionMapping("place_light", ",");
+        AddActionMapping("remove_light", "mouse5");
+        AddActionMapping("remove_light", ".");
 
         AddActionMapping("jump", "joy_a");
         AddActionMapping("brake", "joy_b");
@@ -80,10 +89,7 @@ public class ActionMapping : Node
         AddActionMapping("remove_light_add_debug", "j");
         AddActionMapping("debug", "\\");
         AddActionMapping("toggle_fullscreen", "F11");
-        AddActionMapping("place_light", "mouse4");
-        AddActionMapping("place_light", ",");
-        AddActionMapping("remove_light", "mouse5");
-        AddActionMapping("remove_light", ".");
+        
     }
 
     /* Remap Godot keys to strings to use in bindings. Ensure the keys are unique even

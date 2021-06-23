@@ -54,7 +54,6 @@ public class Chunk : Node2D, IResettable
     public Chunk()
     {
         Name = "Chunk";
-        // _chunkTexture = new ImageTexture();
         chunkStack = new ChunkStack();
     }
 
@@ -80,7 +79,6 @@ public class Chunk : Node2D, IResettable
 
         chunkStack.Create(chunkPosition, blockCount, worldBlocksImages, worldWallsImage);
         LoadingDone = true;
-        // _chunkLighting.ComputeLightingPass();
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */

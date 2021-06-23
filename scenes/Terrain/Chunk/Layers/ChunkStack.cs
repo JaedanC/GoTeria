@@ -4,50 +4,50 @@ using System;
 
 public class ChunkStack
 {
-    private ChunkLayer<Block> _blocks;
-    private ChunkLayer<Wall> _walls;
-    private Array<ImageTexture> _textures;
-    private Vector2 _chunkSize;
-    public Block[] Blocks { get { return _blocks.Blocks; } }
-    public Wall[] Walls { get { return _walls.Blocks; } }
+    private ChunkLayer<Block> blocks;
+    private ChunkLayer<Wall> walls;
+    private Array<ImageTexture> textures;
+    private Vector2 chunkSize;
+    public Block[] Blocks { get { return blocks.Blocks; } }
+    public Wall[] Walls { get { return walls.Blocks; } }
 
     public ChunkStack()
     {
-        _blocks = new ChunkLayer<Block>();
-        _walls = new ChunkLayer<Wall>();
-        _textures = new Array<ImageTexture>();
-        _textures.Add(new ImageTexture());
-        _textures.Add(new ImageTexture());
+        blocks = new ChunkLayer<Block>();
+        walls = new ChunkLayer<Wall>();
+        textures = new Array<ImageTexture>();
+        textures.Add(new ImageTexture());
+        textures.Add(new ImageTexture());
     }
 
     public void AllocateMemory(Vector2 chunkSize)
     {
-        _chunkSize = chunkSize;
-        _blocks.AllocateMemory(chunkSize);
-        _walls.AllocateMemory(chunkSize);
+        this.chunkSize = chunkSize;
+        blocks.AllocateMemory(chunkSize);
+        walls.AllocateMemory(chunkSize);
     }
 
     public void Create(Vector2 chunkPosition, Vector2 chunkSize, Image worldBlocksImages, Image worldWallsImage)
     {
-        _chunkSize = chunkSize;
-        _blocks.Create(chunkPosition, chunkSize, worldBlocksImages);
-        _walls.Create(chunkPosition, chunkSize, worldWallsImage);
+        this.chunkSize = chunkSize;
+        blocks.Create(chunkPosition, chunkSize, worldBlocksImages);
+        walls.Create(chunkPosition, chunkSize, worldWallsImage);
     }
 
     public Array<ImageTexture> ComputeAndGetTextures()
     {
-        _textures[0].CreateFromImage(_walls.ChunkLayerImage, 0);
-        _textures[1].CreateFromImage(_blocks.ChunkLayerImage, 0);
-        return _textures;
+        textures[0].CreateFromImage(walls.ChunkLayerImage, 0);
+        textures[1].CreateFromImage(blocks.ChunkLayerImage, 0);
+        return textures;
     }
 
     public IBlock GetTopIBlock(Vector2 blockPosition)
     {
-        if (Helper.OutOfBounds(blockPosition, _chunkSize))
+        if (Helper.OutOfBounds(blockPosition, chunkSize))
         {
             return null;
         }
-        int blockIndex = Chunk.BlockPositionToBlockIndex(_chunkSize, blockPosition);
+        int blockIndex = Chunk.BlockPositionToBlockIndex(chunkSize, blockPosition);
         if (blockIndex >= Blocks.Length)
         {
             GD.Print(Blocks.Length + " " + blockIndex);
@@ -61,11 +61,11 @@ public class ChunkStack
 
     public Image GetBlocksImage()
     {
-        return _blocks.ChunkLayerImage;
+        return blocks.ChunkLayerImage;
     }
 
     public Image GetWallsImage()
     {
-        return _walls.ChunkLayerImage;
+        return walls.ChunkLayerImage;
     }
 }
