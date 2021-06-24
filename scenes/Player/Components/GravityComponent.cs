@@ -3,7 +3,7 @@ using System;
 
 public class GravityComponent : Node2D
 {
-    private bool enabled = true;
+    private bool enabled = false;
 
     public override void _Ready()
     {

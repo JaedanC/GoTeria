@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://scenes/Entities/Smoothing.cs" type="Script" id=1]
+[ext_resource path="res://assets/bullet.png" type="Texture" id=2]
+[ext_resource path="res://scenes/Entities/Projectiles/Bullet.cs" type="Script" id=3]
+
+[sub_resource type="RectangleShape2D" id=1]
+extents = Vector2( 32, 32 )
+
+[node name="Bullet" type="Node2D"]
+script = ExtResource( 3 )
+
+[node name="RigidBody" type="KinematicBody2D" parent="."]
+visible = false
+collision/safe_margin = 0.008
+
+[node name="Hitbox" type="CollisionShape2D" parent="RigidBody"]
+visible = false
+shape = SubResource( 1 )
+one_way_collision = true
+
+[node name="Smoothing" type="Node2D" parent="."]
+script = ExtResource( 1 )
+Target = NodePath("../RigidBody")
+Flags = 7
+
+[node name="BulletSprite" type="Sprite" parent="Smoothing"]
+texture = ExtResource( 2 )

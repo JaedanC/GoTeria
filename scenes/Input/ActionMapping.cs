@@ -60,6 +60,7 @@ public class ActionMapping : Node
         AddActionMapping("zoom_out", "mwheelup");
 
         AddActionMapping("spawn_slime", "mouse3");
+        AddActionMapping("shoot_bullet", "mouse1");
         AddActionMapping("teleport", "tab");
         AddActionMapping("place_light", "mouse4");
         AddActionMapping("place_light", ",");
@@ -78,10 +79,9 @@ public class ActionMapping : Node
         AddActionMapping("show_mappings", "p");
         AddActionMapping("save_world", "F5");
         AddActionMapping("load_saved_world", "F9");
-        AddActionMapping("click", "mouse1");
-        AddActionMapping("click", "n");
+        AddActionMapping("place_block", "c");
+        AddActionMapping("dig", "v");
         AddActionMapping("dig", "mouse2");
-        AddActionMapping("dig", "m");
         AddActionMapping("brake", "x");
         AddActionMapping("quit", "esc");
         AddActionMapping("light_debug", "l");

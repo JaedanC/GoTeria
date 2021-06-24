@@ -61,8 +61,8 @@ public class Terrain : Node2D
 
         // TODO: dynamically load the world
 
-        // worldFile = new WorldFile("SavedWorld");
-        worldFile = new WorldFile("light_test");
+        worldFile = new WorldFile("SavedWorld");
+        // worldFile = new WorldFile("light_test");
         terrainStack = worldFile.GetITerrainStack();
 
         lightingEngine.Initialise();
@@ -195,21 +195,21 @@ public class Terrain : Node2D
         {
             Chunk chunk = GetChunkFromChunkPosition(point);
             if (chunk != null)
-                urgentChunks.Add(point, chunk);
+                urgentChunks[point] = chunk;
         }
 
         foreach (Vector2 point in drawVisibilityPoints)
         {
             Chunk chunk = GetChunkFromChunkPosition(point);
             if (chunk != null)
-                lightDrawChunks.Add(point, chunk);
+                lightDrawChunks[point] = chunk;
         }
 
         foreach (Vector2 point in loadVisibilityPoints)
         {
             Chunk chunk = GetChunkFromChunkPosition(point);
             if (chunk != null)
-                lightLoadingChunks.Add(point, chunk);
+                lightLoadingChunks[point] = chunk;
         }
     }
 

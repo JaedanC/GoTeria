@@ -3,7 +3,7 @@ using Godot.Collections;
 using System;
 using System.Diagnostics;
 
-public class Player : Entity, ICollidable
+public class Player : Entity
 {
     private const float ZOOM_CLAMP = 20f;
     private Terrain terrain;
@@ -15,7 +15,8 @@ public class Player : Entity, ICollidable
     any frame other than a physics frame. This is an linear interpolated Vector2. */
     public Vector2 CameraZoom { get { return camera.Zoom; } }
 
-    PackedScene slimeScene = (PackedScene)ResourceLoader.Load("res://scenes/Enemies/AI/SlimeAI/Slime.tscn");
+    PackedScene slimeScene = (PackedScene)ResourceLoader.Load("res://scenes/Entities/Enemies/AI/SlimeAI/Slime.tscn");
+    PackedScene bulletScene = (PackedScene)ResourceLoader.Load("res://scenes/Entities/Projectiles/Bullet.tscn");
 
     public override void _Ready()
     {
@@ -38,7 +39,7 @@ public class Player : Entity, ICollidable
         if (inputLayering.PopAction("quit"))
             GetTree().Quit();
 
-        if (inputLayering.PopAction("click"))
+        if (inputLayering.PopAction("place_block"))
         {
             Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Block newBlock = new Block(1, new Color(1, 1, 0, 1));
@@ -92,6 +93,19 @@ public class Player : Entity, ICollidable
             Slime slime = (Slime)slimeScene.Instance();
             AddChild(slime);
             slime.Teleport(mouseWorldPosition);
+        }
+
+        if (inputLayering.PollAction("shoot_bullet"))// || Engine.GetPhysicsFrames() % 4 == 0)
+        {
+            Vector2 mousePosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
+            Bullet bullet = (Bullet)bulletScene.Instance();
+            bullet.Init(this, Position, mousePosition - Position);
+            // bullet.Init(this, Position, mousePosition - Position, 5000);
+        }
+
+        if (inputLayering.PollActionPressed("debug"))
+        {
+            PrintStrayNodes();
         }
         
     }
