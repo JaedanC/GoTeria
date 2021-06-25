@@ -2,6 +2,17 @@ using Godot;
 using System;
 
 
+/* Performs ray casting with only blocks.
+
+    "A Fast Voxel Traversal Algorithm for Ray Tracing"
+    http://www.cse.chalmers.se/edu/year/2010/course/TDA361/grid.pdf
+    By John Amanatides, Andrew Woo
+
+    "A fast and simple voxel traversal algorithm through a 3D [also 2D] space partition is
+    introduced. Going from one voxel to its neighbour requires only two floating point
+    comparisons and one floating point addition. Also, multiple ray intersections with
+    objects that are in more than one voxel are eliminated."
+*/
 public class TeriaFastRayCast
 {
     private Terrain terrain;
@@ -47,9 +58,14 @@ public class TeriaFastRayCast
 
     public TeriaFastRayCastCollision Cast()
     {
+        // For additional reference
+        // https://vercidium.com/blog/optimised-voxel-raymarching/
+        // https://github.com/Vercidium/voxel-ray-marching/blob/master/source/Map.cs
         Vector2 voxelSize = terrain.BlockPixelSize;
-        // From http://www.cse.chalmers.se/edu/year/2010/course/TDA361/grid.pdf
-        // Ray = u + tv for t >= 0
+        
+
+        // Concept:
+        // Collision Position = u + tv for t >= 0
         // Where:
         //  u = starting point
         //  v = direction
@@ -117,67 +133,53 @@ public class TeriaFastRayCast
         // must move (in units of t) for the horizontal component of such a movement to equal
         // the width of a voxel. Similarly, we store in tDeltaY the amount of movement along
         // the ray which has a vertical component equal to the height of a voxel.
+        // If the direction is zero then there is no moving in that direction at all. So, if we add the
+        // delta it will immediately never be picked again.
         float tDeltaX = direction.x == 0 ? float.PositiveInfinity : Mathf.Abs(voxelSize.x / direction.x);
         float tDeltaY = direction.y == 0 ? float.PositiveInfinity : Mathf.Abs(voxelSize.y / direction.y);
 
-
-        /*
-        t = 0
-        1st: Block (-3, 1) -> Empty
-            : 13.5 < 0.3 = false
-             : Y = 1 - 1 = 0
-             : t = 0.3
-             : tMaxY = 0.3 + 65.97 = 66.27
-        2nd: Block (-3, 0) -> Empty
-            : 13.5 < 66.27 = true
-             : X = -3 + 1 = -2
-             : t = 13.5
-             : tMaxX = 13.5 + 16.49 = 29.99
-        3rd: Block (-2, 0) -> Empty
-            : 29.99 < 66.27 = true
-             : X = -2 + 1 = -1
-             : t = 29.99
-             : tMaxX = 29.99 + 16.49 = 46.48
-        4th: Block (-1, 0) -> Block! (continue for testing)
-            : tMaxX = 46.48
-            : tMaxY = 66.27
-            : t = 29.99
-        */
-
-        // Find the ray intersection point
-        // u + tv = intersection
-        // u = (-45.5, 16.3)
-        // t = 29.99
-        // v = (0.97, -0.24)
-        // intersection = (-45.5 + 29.99 * 0.97, 16.3 + 29.99 * -0.24)
-        //              = (-45.5 + 29.09, 16.3 - 7.20)
-        //              = (-16.41, 9.1)
+        // This is the distance along the ray we have travelled thus far. It is equal to the minimum tMax*
+        // value before it is incremented with delta.
         float t = 0;
 
+        // This is used to retrieve the normal of the collision later on.
         Vector2[] axis = new Vector2[2];
         axis[0] = Vector2.Right * stepX * -1;
         axis[1] = Vector2.Down * stepY * -1;
         int normalAxis = tMaxX < tMaxY ? 0 : 1;
         
-        while (t <= maxDistance) // Incremental Phase
+        // Incremental Phase
+        while (t <= maxDistance)
         {
+            // First check if the block we start the ray on is solid.
             Block foundBlock = terrain.GetBlockFromWorldPosition(new Vector2(X, Y) * voxelSize);
+
+            // If it's null then we're out of bounds.
+            // If it's solid then we've found a collision.
             if (foundBlock == null)
             {
                 return new TeriaFastRayCastCollision(null, null);
             }
             else if (foundBlock.IsSolid())
             {
-                Vector2 normal = axis[normalAxis];
-                Vector2 intercept = startPoint + t * direction; // u + tv = intersection
-                return new TeriaFastRayCastCollision(intercept, normal);
+                // collisionPosition = u + tv
+                Vector2 collisionPosition = startPoint + t * direction;
+                Vector2 collisionNormal = axis[normalAxis];
+                return new TeriaFastRayCastCollision(collisionPosition, collisionNormal);
             }
 
             if (tMaxX < tMaxY)
             {
+                // Going to the next cell
                 X = X + stepX;
+
+                // Updating t for how much we've moved along the ray
                 t = tMaxX;
+
+                // Moving the marker to the next potential location along the ray.
                 tMaxX += tDeltaX;
+
+                // If a collision occurs now, then we know it was a vertical normal
                 normalAxis = 0;
             }
             else

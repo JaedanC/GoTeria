@@ -11,7 +11,7 @@ public abstract class Entity : Node2D, ICollidable
     public new Vector2 Position {
         get
         {
-            return (Vector2)smoothing.Get("position");
+            return smoothing.Position;
         }
         set
         {

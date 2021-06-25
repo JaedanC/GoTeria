@@ -107,7 +107,8 @@ public class Player : Entity
         {
             PrintStrayNodes();
         }
-        
+
+        // GD.Print("Pl: " + Position + " " + Engine.GetPhysicsFrames() + " " + delta);
     }
 
     public override void _Input(InputEvent @event)

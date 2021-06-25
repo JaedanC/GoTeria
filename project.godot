@@ -55,6 +55,10 @@ ui_accept={
 
 profiler/enabled=true
 
+[physics]
+
+2d/thread_model=2
+
 [rendering]
 
 quality/intended_usage/framebuffer_allocation=0

@@ -26,7 +26,7 @@ public class CollisionComponent : Node2D
     {
         UpdateCollisionVisiblityRect(delta);
         CreateCollisionVisibleBlockHitboxes();
-        Move(parent.GetVelocity());
+        Move(parent.GetVelocity(), delta);
     }
 
     /* This function expands a Rect2 to include the player and where the player would be
@@ -55,16 +55,22 @@ public class CollisionComponent : Node2D
         collisionSystem.CreateBlockHitboxesInArea(mergedParentHitboxRect);
     }
 
-    private void Move(Vector2 vector)
+    private void Move(Vector2 vector, float delta)
     {
         // Fixes infinite velocity Portal 2 style
         Vector2 oldParentPosition = parent.GetRigidBody().Position;
 
         // Let's do the collision in two parts. This seems to fix many edge case with movement hitting
         // zero randomly on slopes when sliding.
-        Vector2 firstResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(vector.x, 0), Vector2.Up);
-        Vector2 secondResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(0, vector.y), Vector2.Up);
-        parent.SetVelocity(firstResponse + secondResponse);
+        Vector2 response = parent.GetRigidBody().MoveAndSlide(vector, Vector2.Up);
+        Vector2 newPosition = parent.GetRigidBody().Position;
+
+        // GD.Print("Player moved: " + (newPosition - oldParentPosition));
+
+        parent.SetVelocity(response);
+        // Vector2 firstResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(vector.x, 0), Vector2.Up);
+        // Vector2 secondResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(0, vector.y), Vector2.Up);
+        // parent.SetVelocity(firstResponse + secondResponse);
 
         // Portal 2 fix pt.2        
         if (parent.GetRigidBody().Position == oldParentPosition)

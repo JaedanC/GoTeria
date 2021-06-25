@@ -58,7 +58,7 @@ public abstract class Projectile : Entity
         alive += 1;
     }
 
-    protected TeriaFastRayCastCollision FastCast(float delta)
+    private TeriaFastRayCastCollision FastCast(float delta)
     {
         TeriaFastRayCast rayCast;
         TeriaFastRayCastCollision collision;
@@ -76,30 +76,34 @@ public abstract class Projectile : Entity
         }
         else
         {
-            rayCast = TeriaFastRayCast.FromDirection(terrain, shooter, GetWorld2d().DirectSpaceState, Position, direction, speed * delta); // Half the FPS dies here
-            collision = rayCast.Cast(); // The other half here.
+            rayCast = TeriaFastRayCast.FromDirection(terrain, shooter, GetWorld2d().DirectSpaceState, Position, direction, speed * delta);
+            collision = rayCast.Cast();
 
             Vector2? collisionPosition = collision.GetCollisionPosition();
             if (collisionPosition != null)
             {
                 this.Position = (Vector2)collisionPosition;
+                // done = true;
             }
             else
             {
-                this.Position += direction * speed * delta;
+                // This is still being run even when it skips
+                // this.Position += direction * speed * delta;
+                // Can't read from Position as that is dependant on Process not PhysicsProcess.
+                GetRigidBody().Position = GetRigidBody().Position + direction * speed * delta;
             }
         }
         return collision;
     }
 
-    protected void Behaviour(float delta)
+    private void Behaviour(float delta)
     {
         // Rotate with the direction
         Rotation = direction.Angle();
 
         TeriaFastRayCastCollision collision = FastCast(delta);
 
-        AI(alive, collision);
+        AI(alive, collision, delta);
     }
 
     public Entity GetShooter()
@@ -107,5 +111,5 @@ public abstract class Projectile : Entity
         return shooter;
     }
 
-    public virtual void AI(int alive, TeriaFastRayCastCollision collision) {}
+    public virtual void AI(int alive, TeriaFastRayCastCollision collision, float delta) {}
 }
