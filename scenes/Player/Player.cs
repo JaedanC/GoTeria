@@ -99,8 +99,8 @@ public class Player : Entity
         {
             Vector2 mousePosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Bullet bullet = (Bullet)bulletScene.Instance();
-            bullet.Init(this, Position, mousePosition - Position);
-            // bullet.Init(this, Position, mousePosition - Position, 5000);
+            // bullet.Init(this, Position, mousePosition - Position);
+            bullet.Init(this, Position, mousePosition - Position, 5000);
         }
 
         if (inputLayering.PollActionPressed("debug"))

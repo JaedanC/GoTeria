@@ -32,8 +32,8 @@ using System.Diagnostics;
 
 public class Smoothing : Node2D
 {
-    private NodePath target;
-    private int flags;
+    private NodePath target = new NodePath("../RigidBody");
+    private int flags = ENABLED | TRANSLATE;
     
     [Export]
     public NodePath Target

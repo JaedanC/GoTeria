@@ -8,9 +8,9 @@ public class Bullet : Projectile
         base.Init(shooter, position, direction, speed);
     }
 
-    public override void AI(int alive, TeriaRayCastCollision collision)
+    public override void AI(int alive, TeriaFastRayCastCollision collision)
     {
-        if (collision != null && collision.GetCollider() != null)
+        if (collision != null && collision.GetCollisionPosition() != null)
         {
             // GD.Print("Collided with: " + collision.GetCollider() + " @ " + collision.GetCollisionPosition());
             QueueFree();

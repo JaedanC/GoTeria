@@ -58,40 +58,48 @@ public abstract class Projectile : Entity
         alive += 1;
     }
 
-    protected void Behaviour(float delta)
+    protected TeriaFastRayCastCollision FastCast(float delta)
     {
-        // Rotate with the direction
-        Rotation = direction.Angle();
-
-        TeriaRayCast rayCast;
-        TeriaRayCastCollision collision;
+        TeriaFastRayCast rayCast;
+        TeriaFastRayCastCollision collision;
         if (rayCasted)
         {
-            rayCast = TeriaRayCast.FromDirection(terrain, collisionSystem, GetWorld2d().DirectSpaceState, shooter, Position, direction, 1000);
+            rayCast = TeriaFastRayCast.FromDirection(terrain, shooter, GetWorld2d().DirectSpaceState, Position, direction, 1000);
             collision = rayCast.Cast();
 
-            if (collision.GetCollider() != null)
+            Vector2? collisionPosition = collision.GetCollisionPosition();
+            if (collisionPosition != null)
             {
-                this.Position = (Vector2)collision.GetCollisionPosition();
+                this.Position = (Vector2)collisionPosition;
             }
             done = true;
         }
         else
         {
-            rayCast = TeriaRayCast.FromDirection(terrain, collisionSystem, GetWorld2d().DirectSpaceState, shooter, Position, direction, speed * delta); // Half the FPS dies here
+            rayCast = TeriaFastRayCast.FromDirection(terrain, shooter, GetWorld2d().DirectSpaceState, Position, direction, speed * delta); // Half the FPS dies here
             collision = rayCast.Cast(); // The other half here.
 
-            if (collision.GetCollider() != null)
+            Vector2? collisionPosition = collision.GetCollisionPosition();
+            if (collisionPosition != null)
             {
-                this.Position = (Vector2)collision.GetCollisionPosition();
+                this.Position = (Vector2)collisionPosition;
             }
             else
             {
                 this.Position += direction * speed * delta;
             }
         }
-        // rayCast.Free();
-        AI(alive, null);
+        return collision;
+    }
+
+    protected void Behaviour(float delta)
+    {
+        // Rotate with the direction
+        Rotation = direction.Angle();
+
+        TeriaFastRayCastCollision collision = FastCast(delta);
+
+        AI(alive, collision);
     }
 
     public Entity GetShooter()
@@ -99,5 +107,5 @@ public abstract class Projectile : Entity
         return shooter;
     }
 
-    public virtual void AI(int alive, TeriaRayCastCollision collision) {}
+    public virtual void AI(int alive, TeriaFastRayCastCollision collision) {}
 }

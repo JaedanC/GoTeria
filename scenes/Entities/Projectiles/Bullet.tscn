@@ -21,7 +21,6 @@ one_way_collision = true
 
 [node name="Smoothing" type="Node2D" parent="."]
 script = ExtResource( 1 )
-Target = NodePath("../RigidBody")
 Flags = 7
 
 [node name="BulletSprite" type="Sprite" parent="Smoothing"]
