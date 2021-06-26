@@ -41,7 +41,7 @@ public class Chunk : Node2D, IResettable
     }
     public bool LoadingDone { get; set; }
     public bool LightingDone { get; set; }
-    private ChunkLighting chunkLighting;
+    // private ChunkLighting chunkLighting;
     public Block[] Blocks { get { return chunkStack.Blocks; } }
     public Wall[] Walls { get { return chunkStack.Walls; } }
 
@@ -80,7 +80,7 @@ public class Chunk : Node2D, IResettable
         LoadingDone = false;
         Position = blockPixelSize * chunkPosition * blockCount;
         worldFile = WorldSpawn.ActiveWorldSpawn.GetWorldFile();
-        chunkLighting = new ChunkLighting(this, terrain, worldFile);
+        // chunkLighting = new ChunkLighting(this, terrain, worldFile);
     }
 
     public void Create(Vector2 chunkPosition, Vector2 blockCount, Image worldBlocksImages, Image worldWallsImage)
@@ -92,31 +92,6 @@ public class Chunk : Node2D, IResettable
         LoadingDone = true;
     }
 
-    /* This method will save all the data in a chunk to disk. Currently it is being
-    done using compression, however this can be changed below. TODO: Change this
-    to take in a parameter as a save destination. Currently it's hardcoded. */
-    public void SaveChunk()
-    {
-        // Create the directory if it does not exist
-        Directory directory = new Directory();
-        directory.MakeDir("user://chunk_data");
-
-        // Create a file for each chunk. Store chunk specfic data below. File
-        // size heavily depends on how varied the data is stored between blocks.
-        File chunkFile = new File();
-        // chunk.Open("user://chunk_data/%s.dat" % worldPosition, File.Write);
-        chunkFile.OpenCompressed(String.Format("user://chunk_data/{0}.dat", chunkPosition), File.ModeFlags.Write, File.CompressionMode.Zstd);
-
-        // Save all chunk data in here
-        for (int i = 0; i < blockCount.x; i++)
-            for (int j = 0; j < blockCount.y; j++)
-            {
-                float randomNumber = Mathf.Floor(Convert.ToSingle(GD.RandRange(0, 5)));
-                chunkFile.Store16(Convert.ToUInt16(randomNumber));
-            }
-        chunkFile.Close();
-    }
-
     public override void _Draw()
     {
         // DrawCircle(Vector2.Zero, 2, Color.aquamarine);
@@ -126,13 +101,14 @@ public class Chunk : Node2D, IResettable
     public void ComputeLightingPass()
     {
         GD.Print("Computed Lighting for chunk: " + ChunkPosition);
-        chunkLighting.ComputeLightingPass();
+        terrain.LightingEngine.LightChunk(this);
+        // chunkLighting.ComputeLightingPass();
         LightingDone = true;
     }
 
     public void OnDeath()
     {
-        chunkLighting.SaveLight();
+        // chunkLighting.SaveLight();
     }
 
     /* Draw the chunk to the screen using my special colour formula. This function
@@ -154,7 +130,7 @@ public class Chunk : Node2D, IResettable
     private bool IsValidBlockPosition(Vector2 blockPosition)
     {
         return !(blockPosition.x < 0 || blockPosition.x >= blockCount.x ||
-                blockPosition.y < 0 || blockPosition.y >= blockCount.y);
+                 blockPosition.y < 0 || blockPosition.y >= blockCount.y);
     }
 
     public int BlockPositionToBlockIndex(Vector2 blockPosition)

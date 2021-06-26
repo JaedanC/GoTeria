@@ -11,10 +11,22 @@ public class WorldSpawn : Node
         }
     }
 
+    [Export]
+    private String windowTitle = "Teria";
+
+    [Export]
+    private Vector2 blockPixelSize = new Vector2(16, 16);
+
+    [Export]
+    // private Vector2 chunkBlockCount = new Vector2(420, 400);
+    private Vector2 chunkBlockCount = new Vector2(210, 200);
+
+    [Export]
+    private bool singleThreadedThreadPool = false;
+
+    // Static reference to the current active WorldSpawn
     public static WorldSpawn ActiveWorldSpawn;
 
-    private const String title = "Teria";
-    
     // Instance variables
     String saveFileName = "SavedWorld";
 
@@ -34,12 +46,18 @@ public class WorldSpawn : Node
 
     public WorldSpawn()
     {
-        // Make this instance static so arbritray nodes can request the above
+        // Make this instance static so arbritray nodes can request data
         WorldSpawn.ActiveWorldSpawn = this;
 
         // Only instance what has no dependencies and isn't a Node
         worldFile = new WorldFile(saveFileName);
         analogMapping = new AnalogMapping();
+
+        // Value checks
+        Developer.AssertGreaterThan(blockPixelSize.x, 0, "BlockPixelSize.x is 0");
+        Developer.AssertGreaterThan(blockPixelSize.y, 0, "BlockPixelSize.y is 0");
+        Developer.AssertGreaterThan(chunkBlockCount.x, 0, "ChunkBlockCount.x is 0");
+        Developer.AssertGreaterThan(chunkBlockCount.y, 0, "ChunkBlockCount.y is 0");
     }
 
     public override void _Ready()
@@ -55,13 +73,13 @@ public class WorldSpawn : Node
         collisionSystem = GetNode<CollisionSystem>("CollisionSystem");
 
         // Initialise Singletons
-        threadPool.Initialise(false);
+        threadPool.Initialise(singleThreadedThreadPool);
         inputLayering.Initialise(analogMapping);
 
         // Initialise children
         actionMapping.Initialise(analogMapping);
         player.Initialise(inputLayering, terrain, collisionSystem);
-        terrain.Initialise(threadPool, inputLayering, player, worldFile);
+        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount);
         collisionSystem.Initialise(terrain);
     }
 
@@ -77,7 +95,7 @@ public class WorldSpawn : Node
 
     public override void _Process(float delta)
     {
-        OS.SetWindowTitle(String.Format("{0} | FPS: {1}", title, Engine.GetFramesPerSecond()));
+        OS.SetWindowTitle(String.Format("{0} | FPS: {1}", windowTitle, Engine.GetFramesPerSecond()));
 
         if (inputLayering.PopActionPressed("toggle_fullscreen"))
         {

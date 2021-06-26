@@ -41,65 +41,6 @@ public class LightingEngine : Node2D
         }
     }
 
-    public class LightImage
-    {
-        private Image worldLightImage;
-        private System.Collections.Generic.Dictionary<Vector2, Color> colourChanges;
-        private Mutex imageMutex;
-
-        public LightImage(Image worldLightImage)
-        {
-            this.worldLightImage = worldLightImage;
-            colourChanges = new System.Collections.Generic.Dictionary<Vector2, Color>();
-            imageMutex = new Mutex();
-        }
-
-        public void SetPixelv(Vector2 worldPosition, Color colour)
-        {
-            imageMutex.Lock();
-            colourChanges[worldPosition] = colour;
-            imageMutex.Unlock();
-        }
-
-        public Color GetPixelv(Vector2 worldPosition)
-        {
-            imageMutex.Lock();
-            Color colour;
-            if (colourChanges.ContainsKey(worldPosition))
-                colour = colourChanges[worldPosition];
-            else
-                colour = worldLightImage.GetPixelv(worldPosition);
-            imageMutex.Unlock();
-            return colour;
-        }
-
-        public void LockImage()
-        {
-            imageMutex.Lock();
-        }
-
-        public Image GetImage()
-        {
-            return worldLightImage;
-        }
-
-        public void UnlockImage()
-        {
-            imageMutex.Unlock();
-        }
-
-        public void CommitColourChanges()
-        {
-            imageMutex.Lock();
-            foreach (Vector2 pixel in colourChanges.Keys)
-            {
-                worldLightImage.SetPixelv(pixel, colourChanges[pixel]);
-            }
-            colourChanges.Clear();
-            imageMutex.Unlock();
-        }
-    }
-
     private InputLayering inputLayering;
     private Terrain terrain;
     private Player player;
@@ -115,9 +56,8 @@ public class LightingEngine : Node2D
     private Vector2 nextPosition;
     private bool keepLightThread = true;
     private bool updateShader = true;
-    public LightImage WorldLightImage;
+    private DefferedUpdateImage WorldLightImage;
     private Image worldLightSources;
-    public Image WorldLightSources { get { return worldLightSources; } }
 
 
     public override void _Notification(int what)
@@ -158,24 +98,82 @@ public class LightingEngine : Node2D
         worldLightSources.Fill(Colors.Red);
         worldLightSources.Lock();
         for (int i = 0; i < worldSize.x; i++)
-        for (int j = 0; j < worldSize.y; j++)
-        {
-            Color blockColour = terrain.WorldBlocksImage.GetPixel(i, j);
-            Color wallColour = terrain.WorldWallsImage.GetPixel(i, j);
-            Color lightValue;
-            if (Helper.IsLight(blockColour) && Helper.IsLight(wallColour))
-                lightValue = Colors.White;
-            else
-                lightValue = Colors.Black;
-            worldLightSources.SetPixel(i, j, lightValue);
-        }
+            for (int j = 0; j < worldSize.y; j++)
+            {
+                Color blockColour = terrain.WorldBlocksImage.GetPixel(i, j);
+                Color wallColour = terrain.WorldWallsImage.GetPixel(i, j);
+                Color lightValue;
+                if (Helper.IsLight(blockColour) && Helper.IsLight(wallColour))
+                    lightValue = Colors.White;
+                else
+                    lightValue = Colors.Black;
+                worldLightSources.SetPixel(i, j, lightValue);
+            }
 
         worldLightLevels.BlitRect(worldLightSources, new Rect2(Vector2.Zero, terrain.GetWorldSize()), Vector2.Zero);
-        
-        // WorldLightImage = new LightImage(worldLightLevels);
-        // WorldChunkLighting.Instance.Initialise(terrain, terrain.WorldFile, terrain.ChunkPool, terrain.WorldFile.SaveName);
-        // worldLightLevels = WorldChunkLighting.Instance.GetWorldLightImage();
-        WorldLightImage = new LightImage(worldLightLevels);
+        WorldLightImage = new DefferedUpdateImage(worldLightLevels);
+
+        lightingThread.Start();
+    }
+
+    public override void _PhysicsProcess(float delta)
+    {
+        if (inputLayering.PollAction("light_debug"))
+        {
+            GD.Print("Add: " + lightUpdateAddQueue.Count);
+        }
+        if (inputLayering.PollAction("remove_light_debug"))
+        {
+            GD.Print("Remove: " + lightUpdateRemoveQueue.Count);
+        }
+        if (inputLayering.PollAction("remove_light_add_debug"))
+        {
+            GD.Print("RemoveAdd: " + lightUpdateRemoveToAddQueue.Count);
+        }
+
+        // LightUpdatePass();
+        UpdateLightShaderParameters();
+    }
+
+    public override void _Process(float delta)
+    {
+        if (inputLayering.PopAction("place_light"))
+        {
+            Vector2 worldPosition = player.ScreenToWorldPosition(GetViewport().GetMousePosition());
+            AddLight(worldPosition / terrain.BlockPixelSize, Colors.White);
+        }
+
+        if (inputLayering.PopAction("remove_light"))
+        {
+            Vector2 worldPosition = player.ScreenToWorldPosition(GetViewport().GetMousePosition());
+            RemoveLight(worldPosition / terrain.BlockPixelSize);
+        }
+    }
+
+    public void LightChunk(Chunk chunk)
+    {
+        QueueSet<LightBFSNode> lightQueue = new QueueSet<LightBFSNode>();
+
+        Vector2 chunkBlockCount = terrain.ChunkBlockCount;
+        Vector2 topLeftPixel = chunk.ChunkPosition * chunkBlockCount;
+
+        // GD.Print("Chunk: ", topLeftPixel, chunkBlockCount);
+        for (int i = (int)topLeftPixel.x; i < topLeftPixel.x + chunkBlockCount.x; i++)
+            for (int j = (int)topLeftPixel.y; j < topLeftPixel.y + chunkBlockCount.y; j++)
+            {
+                Vector2 position = new Vector2(i, j);
+                if (Helper.OutOfBounds(position, terrain.GetWorldSize()))
+                    continue;
+
+                Color sourceColour = worldLightSources.GetPixelv(position);
+                if (sourceColour == Colors.White)
+                {
+                    lightQueue.Enqueue(new LightBFSNode(position, Colors.White));
+                }
+            }
+
+        BFSAddLightsToWorld(lightQueue);
+        updateShader = true;
     }
 
     public void AddLight(Vector2 worldBlockPosition, Color lightValue)
@@ -213,61 +211,23 @@ public class LightingEngine : Node2D
         lightUpdateMutex.Unlock();
     }
 
-    public override void _PhysicsProcess(float delta)
+    private void AddLightUpdate(LightUpdate addLightRoot)
     {
-        if (lightingThread.ThreadState == System.Threading.ThreadState.Unstarted)
-            lightingThread.Start();
-
-        if (inputLayering.PollAction("light_debug"))
-        {
-            GD.Print("Add: " + lightUpdateAddQueue.Count);
-        }
-        if (inputLayering.PollAction("remove_light_debug"))
-        {
-            GD.Print("Remove: " + lightUpdateRemoveQueue.Count);
-        }
-        if (inputLayering.PollAction("remove_light_add_debug"))
-        {
-            GD.Print("RemoveAdd: " + lightUpdateRemoveToAddQueue.Count);
-        }
-
-        // LightUpdatePass();
-        UpdateShaderTexture();
+        QueueSet<LightBFSNode> addLightFringe = new QueueSet<LightBFSNode>(new LightBFSNode(addLightRoot));
+        BFSAddLightsToWorld(addLightFringe);
     }
 
-    public override void _Process(float delta)
-    {
-        if (inputLayering.PopAction("place_light"))
-        {
-            Vector2 worldPosition = player.ScreenToWorldPosition(GetViewport().GetMousePosition());
-            AddLight(worldPosition / terrain.BlockPixelSize, Colors.White);
-        }
-
-        if (inputLayering.PopAction("remove_light"))
-        {
-            Vector2 worldPosition = player.ScreenToWorldPosition(GetViewport().GetMousePosition());
-            RemoveLight(worldPosition / terrain.BlockPixelSize);
-        }
-    }
-
-    private void DoAddLightUpdates(LightUpdate lightAddUpdate)
-    {
-        QueueSet<LightBFSNode> lightValuesFringe = new QueueSet<LightBFSNode>();
-        lightValuesFringe.Enqueue(new LightBFSNode(lightAddUpdate));
-        LightUpdateBFS(lightValuesFringe);
-    }
-
-    public void LightUpdateBFS(QueueSet<LightBFSNode> lightValuesFringe)
+    private void BFSAddLightsToWorld(QueueSet<LightBFSNode> addLightFringe)
     {
         // This precomputation prevents a lot of neighbour exploration for a large fringe.
-        foreach (LightBFSNode node in lightValuesFringe.ToList())
+        foreach (LightBFSNode node in addLightFringe.ToList())
         {
             WorldLightImage.SetPixelv(node.WorldPosition, node.Colour);
         }
 
-        while (lightValuesFringe.Count > 0)
+        while (addLightFringe.Count > 0)
         {
-            LightBFSNode node = lightValuesFringe.Dequeue();
+            LightBFSNode node = addLightFringe.Dequeue();
 
             // Exit condition: The current nodes color is brighter than us already.
             Color existingColour = WorldLightImage.GetPixelv(node.WorldPosition);
@@ -312,23 +272,26 @@ public class LightingEngine : Node2D
                     Color neighbourExistingColour = WorldLightImage.GetPixelv(neighbourPosition);
                     if (neighbourExistingColour.r < node.Colour.r)
                     {
-                        lightValuesFringe.Enqueue(new LightBFSNode(neighbourPosition, newColour));
+                        addLightFringe.Enqueue(new LightBFSNode(neighbourPosition, newColour));
                     }
                 }
             }
         }
     }
 
-    private void DoRemoveLightUpdates(LightUpdate lightRemoveUpdate)
+    private void RemoveLightUpdate(LightUpdate removeLightRoot)
     {
-        QueueSet<LightBFSNode> fringe = new QueueSet<LightBFSNode>();
-        fringe.Enqueue(new LightBFSNode(lightRemoveUpdate));
+        QueueSet<LightBFSNode> removeLightFringe = new QueueSet<LightBFSNode>(new LightBFSNode(removeLightRoot));
+        BFSRemoveLightsFromWorld(removeLightFringe);
+    }
 
+    private void BFSRemoveLightsFromWorld(QueueSet<LightBFSNode> removeLightFringe)
+    {
         List<LightUpdate> removeAddLightUpdateList = new List<LightUpdate>();
 
-        while (fringe.Count > 0)
+        while (removeLightFringe.Count > 0)
         {
-            LightBFSNode node = fringe.Dequeue();
+            LightBFSNode node = removeLightFringe.Dequeue();
 
             // Remove this blocks light. It doesn't have any light sources near it.
             WorldLightImage.SetPixelv(node.WorldPosition, Colors.Black);
@@ -357,7 +320,7 @@ public class LightingEngine : Node2D
                 Color neighboursLevel = WorldLightImage.GetPixelv(neighbourPosition);
                 if (neighboursLevel.r != 0 && neighboursLevel.r < lightLevel.r)
                 {
-                    fringe.Enqueue(new LightBFSNode(neighbourPosition, neighboursLevel));
+                    removeLightFringe.Enqueue(new LightBFSNode(neighbourPosition, neighboursLevel));
                 }
                 else if (neighboursLevel.r >= lightLevel.r)
                 {
@@ -405,7 +368,7 @@ public class LightingEngine : Node2D
 
     private void LightUpdatePass()
     {
-        WorldLightImage.CommitColourChanges();
+        WorldLightImage.CommitColourChangesToImage();
 
         if (lightUpdateRemoveQueue.Count == 0 && lightUpdateAddQueue.Count == 0)
             return;
@@ -417,27 +380,22 @@ public class LightingEngine : Node2D
         lightUpdateMutex.Lock();
         while (lightUpdateRemoveQueue.Count > 0)
         {
-            DoRemoveLightUpdates(lightUpdateRemoveQueue.Dequeue());
+            RemoveLightUpdate(lightUpdateRemoveQueue.Dequeue());
 
             // During the operation of removing lights we treat the edges as small light sources
             // They need to be computed first.
             while (lightUpdateRemoveToAddQueue.Count > 0)
-                DoAddLightUpdates(lightUpdateRemoveToAddQueue.Dequeue());
+                AddLightUpdate(lightUpdateRemoveToAddQueue.Dequeue());
         }
         // Now compute the lights that need to be added.
         while (lightUpdateAddQueue.Count > 0)
-            DoAddLightUpdates(lightUpdateAddQueue.Dequeue());
+            AddLightUpdate(lightUpdateAddQueue.Dequeue());
 
         lightUpdateMutex.Unlock();
 
-        WorldLightImage.CommitColourChanges();
+        WorldLightImage.CommitColourChangesToImage();
 
         updateShader = true;
-    }
-
-    public void SetUpdateShader(bool doUpdate)
-    {
-        updateShader = doUpdate;
     }
 
     private void CalculateNextShaderRectangle()
@@ -450,7 +408,7 @@ public class LightingEngine : Node2D
         nextScale = chunkPositionBottomRightInPixels - chunkPositionTopLeftInPixels;
     }
 
-    private void UpdateShaderTexture()
+    private void UpdateLightShaderParameters()
     {
         CalculateNextShaderRectangle();
 

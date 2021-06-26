@@ -8,10 +8,15 @@ public class QueueSet<T>
     public int Count { get { return queue.Count; } }
 
 
-    public QueueSet()
+    public QueueSet(params T[] initialValues)
     {
         queue = new Queue<T>();
         set = new HashSet<T>();
+
+        for (int i = 0; i < initialValues.Count<T>(); i++)
+        {
+            Enqueue(initialValues[i]);
+        }
     }
 
     public void Enqueue(T item)
