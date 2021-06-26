@@ -13,7 +13,7 @@ By Marcos Zolnowski
 // TODO: Change this to user the futures implementation because stop reinventing the wheel.
 public class ThreadPool : Node
 {
-    private const bool SINGLE_THREADED = false;
+    private bool singleThreaded;
 
     [Export]
     private bool discardFinishedTasks = false;
@@ -39,7 +39,11 @@ public class ThreadPool : Node
         __tasksWait = new Semaphore();
         __finishedTasks = new Array<Task>();
         __finishedTasksLock = new Mutex();
+    }
 
+    public void Initialise(bool singleThreaded)
+    {
+        this.singleThreaded = singleThreaded;
         __pool = __CreatePool();
     }
 
@@ -153,7 +157,7 @@ public class ThreadPool : Node
 
     private void __Start()
     {
-        if (SINGLE_THREADED)
+        if (singleThreaded)
         {
             Task task = __DrainTask();
             task.__ExecuteTask();

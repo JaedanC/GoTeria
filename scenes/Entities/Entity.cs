@@ -1,13 +1,15 @@
 using Godot;
-using System;
 
 
 public abstract class Entity : Node2D, ICollidable
 {
-    protected Vector2 velocity;
+    protected Terrain terrain;
+    protected CollisionSystem collisionSystem;
+    protected CollisionComponent collisionComponent;
+    protected Smoothing smoothing;
     protected KinematicBody2D rigidBody;
     protected CollisionShape2D hitbox;
-    protected Smoothing smoothing;
+    protected Vector2 velocity;
     public Vector2 SmoothPosition
     {
         get
@@ -38,9 +40,20 @@ public abstract class Entity : Node2D, ICollidable
 
     public override void _Ready()
     {
+        // Dependencies
+        collisionComponent = GetNodeOrNull<CollisionComponent>("CollisionComponent");
+        smoothing = GetNode<Smoothing>("Smoothing");
         rigidBody = GetNode<KinematicBody2D>("RigidBody");
         hitbox = rigidBody.GetNode<CollisionShape2D>("Hitbox");
-        smoothing = GetNode<Smoothing>("Smoothing");
+    }
+
+    public virtual void Initialise(Terrain terrain, CollisionSystem collisionSystem)
+    {
+        this.terrain = terrain;
+        this.collisionSystem = collisionSystem;
+
+        if (collisionComponent != null)
+            collisionComponent.Initialise(terrain, collisionSystem);
     }
 
     public void Teleport()

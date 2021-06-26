@@ -5,6 +5,7 @@ using System;
 public class Chunk : Node2D, IResettable
 {
     private Terrain terrain;
+    private WorldFile worldFile;
     private Image worldImage;
     private Vector2 chunkPosition;
     private Vector2 blockCount;
@@ -65,10 +66,21 @@ public class Chunk : Node2D, IResettable
         memoryAllocated = true;
     }
 
-    public override void _Ready()
+    /* This is the method that is called when a chunk is reset before it is reused. */
+    public void Initialise(object[] parameters)
     {
-        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
-        chunkLighting = new ChunkLighting(this, terrain);
+        worldImage = (Image)parameters[0];
+        chunkPosition = (Vector2)parameters[1];
+        blockPixelSize = (Vector2)parameters[2];
+        blockCount = (Vector2)parameters[3];
+        terrain = (Terrain)parameters[4];
+        loadLocked = false;
+        lightingLocked = false;
+        LightingDone = false;
+        LoadingDone = false;
+        Position = blockPixelSize * chunkPosition * blockCount;
+        worldFile = WorldSpawn.ActiveWorldSpawn.GetWorldFile();
+        chunkLighting = new ChunkLighting(this, terrain, worldFile);
     }
 
     public void Create(Vector2 chunkPosition, Vector2 blockCount, Image worldBlocksImages, Image worldWallsImage)
@@ -79,21 +91,6 @@ public class Chunk : Node2D, IResettable
         chunkStack.Create(chunkPosition, blockCount, worldBlocksImages, worldWallsImage);
         LoadingDone = true;
     }
-
-    /* This is the method that is called when a chunk is reset before it is reused. */
-    public void Reset(object[] parameters)
-    {
-        worldImage = (Image)parameters[0];
-        chunkPosition = (Vector2)parameters[1];
-        blockPixelSize = (Vector2)parameters[2];
-        blockCount = (Vector2)parameters[3];
-        loadLocked = false;
-        lightingLocked = false;
-        LightingDone = false;
-        LoadingDone = false;
-        Position = blockPixelSize * chunkPosition * blockCount;
-    }
-
 
     /* This method will save all the data in a chunk to disk. Currently it is being
     done using compression, however this can be changed below. TODO: Change this

@@ -26,8 +26,6 @@ one_way_collision = true
 
 [node name="Smoothing" type="Node2D" parent="."]
 script = ExtResource( 3 )
-Target = NodePath("../RigidBody")
-Flags = 3
 
 [node name="SlimeSprite" type="Sprite" parent="Smoothing"]
 position = Vector2( 0, -9.53674e-07 )

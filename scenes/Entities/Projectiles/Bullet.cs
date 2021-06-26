@@ -3,9 +3,9 @@ using Godot;
 
 public class Bullet : Projectile
 {
-    public override void Init(Entity shooter, Vector2 position, Vector2 direction, float speed)
+    public override void Initialise(Terrain terrain, CollisionSystem collisionSystem, Entity shooter, Vector2 position, Vector2 direction, float speed)
     {
-        base.Init(shooter, position, direction, speed);
+        base.Initialise(terrain, collisionSystem, shooter, position, direction, speed);
     }
 
     public override void AI(int alive, TeriaFastRayCastCollision collision, float delta)

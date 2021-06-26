@@ -1,6 +1,5 @@
 using Godot;
-using Godot.Collections;
-using System;
+
 
 public class ChunkLighting
 {
@@ -9,12 +8,12 @@ public class ChunkLighting
     private Chunk chunk;
     private WorldFile worldFile;
 
-    public ChunkLighting(Chunk chunk, Terrain terrain)
+    public ChunkLighting(Chunk chunk, Terrain terrain, WorldFile worldFile)
     {
         this.chunk = chunk;
         this.terrain = terrain;
         this.lightingEngine = terrain.LightingEngine;
-        this.worldFile = new WorldFile("SavedWorld");
+        this.worldFile = WorldSpawn.ActiveWorldSpawn.GetWorldFile();
     }
 
     public void ComputeLightingPass()

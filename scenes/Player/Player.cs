@@ -1,13 +1,13 @@
 using Godot;
 using Godot.Collections;
-using System;
+
 
 public class Player : Entity
 {
     private const float ZOOM_CLAMP = 20f;
-    private Terrain terrain;
-    private Camera2D camera;
+
     private InputLayering inputLayering;
+    private Camera2D camera;
 
     /* Hide the player's position with the smoothing one. This returns the player's position
     (which is actually the smoothing sprite's location) if you want the player's position on
@@ -22,12 +22,17 @@ public class Player : Entity
         base._Ready();
         Name = "Player";
 
-        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
+        // Dependencies
         rigidBody = GetNode<KinematicBody2D>("RigidBody");
         hitbox = rigidBody.GetNode<CollisionShape2D>("Hitbox");
-        // smoothing = GetNode<Godot.Object>("Smoothing");
         camera = GetNode<Camera2D>("Smoothing/Camera");
-        inputLayering = GetNode<InputLayering>("/root/InputLayering");
+
+    }
+
+    public void Initialise(InputLayering inputLayering, Terrain terrain, CollisionSystem collisionSystem)
+    {
+        base.Initialise(terrain, collisionSystem);
+        this.inputLayering = inputLayering;
     }
 
     public override void _Process(float delta)
@@ -92,6 +97,7 @@ public class Player : Entity
             Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Slime slime = (Slime)slimeScene.Instance();
             AddChild(slime);
+            slime.Initialise(terrain, collisionSystem);
             slime.Position = mouseWorldPosition;
             slime.Teleport();
         }
@@ -102,7 +108,7 @@ public class Player : Entity
             Bullet bullet = (Bullet)bulletScene.Instance();
             // bullet.Init(this, Position, mousePosition - Position);
             // bullet.Init(this, SmoothPosition, mousePosition - SmoothPosition, 5000);
-            bullet.Init(this, SmoothPosition, mousePosition - SmoothPosition, 500);
+            bullet.Initialise(terrain, collisionSystem, this, SmoothPosition, mousePosition - SmoothPosition, 500);
         }
 
         if (inputLayering.PollActionPressed("debug"))

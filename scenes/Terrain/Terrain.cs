@@ -47,26 +47,33 @@ public class Terrain : Node2D
         Developer.AssertGreaterThan(ChunkBlockCount.x, 0, "ChunkBlockCount.x is 0");
         Developer.AssertGreaterThan(ChunkBlockCount.y, 0, "ChunkBlockCount.y is 0");
 
+        // Dependencies
+        lightingEngine = GetNode<LightingEngine>("Lighting");
+
+        // Local variables
         loadedChunksMutex = new Mutex();
         loadedChunks = new Dictionary<Vector2, Chunk>();
         urgentChunks = new Dictionary<Vector2, Chunk>();
         lightDrawChunks = new Dictionary<Vector2, Chunk>();
         lightLoadingChunks = new Dictionary<Vector2, Chunk>();
+    }
 
-        threadPool = GetNode<ThreadPool>("/root/ThreadPool");
-        player = GetNode<Player>("/root/WorldSpawn/Player");
-        inputLayering = GetNode<InputLayering>("/root/InputLayering");
-        lightingEngine = GetNode<LightingEngine>("Lighting");
+    public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player, WorldFile worldFile)
+    {
+        this.threadPool = threadPool;
+        this.inputLayering = inputLayering;
+        this.player = player;
+        this.worldFile = worldFile;
 
-        // TODO: dynamically load the world
-
-        worldFile = new WorldFile("SavedWorld");
-        // worldFile = new WorldFile("light_test");
-        terrainStack = worldFile.GetITerrainStack();
-
+        // Instance locals
         chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
-        lightingEngine.Initialise();
+        
+        // Use instances
+        terrainStack = worldFile.GetITerrainStack();
         chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
+
+        // Initialise further
+        lightingEngine.Initialise(inputLayering, this, player);
     }
 
     public override void _Process(float _delta)
@@ -131,7 +138,7 @@ public class Terrain : Node2D
             // Only create chunks that have not already been loaded in
             if (!loadedChunks.ContainsKey(chunkPosition))
             {
-                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize, ChunkBlockCount);
+                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize, ChunkBlockCount, this);
                 AddChild(chunk);
                 loadedChunks[chunkPosition] = chunk;
             }

@@ -132,10 +132,6 @@ public class LightingEngine : Node2D
 
     public override void _Ready()
     {
-        inputLayering = GetNode<InputLayering>("/root/InputLayering");
-        terrain = GetParent<Terrain>();
-        player = GetNode<Player>("/root/WorldSpawn/Player");
-
         screenLightLevels = new Image();
         screenLightLevelsShaderTexture = new ImageTexture();
         lightingThread = new System.Threading.Thread(new System.Threading.ThreadStart(LightingThread));
@@ -145,8 +141,12 @@ public class LightingEngine : Node2D
         lightUpdateMutex = new Mutex();
     }
 
-    public void Initialise()
+    public void Initialise(InputLayering inputLayering, Terrain terrain, Player player)
     {
+        this.inputLayering = inputLayering;
+        this.terrain = terrain;
+        this.player = player;
+
         Vector2 worldSize = terrain.GetWorldSize();
 
         Image worldLightLevels = new Image();

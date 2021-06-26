@@ -22,12 +22,7 @@ public class ActionMapping : Node
     private MouseInput mouseInput;
     private JoypadInput joypadInput;
     private JoypadAxisInput joypadAxisInput;
-    private AnalogMapping controllerMapping;
-
-    public ActionMapping()
-    {
-        controllerMapping = new AnalogMapping();
-    }
+    private AnalogMapping analogMapping;
 
     public override void _Ready()
     {
@@ -40,7 +35,11 @@ public class ActionMapping : Node
         actionBindings[mouseInput] = new Dictionary<String, int>();
         actionBindings[joypadInput] = new Dictionary<String, int>();
         actionBindings[joypadAxisInput] = new Dictionary<String, int>();
+    }
 
+    public void Initialise(AnalogMapping analogMapping)
+    {
+        this.analogMapping = analogMapping;
         SetupAliases();
         SetupActionMappings();
     }
@@ -89,7 +88,6 @@ public class ActionMapping : Node
         AddActionMapping("remove_light_add_debug", "j");
         AddActionMapping("debug", "\\");
         AddActionMapping("toggle_fullscreen", "F11");
-        
     }
 
     /* Remap Godot keys to strings to use in bindings. Ensure the keys are unique even
@@ -204,14 +202,14 @@ public class ActionMapping : Node
     /* See AnalogMapping for more information. */
     private void AddActionMappingAxis(String firstAction, String secondAction, int device, int joyAxis, bool useDeadZone)
     {
-        controllerMapping.AddDualAxisAction(firstAction, secondAction, device, joyAxis, useDeadZone);
+        analogMapping.AddDualAxisAction(firstAction, secondAction, device, joyAxis, useDeadZone);
     }
 
     /* Used by InputLaying to gain access to AnalogMapping. I could make AnalogMapping static,
     but that makes making bindings tie to a save really difficult. */
     public AnalogMapping GetAnalogMapping()
     {
-        return controllerMapping;
+        return analogMapping;
     }
 
     /* Binds a key to an action. */
@@ -257,23 +255,23 @@ public class ActionMapping : Node
     }
 
     /* This function converts the mapping data (which is in the format above) to a disk
-	storable version that can be saved to a file. Pseudocode:
-	
-	dict = {}
-	foreach action:   # jump
-		foreach input_event tied to the action:   # [InputEventKey: 560]
-			foreach input_method:   # KeyboardInput
-				if the input_event is not the type of input_method:
-					continue
-				
-				Get the input_events 'integer' representation so that we can
-				finding the binding associated with it.
-				
-				If the Dictionary or Array doesn't exist yet make it.
-					
-				Add the binding to the dictionary, with the key being a string
-				representation of the input_event class.
-	return dict */
+    storable version that can be saved to a file. Pseudocode:
+    
+    dict = {}
+    foreach action:   # jump
+        foreach input_event tied to the action:   # [InputEventKey: 560]
+            foreach input_method:   # KeyboardInput
+                if the input_event is not the type of input_method:
+                    continue
+                
+                Get the input_events 'integer' representation so that we can
+                finding the binding associated with it.
+                
+                If the Dictionary or Array doesn't exist yet make it.
+                    
+                Add the binding to the dictionary, with the key being a string
+                representation of the input_event class.
+    return dict */
     private Dictionary<string, Dictionary<string, Godot.Collections.Array<String>>> GetBindingsAsSaveableDictionary()
     {
         var bindings = new Dictionary<string, Dictionary<string, Godot.Collections.Array<String>>>();
@@ -309,7 +307,7 @@ public class ActionMapping : Node
     }
 
     /* Converts KeyCode Enum values to readable string that can be stored in a file.
-	The strings are defined in setup_aliases(). */
+    The strings are defined in setup_aliases(). */
     private String KeyIntToString(int keyCodeValue, IInputMethod inputMethod)
     {
         foreach (String keyString in actionBindings[inputMethod].Keys)
@@ -323,7 +321,7 @@ public class ActionMapping : Node
     }
 
     /* Converts readable string representations of keys into the godot KeyCode Enum
-	values. The strings are defined in setup_aliases(). */
+    values. The strings are defined in setup_aliases(). */
     private int? KeyStringToInt(String keyString, IInputMethod inputMethod)
     {
         if (actionBindings[inputMethod].ContainsKey(keyString))
@@ -356,8 +354,8 @@ public class ActionMapping : Node
     }
 
     /* Saves the action mappings and key bindings to a save file that is human
-	readable. TODO: The file name is currently hardcoded and needs to be
-	parameterised. */
+    readable. TODO: The file name is currently hardcoded and needs to be
+    parameterised. */
     private void SaveActionMappingsConfig()
     {
         ConfigFile configFile = new ConfigFile();
@@ -374,7 +372,7 @@ public class ActionMapping : Node
     }
 
     /* Loads and binds action mappings to keys based on a save file. TODO: The file
-	name is currently hardcoded and needs to be parameterised. */
+    name is currently hardcoded and needs to be parameterised. */
     private void LoadActionMappingsConfig()
     {
         ConfigFile configFile = new ConfigFile();

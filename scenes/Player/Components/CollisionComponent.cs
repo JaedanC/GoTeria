@@ -1,12 +1,11 @@
 using Godot;
-using System;
 
 
 public class CollisionComponent : Node2D
 {
+    private ICollidable parent;
     private Terrain terrain;
     private CollisionSystem collisionSystem;
-    private ICollidable parent;
     private Rect2 previousParentHitboxRect;
     private Rect2 nextParentHitboxRect;
     private Rect2 mergedParentHitboxRect;
@@ -16,9 +15,15 @@ public class CollisionComponent : Node2D
     {
         Name = "CollisionComponent";
 
-        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
-        collisionSystem = GetNode<CollisionSystem>("/root/WorldSpawn/CollisionSystem");
         parent = GetParent<ICollidable>();
+        // this.terrain = WorldSpawn.ActiveWorldSpawn.GetTerrain();
+        // this.collisionSystem = WorldSpawn.ActiveWorldSpawn.GetCollisionSystem();
+    }
+
+    public void Initialise(Terrain terrain, CollisionSystem collisionSystem)
+    {
+        this.terrain = terrain;
+        this.collisionSystem = collisionSystem;
     }
 
     public override void _PhysicsProcess(float delta)
