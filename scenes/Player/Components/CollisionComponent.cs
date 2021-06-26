@@ -1,7 +1,6 @@
 using Godot;
-using Godot.Collections;
 using System;
-using System.Diagnostics;
+
 
 public class CollisionComponent : Node2D
 {
@@ -60,14 +59,12 @@ public class CollisionComponent : Node2D
         // Fixes infinite velocity Portal 2 style
         Vector2 oldParentPosition = parent.GetRigidBody().Position;
 
-        // Let's do the collision in two parts. This seems to fix many edge case with movement hitting
-        // zero randomly on slopes when sliding.
         Vector2 response = parent.GetRigidBody().MoveAndSlide(vector, Vector2.Up);
         Vector2 newPosition = parent.GetRigidBody().Position;
-
-        // GD.Print("Player moved: " + (newPosition - oldParentPosition));
-
         parent.SetVelocity(response);
+
+        // Let's do the collision in two parts. This seems to fix many edge case with movement hitting
+        // zero randomly on slopes when sliding.
         // Vector2 firstResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(vector.x, 0), Vector2.Up);
         // Vector2 secondResponse = parent.GetRigidBody().MoveAndSlide(new Vector2(0, vector.y), Vector2.Up);
         // parent.SetVelocity(firstResponse + secondResponse);

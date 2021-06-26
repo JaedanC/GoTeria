@@ -8,10 +8,10 @@ public class TerrainStack : ITerrainStack
     public Image WorldBlocksImage { get { return blocks.WorldImage; } }
     public Image WorldWallsImage { get { return walls.WorldImage; } }
 
-    public TerrainStack(String blocksImagePath, String wallsImagePath)
+    public TerrainStack(Image blocksImage, Image wallsImage)
     {
-        walls = new TerrainWallLayer(wallsImagePath);
-        blocks = new TerrainBlockLayer(blocksImagePath);
+        blocks = new TerrainBlockLayer(blocksImage);
+        walls = new TerrainWallLayer(wallsImage);
         walls.Lock();
         blocks.Lock();
     }

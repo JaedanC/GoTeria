@@ -28,7 +28,11 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
     {
         if (what == MainLoop.NotificationPredelete)
         {
-            foreach (T instance in pool) instance.QueueFree();
+            foreach (T instance in pool)
+            {
+                instance.OnDeath();
+                instance.QueueFree();
+            }
         }
     }
 
@@ -59,6 +63,7 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
     public void Die(T instance)
     {
         pool.Add(instance);
+        instance.OnDeath();
     }
 
 }

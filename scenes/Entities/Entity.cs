@@ -8,10 +8,17 @@ public abstract class Entity : Node2D, ICollidable
     protected KinematicBody2D rigidBody;
     protected CollisionShape2D hitbox;
     protected Smoothing smoothing;
-    public new Vector2 Position {
+    public Vector2 SmoothPosition
+    {
         get
         {
             return smoothing.Position;
+        }
+    }
+    public new Vector2 Position {
+        get
+        {
+            return rigidBody.Position;
         }
         set
         {
@@ -36,9 +43,8 @@ public abstract class Entity : Node2D, ICollidable
         smoothing = GetNode<Smoothing>("Smoothing");
     }
 
-    public void Teleport(Vector2 worldPosition)
+    public void Teleport()
     {
-        Position = worldPosition;
         smoothing.Teleport();
     }
 

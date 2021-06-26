@@ -24,4 +24,5 @@ script = ExtResource( 1 )
 Flags = 7
 
 [node name="BulletSprite" type="Sprite" parent="Smoothing"]
+position = Vector2( -13, 0 )
 texture = ExtResource( 2 )

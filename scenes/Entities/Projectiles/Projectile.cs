@@ -16,12 +16,13 @@ public abstract class Projectile : Entity
     public virtual void Init(Entity shooter, Vector2 position, Vector2 direction, float speed)
     {
         shooter.AddChild(this);
+        this.Position = position;
         this.shooter = shooter;
-        Teleport(position);
         this.direction = direction.Normalized();
         this.speed = Mathf.Max(speed, 0);
         this.rayCasted = false;
         alive = 0;
+        Teleport();
 
         collisionSystem = GetNode<CollisionSystem>("/root/WorldSpawn/CollisionSystem");
         terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
@@ -46,7 +47,7 @@ public abstract class Projectile : Entity
     public override void _PhysicsProcess(float delta)
     {
         // Die after a certain amount of time
-        if (alive == 200)
+        if (alive == 2000)
         {
             QueueFree();
             return;
@@ -83,14 +84,11 @@ public abstract class Projectile : Entity
             if (collisionPosition != null)
             {
                 this.Position = (Vector2)collisionPosition;
-                // done = true;
+                done = true;
             }
             else
             {
-                // This is still being run even when it skips
-                // this.Position += direction * speed * delta;
-                // Can't read from Position as that is dependant on Process not PhysicsProcess.
-                GetRigidBody().Position = GetRigidBody().Position + direction * speed * delta;
+                this.Position += direction * speed * delta;
             }
         }
         return collision;
@@ -100,6 +98,7 @@ public abstract class Projectile : Entity
     {
         // Rotate with the direction
         Rotation = direction.Angle();
+        Teleport();
 
         TeriaFastRayCastCollision collision = FastCast(delta);
 

@@ -1,7 +1,7 @@
 using Godot;
 using Godot.Collections;
-using System.Diagnostics;
 using System.Collections.Generic;
+
 
 class MultithreadedChunkLoader
 {
@@ -56,7 +56,7 @@ class MultithreadedChunkLoader
             chunk
         };
 
-        threadPool.SubmitTask(this, "LoadChunk", chunkData, "loadingChunk", chunkPosition);
+        threadPool.SubmitTask(this, "ThreadedLoadChunk", chunkData, "loadingChunk", chunkPosition);
     }
 
     public void BeginLightingChunk(Chunk chunk, Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks)
@@ -87,7 +87,7 @@ class MultithreadedChunkLoader
                 continue;
             }
 
-            Debug.Assert(loadedChunks.ContainsKey(chunkToLoadDependency));
+            Developer.AssertTrue(loadedChunks.ContainsKey(chunkToLoadDependency));
 
             Chunk dependencyChunk = loadedChunks[chunkToLoadDependency];
             if (!chunksLoading.Contains(chunkToLoadDependency) && GetChunkPhase(chunk) == LoadingPhase.NeedsLoading)
@@ -101,10 +101,10 @@ class MultithreadedChunkLoader
             chunk
         };
 
-        threadPool.SubmitTask(this, "LightChunk", chunkData, "lightingChunk", chunk.ChunkPosition);
+        threadPool.SubmitTask(this, "ThreadedLightChunk", chunkData, "lightingChunk", chunk.ChunkPosition);
     }
 
-    public Vector2 LoadChunk(Array<object> data)
+    public Vector2 ThreadedLoadChunk(Array<object> data)
     {
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
@@ -114,7 +114,7 @@ class MultithreadedChunkLoader
         return chunkPosition;
     }
 
-    public Vector2 LightChunk(Array<object> data)
+    public Vector2 ThreadedLightChunk(Array<object> data)
     {
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];

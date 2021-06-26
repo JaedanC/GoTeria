@@ -1,7 +1,6 @@
 using Godot;
 using Godot.Collections;
 using System;
-using System.Diagnostics;
 
 public class Terrain : Node2D
 {
@@ -13,12 +12,13 @@ public class Terrain : Node2D
     private const int loadMargin = 1;
     private const int lightingMargin = 1;
 
-    private ThreadPool threadPool;
     private Player player;
     private InputLayering inputLayering;
     private LightingEngine lightingEngine;
     private ITerrainStack terrainStack;
     private WorldFile worldFile;
+    private ObjectPool<Chunk> chunkPool;
+    private ThreadPool threadPool;
 
     private Mutex loadedChunksMutex;
     private Vector2 chunkPixelDimensions;
@@ -26,7 +26,6 @@ public class Terrain : Node2D
     private Dictionary<Vector2, Chunk> urgentChunks;
     private Dictionary<Vector2, Chunk> lightDrawChunks;
     private Dictionary<Vector2, Chunk> lightLoadingChunks;
-    private ObjectPool<Chunk> chunkPool;
     private MultithreadedChunkLoader chunkLoader;
 
     /* Returns the size of a block in pixels as a Vector2 */
@@ -43,10 +42,10 @@ public class Terrain : Node2D
         Name = "Terrain";
         chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
 
-        Debug.Assert(BlockPixelSize.x > 0, "BlockPixelSize.x is 0");
-        Debug.Assert(BlockPixelSize.y > 0, "BlockPixelSize.y is 0");
-        Debug.Assert(ChunkBlockCount.y > 0, "ChunkBlockCount.y is 0");
-        Debug.Assert(ChunkBlockCount.y > 0, "ChunkBlockCount.y is 0");
+        Developer.AssertGreaterThan(BlockPixelSize.x, 0, "BlockPixelSize.x is 0");
+        Developer.AssertGreaterThan(BlockPixelSize.y, 0, "BlockPixelSize.y is 0");
+        Developer.AssertGreaterThan(ChunkBlockCount.x, 0, "ChunkBlockCount.x is 0");
+        Developer.AssertGreaterThan(ChunkBlockCount.y, 0, "ChunkBlockCount.y is 0");
 
         loadedChunksMutex = new Mutex();
         loadedChunks = new Dictionary<Vector2, Chunk>();
@@ -65,8 +64,8 @@ public class Terrain : Node2D
         // worldFile = new WorldFile("light_test");
         terrainStack = worldFile.GetITerrainStack();
 
-        lightingEngine.Initialise();
         chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
+        lightingEngine.Initialise();
         chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
     }
 

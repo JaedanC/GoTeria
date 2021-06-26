@@ -1,5 +1,5 @@
-
 using Godot;
+
 
 public interface ICollidable
 {

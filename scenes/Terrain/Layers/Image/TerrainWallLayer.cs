@@ -8,10 +8,9 @@ public class TerrainWallLayer : ITerrainLayer
     public Image WorldImage { get { return wallsImage; } }
     public BlockMapping BlockList { get { return walls; } }
 
-    public TerrainWallLayer(String wallsImagePath)
+    public TerrainWallLayer(Image wallsImage)
     {
-        Texture worldWallsTexture = (Texture)GD.Load(wallsImagePath);
-        wallsImage = worldWallsTexture.GetData();
+        this.wallsImage = wallsImage;
         walls = new BlockMapping();
 
         SetupBlockMappings();

@@ -1,32 +1,60 @@
 using Godot;
 using System;
-using System.Diagnostics;
 
 public class WorldFile
 {
     private String WORLD_DIRECTORY = "res://saves/worlds/";
     private String BLOCKS_FILE = "blocks.png";
     private String WALLS_FILE = "walls.png";
-    private String saveName = null;
     private ITerrainStack terrainStack = null;
+    public String SaveName;
+
+    private static Mutex loadMutex = new Mutex();
+
+
     public WorldFile(String saveName)
     {
         LoadWorld(saveName);
     }
 
-    private String GetSavePathForFile(String saveName, String filename)
+    private String GetSavePathForFile(String saveName, String fileName)
     {
-        return WORLD_DIRECTORY + saveName + "/" + filename;
+        return WORLD_DIRECTORY + saveName + "/" + fileName;
     }
 
     public ITerrainStack GetITerrainStack()
     {
-        Debug.Assert(terrainStack != null);
+        Developer.AssertNotNull(terrainStack);
         return terrainStack;
     }
 
     public Error SaveWorld(String newSaveName)
     {
+        Error blockError = SaveImage(terrainStack.WorldBlocksImage, newSaveName, BLOCKS_FILE);
+        Error wallError = SaveImage(terrainStack.WorldWallsImage, newSaveName, WALLS_FILE);
+
+        if (blockError != Error.Ok)
+        {
+            return blockError;
+        }
+        if (wallError != Error.Ok)
+        {
+            return wallError;
+        }
+
+        GD.Print("SaveWorld(): Success");
+        return Error.Ok;
+    }
+
+    public Error SaveWorld()
+    {
+        return SaveWorld(SaveName);
+    }
+
+    public Error SaveImage(Image image, String newSaveName, String fileName)
+    {
+        String savePath = GetSavePathForFile(newSaveName, fileName);
+
         // Creating the save directory if it doesn't exist
         Directory saveDirectory = new Directory();
         if (!saveDirectory.DirExists(WORLD_DIRECTORY + newSaveName))
@@ -39,70 +67,56 @@ public class WorldFile
             }
         }
 
-        String blocksSavePath = GetSavePathForFile(newSaveName, BLOCKS_FILE);
-        String wallsSavePath = GetSavePathForFile(newSaveName, WALLS_FILE);
-
-        // Saving the blocks
-        GD.Print("SaveWorld(): Saving: " + blocksSavePath);
-        Error blockError = terrainStack.WorldBlocksImage.SavePng(blocksSavePath);
-        if (blockError != Error.Ok)
+        GD.Print("SaveWorld(): Saving: " + savePath);
+        Error saveError = image.SavePng(savePath);
+        if (saveError != Error.Ok)
         {
-            GD.Print("SaveWorld(): Blocks Error: " + blockError);
-            return blockError;
+            GD.Print("SaveWorld(): Error: " + saveError);
+            return saveError;
         }
-
-        // Saving the walls
-        GD.Print("SaveWorld(): Saving: " + wallsSavePath);
-        Error wallError = terrainStack.WorldWallsImage.SavePng(wallsSavePath);
-        if (wallError != Error.Ok)
-        {
-            GD.Print("SaveWorld(): Walls Error: " + wallError);
-            return wallError;
-        }
-
-        GD.Print("SaveWorld(): Success");
-
         return Error.Ok;
     }
-    public Error SaveWorld()
+
+    public void LoadWorld(String saveName)
     {
-        return SaveWorld(saveName);
+        this.SaveName = saveName;
+        Image worldBlocksImage = LoadImage(saveName, BLOCKS_FILE);
+        Image worldWallsImage = LoadImage(saveName, WALLS_FILE);
+
+        this.terrainStack = terrainStack = new TerrainStack(
+            worldBlocksImage,
+            worldWallsImage
+        );
+
+        GD.Print("LoadWorld(): Success");
     }
 
-    public Error LoadWorld(String saveName)
+    public Image LoadImage(String newSaveName, String fileName)
     {
-        String savePath = WORLD_DIRECTORY + saveName;
-        GD.Print("LoadWorld(): Loading from path: " + savePath);
+        loadMutex.Lock();
 
+        String savePath = WORLD_DIRECTORY + SaveName;
         Directory loadDirectory = new Directory();
         Error error = loadDirectory.Open(savePath);
         if (error != Error.Ok)
         {
-            GD.Print("LoadWorld(): Opening directory error: " + error);
-            return error;
+            GD.Print("LoadImage(): Opening directory error: " + error);
+            loadMutex.Unlock();
+            return null;
         }
 
-        String blocksPath = GetSavePathForFile(saveName, BLOCKS_FILE);
-        String wallsPath = GetSavePathForFile(saveName, WALLS_FILE);
+        String imagePath = GetSavePathForFile(newSaveName, fileName);
 
-        if (!loadDirectory.FileExists(blocksPath))
+        if (!loadDirectory.FileExists(imagePath))
         {
-            GD.Print("LoadWorld(): Blocks path " + blocksPath + " does not exist");
-            return Error.FileNotFound;
+            GD.Print("LoadImage(): Image path " + imagePath + " does not exist");
+            loadMutex.Unlock();
+            return null;
         }
-        if (!loadDirectory.FileExists(wallsPath))
-        {
-            GD.Print("LoadWorld(): Walls path " + wallsPath + " does not exist");
-            return Error.FileNotFound;
-        }
-    
-        this.saveName = saveName;
-        this.terrainStack = terrainStack = new TerrainStack(
-            blocksPath,
-            wallsPath
-        );
 
-        GD.Print("LoadWorld(): Success");
-        return Error.Ok;
+        GD.Print("LoadImage(): Loaded image: " + imagePath);
+        Texture imageTexture = (Texture)GD.Load(imagePath);
+        loadMutex.Unlock();
+        return imageTexture.GetData();
     }
 }

@@ -1,7 +1,6 @@
 using Godot;
-using Godot.Collections;
 using System;
-using System.Diagnostics;
+
 
 public class Chunk : Node2D, IResettable
 {
@@ -22,7 +21,7 @@ public class Chunk : Node2D, IResettable
         {
             if (value)
             {
-                Debug.Assert(!loadLocked);
+                Developer.AssertFalse(loadLocked);
             }
             loadLocked = value;
         }
@@ -34,7 +33,7 @@ public class Chunk : Node2D, IResettable
         {
             if (value)
             {
-                Debug.Assert(!lightingLocked);
+                Developer.AssertFalse(lightingLocked);
             }
             lightingLocked = value;
         }
@@ -132,6 +131,11 @@ public class Chunk : Node2D, IResettable
         GD.Print("Computed Lighting for chunk: " + ChunkPosition);
         chunkLighting.ComputeLightingPass();
         LightingDone = true;
+    }
+
+    public void OnDeath()
+    {
+        chunkLighting.SaveLight();
     }
 
     /* Draw the chunk to the screen using my special colour formula. This function

@@ -1,7 +1,6 @@
 using Godot;
 using Godot.Collections;
 using System;
-using System.Diagnostics;
 
 public class Player : Entity
 {
@@ -55,7 +54,8 @@ public class Player : Entity
 
         if (inputLayering.PopActionPressed("teleport"))
         {
-            Teleport(ScreenToWorldPosition(GetViewport().GetMousePosition()));
+            Position = ScreenToWorldPosition(GetViewport().GetMousePosition());
+            Teleport();
         }
 
         if (inputLayering.PopAction("brake"))
@@ -92,7 +92,8 @@ public class Player : Entity
             Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Slime slime = (Slime)slimeScene.Instance();
             AddChild(slime);
-            slime.Teleport(mouseWorldPosition);
+            slime.Position = mouseWorldPosition;
+            slime.Teleport();
         }
 
         if (inputLayering.PollAction("shoot_bullet"))// || Engine.GetPhysicsFrames() % 4 == 0)
@@ -100,7 +101,8 @@ public class Player : Entity
             Vector2 mousePosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
             Bullet bullet = (Bullet)bulletScene.Instance();
             // bullet.Init(this, Position, mousePosition - Position);
-            bullet.Init(this, Position, mousePosition - Position, 5000);
+            // bullet.Init(this, SmoothPosition, mousePosition - SmoothPosition, 5000);
+            bullet.Init(this, SmoothPosition, mousePosition - SmoothPosition, 500);
         }
 
         if (inputLayering.PollActionPressed("debug"))
@@ -257,7 +259,7 @@ public class Player : Entity
     public Vector2 ScreenToWorldPosition(Vector2 screenPosition)
     {
         // Vector2 worldPosition = GetPlayerPosition() + screenPosition * GetCameraZoom();
-        Vector2 worldPosition = Position + screenPosition * CameraZoom;
+        Vector2 worldPosition = SmoothPosition + screenPosition * CameraZoom;
         return worldPosition - CameraZoom * GetViewportRect().Size / 2;
     }
 

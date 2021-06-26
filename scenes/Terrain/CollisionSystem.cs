@@ -1,6 +1,5 @@
 using Godot;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 
 public class CollisionSystem : Node
@@ -90,7 +89,7 @@ public class CollisionSystem : Node
 
             newLoadedBlocks[mentionedBlock] = loadedBlocks[mentionedBlock];
             bool erased = loadedBlocks.Remove(mentionedBlock);
-            Debug.Assert(erased);
+            Developer.AssertTrue(erased);
         }
 
         // Reset the mentioned blocks for the next physics frame.

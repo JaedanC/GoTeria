@@ -28,7 +28,6 @@ By Lawnjelly
 
 using Godot;
 using System;
-using System.Diagnostics;
 
 public class Smoothing : Node2D
 {
@@ -117,14 +116,14 @@ public class Smoothing : Node2D
         m_Angle_curr = 0;
         m_Angle_prev = 0;
 
-        Debug.Assert(_m_Target != null, "A target must be defined for the Smoothing2D node to work.");
+        Developer.AssertNotNull(_m_Target, "A target must be defined for the Smoothing2D node to work.");
     }
 
     private void SetTarget(NodePath newTarget)
     {
         target = newTarget;
         if (IsInsideTree())
-		    FindTarget();
+            FindTarget();
     }
 
     private String GetTarget()
@@ -136,7 +135,7 @@ public class Smoothing : Node2D
     {
         this.flags = flags;
         // We may have enabled or disabled
-	    SetProcessing();
+        SetProcessing();
     }
 
     private int OnExportGetFlags()
@@ -158,8 +157,8 @@ public class Smoothing : Node2D
 
     public override void _EnterTree()
     {
-	    // Might have been moved
-	    FindTarget();
+        // Might have been moved
+        FindTarget();
     }
 
     public override void _Notification(int what)
@@ -167,7 +166,7 @@ public class Smoothing : Node2D
         if (what == NotificationVisibilityChanged)
         {
             ChangeFlags(INVISIBLE, IsVisibleInTree() == false);
-			SetProcessing();
+            SetProcessing();
         }
     }
 
@@ -315,7 +314,7 @@ public class Smoothing : Node2D
 
     private void ClearFlags(int f)
     {
-	    this.flags &= ~f;
+        this.flags &= ~f;
     }
 
     private bool TestFlags(int f)
