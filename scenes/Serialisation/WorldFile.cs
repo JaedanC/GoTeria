@@ -95,7 +95,7 @@ public class WorldFile
     {
         loadMutex.Lock();
 
-        String savePath = WORLD_DIRECTORY + SaveName;
+        String savePath = WORLD_DIRECTORY + newSaveName;
         Directory loadDirectory = new Directory();
         Error error = loadDirectory.Open(savePath);
         if (error != Error.Ok)
@@ -107,16 +107,18 @@ public class WorldFile
 
         String imagePath = GetSavePathForFile(newSaveName, fileName);
 
-        if (!loadDirectory.FileExists(imagePath))
+        // Note: Don't use Directory.FileExists cause it falsely flags files that exist
+        // Instead just load the resource and let it error out and return null.
+        Texture imageTexture = (Texture)GD.Load(imagePath);
+        if (imageTexture == null)
         {
-            GD.Print("LoadImage(): Image path " + imagePath + " does not exist");
-            loadMutex.Unlock();
+            GD.Print("LoadImage(): Resource " + imagePath + " does not exist.");
+            Developer.Fail();
             return null;
         }
+        loadMutex.Unlock();
 
         GD.Print("LoadImage(): Loaded image: " + imagePath);
-        Texture imageTexture = (Texture)GD.Load(imagePath);
-        loadMutex.Unlock();
         return imageTexture.GetData();
     }
 }
