@@ -9,8 +9,12 @@ public class InputLayering : Node
 
     public override void _Ready()
     {
-        analogMapping = GetNode<ActionMapping>("/root/WorldSpawn/ActionMapping").GetAnalogMapping();
         consumedActions = new HashSet<String>();
+    }
+
+    public void Initialise(AnalogMapping analogMapping)
+    {
+        this.analogMapping = analogMapping;
     }
 
     public override void _Process(float delta)

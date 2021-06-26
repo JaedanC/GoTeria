@@ -4,8 +4,6 @@ using System;
 
 public abstract class Projectile : Entity
 {
-    protected CollisionSystem collisionSystem;
-    protected Terrain terrain;
     protected Entity shooter;
     protected Vector2 direction;
     protected int alive;
@@ -13,28 +11,28 @@ public abstract class Projectile : Entity
     protected bool rayCasted;
     protected bool done;
 
-    public virtual void Init(Entity shooter, Vector2 position, Vector2 direction, float speed)
+    public virtual void Initialise(Terrain terrain, CollisionSystem collisionSystem, Entity shooter, Vector2 position, Vector2 direction, float speed)
     {
+        base.Initialise(terrain, collisionSystem);
         shooter.AddChild(this);
-        this.Position = position;
+        this.terrain = terrain;
+        this.collisionSystem = collisionSystem;
         this.shooter = shooter;
+        this.Position = position;
         this.direction = direction.Normalized();
         this.speed = Mathf.Max(speed, 0);
         this.rayCasted = false;
         alive = 0;
         Teleport();
 
-        collisionSystem = GetNode<CollisionSystem>("/root/WorldSpawn/CollisionSystem");
-        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
-
         // Disable the hitbox as it is no longer required
         GetHitbox().SetDeferred("disabled", true);
     }
 
     // Use raycasting
-    public void Init(Entity shooter, Vector2 position, Vector2 direction)
+    public void Initialise(Terrain terrain, CollisionSystem collisionSystem, Entity shooter, Vector2 position, Vector2 direction)
     {
-        Init(shooter, position, direction, 0f);
+        Initialise(terrain, collisionSystem, shooter, position, direction, 0f);
         this.rayCasted = true;
     }
 

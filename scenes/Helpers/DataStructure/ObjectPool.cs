@@ -54,7 +54,7 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
             item = new T();
         }
 
-        item.Reset(resetParameters);
+        item.Initialise(resetParameters);
         return item;
     }
 

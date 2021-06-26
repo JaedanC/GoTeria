@@ -4,11 +4,6 @@ using System;
 
 public class Terrain : Node2D
 {
-    [Export]
-    private readonly Vector2 blockPixelSize = new Vector2(16, 16);
-    [Export]
-    // private readonly Vector2 chunkBlockCount = new Vector2(420, 400);
-    private readonly Vector2 chunkBlockCount = new Vector2(210, 200);
     private const int loadMargin = 1;
     private const int lightingMargin = 1;
 
@@ -19,6 +14,9 @@ public class Terrain : Node2D
     private WorldFile worldFile;
     private ObjectPool<Chunk> chunkPool;
     private ThreadPool threadPool;
+
+    private Vector2 blockPixelSize;
+    private Vector2 chunkBlockCount;
 
     private Mutex loadedChunksMutex;
     private Vector2 chunkPixelDimensions;
@@ -40,33 +38,37 @@ public class Terrain : Node2D
     public override void _Ready()
     {
         Name = "Terrain";
-        chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
 
-        Developer.AssertGreaterThan(BlockPixelSize.x, 0, "BlockPixelSize.x is 0");
-        Developer.AssertGreaterThan(BlockPixelSize.y, 0, "BlockPixelSize.y is 0");
-        Developer.AssertGreaterThan(ChunkBlockCount.x, 0, "ChunkBlockCount.x is 0");
-        Developer.AssertGreaterThan(ChunkBlockCount.y, 0, "ChunkBlockCount.y is 0");
+        // Dependencies
+        lightingEngine = GetNode<LightingEngine>("Lighting");
 
+        // Local variables
         loadedChunksMutex = new Mutex();
         loadedChunks = new Dictionary<Vector2, Chunk>();
         urgentChunks = new Dictionary<Vector2, Chunk>();
         lightDrawChunks = new Dictionary<Vector2, Chunk>();
         lightLoadingChunks = new Dictionary<Vector2, Chunk>();
+    }
 
-        threadPool = GetNode<ThreadPool>("/root/ThreadPool");
-        player = GetNode<Player>("/root/WorldSpawn/Player");
-        inputLayering = GetNode<InputLayering>("/root/InputLayering");
-        lightingEngine = GetNode<LightingEngine>("Lighting");
+    public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player, WorldFile worldFile, Vector2 blockPixelSize, Vector2 chunkBlockCount)
+    {
+        this.threadPool = threadPool;
+        this.inputLayering = inputLayering;
+        this.player = player;
+        this.worldFile = worldFile;
+        this.blockPixelSize = blockPixelSize;
+        this.chunkBlockCount = chunkBlockCount;
 
-        // TODO: dynamically load the world
-
-        worldFile = new WorldFile("SavedWorld");
-        // worldFile = new WorldFile("light_test");
-        terrainStack = worldFile.GetITerrainStack();
-
+        // Instance locals
         chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
-        lightingEngine.Initialise();
+
+        // Use instances
+        chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
+        terrainStack = worldFile.GetITerrainStack();
         chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
+
+        // Initialise further
+        lightingEngine.Initialise(inputLayering, this, player);
     }
 
     public override void _Process(float _delta)
@@ -87,14 +89,6 @@ public class Terrain : Node2D
         // Draw the chunk borders
         Update();
     }
-
-    // public override void _Notification(int what)
-    // {
-    //     if (what == MainLoop.NotificationPredelete)
-    //     {
-    //         worldImage.SavePng("res://save_image.png");
-    //     }
-    // }
 
     /* This currently colours the chunks with a border donoting the kind of chunk it
     is and how it should be streamed in. Reducing the viewportRectangle in the
@@ -131,7 +125,7 @@ public class Terrain : Node2D
             // Only create chunks that have not already been loaded in
             if (!loadedChunks.ContainsKey(chunkPosition))
             {
-                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize, ChunkBlockCount);
+                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize, ChunkBlockCount, this);
                 AddChild(chunk);
                 loadedChunks[chunkPosition] = chunk;
             }
@@ -288,7 +282,6 @@ public class Terrain : Node2D
     public Vector2 GetWorldSize()
     {
         return WorldBlocksImage.GetSize();
-        // return worldSizeInChunks;
     }
 
     /* Returns a Chunk if it exists at the given chunkPosition in the world.

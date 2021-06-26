@@ -18,10 +18,14 @@ public class CollisionSystem : Node
 
     public override void _Ready()
     {
-        terrain = GetNode<Terrain>("/root/WorldSpawn/Terrain");
         loadedBlocks = new Dictionary<Vector2, StaticBody2D>();
         mentionedBlocks = new HashSet<Vector2>();
         blockScene = (PackedScene)ResourceLoader.Load("res://scenes/Terrain/Chunk/Layers/BlockHitbox/BlockHitbox.tscn");
+    }
+
+    public void Initialise(Terrain terrain)
+    {
+        this.terrain = terrain;
     }
 
     public override void _PhysicsProcess(float delta)
@@ -45,14 +49,15 @@ public class CollisionSystem : Node
                 if (loadedBlocks.ContainsKey(visibleBlockPoint))
                     continue;
                 
-                StaticBody2D block = (StaticBody2D)blockScene.Instance(); // Instance the block scene.
+                BlockHitbox blockHitbox = (BlockHitbox)blockScene.Instance(); // Instance the block scene.
 
                 // The order of these two operations is very important. Flip them, and collision goes out the window.
                 // I assume this is because the _Ready() method in the block requires this value, but I'll be honest
                 // I have no idea why this is the case from looking at the source code.
-                block.Position = visibleBlockPoint * terrain.BlockPixelSize + terrain.BlockPixelSize / 2;
-                AddChild(block);
-                loadedBlocks[visibleBlockPoint] = block;
+                blockHitbox.Position = visibleBlockPoint * terrain.BlockPixelSize + terrain.BlockPixelSize / 2;
+                AddChild(blockHitbox);
+                blockHitbox.Initialise(terrain);
+                loadedBlocks[visibleBlockPoint] = blockHitbox;
             }
         }
     }
