@@ -23,9 +23,9 @@ public class ActionMapping : Node
     private JoypadInput joypadInput;
     private JoypadAxisInput joypadAxisInput;
     private AnalogMapping analogMapping;
-    private ConfigFile configFile;
-    private String configFilePath;
-    private bool configFileInUserDirectory;
+    private ConfigFile config;
+    private TeriaFile configFile;
+
 
     public override void _Ready()
     {
@@ -40,12 +40,11 @@ public class ActionMapping : Node
         actionBindings[joypadAxisInput] = new Dictionary<String, int>();
     }
 
-    public void Initialise(AnalogMapping analogMapping, ConfigFile configFile, bool configFileInUserDirectory, String configFilePath)
+    public void Initialise(AnalogMapping analogMapping, ConfigFile config, TeriaFile configFile)
     {
         this.analogMapping = analogMapping;
+        this.config = config;
         this.configFile = configFile;
-        this.configFileInUserDirectory = configFileInUserDirectory;
-        this.configFilePath = configFilePath;
         SetupAliases();
         SetupActionMappings();
     }
@@ -348,16 +347,12 @@ public class ActionMapping : Node
 
         if (@event.IsActionPressed("save_config"))
         {
-            GD.Print("Saving Config");
             SaveActionMappingsConfig();
-            GD.Print("Saved Config");
         }
 
         if (@event.IsActionPressed("load_config"))
         {
-            GD.Print("Loading Config");
             LoadActionMappingsConfig();
-            GD.Print("Loaded Config");
         }
     }
 
@@ -366,14 +361,13 @@ public class ActionMapping : Node
     parameterised. */
     private void SaveActionMappingsConfig()
     {
-        ConfigFile configFile = new ConfigFile();
         var saveableActionMappings = GetBindingsAsSaveableDictionary();
 
         foreach (String inputMethodName in saveableActionMappings.Keys)
         {
             foreach (String action in saveableActionMappings[inputMethodName].Keys)
             {
-                configFile.SetValue(inputMethodName, action, saveableActionMappings[inputMethodName][action]);
+                config.SetValue(inputMethodName, action, saveableActionMappings[inputMethodName][action]);
             }
         }
 
@@ -381,30 +375,30 @@ public class ActionMapping : Node
         {
             String action = daa.GetFirstAction() + "|" + daa.GetSecondAction();
             String binding = daa.GetDevice() + "|" + daa.GetJoyAxis() + "|" + daa.UseDeadZone();
-            configFile.SetValue("Dual Axis", action, binding);
+            config.SetValue("Dual Axis", action, binding);
         }
 
-        TeriaFile file = new TeriaFile(configFileInUserDirectory, configFilePath);
-        Error error = file.CreateDirectoryForFile();
+        Error error = configFile.CreateDirectoryForFile();
         if (error != Error.Ok)
         {
             GD.Print("SaveActionMappingsConfig() Create directory Error: " + error);
             return;
         }
-        String filePath = file.GetFinalFilePath();
-        error = configFile.Save(filePath);
+        String filePath = configFile.GetFinalFilePath();
+        error = config.Save(filePath);
         if (error != Error.Ok)
         {
             GD.Print("SaveActionMappingsConfig() Save config Error: " + error);
         }
+
+        GD.Print("ActionMapping.SaveActionMappingsConfig(): Saved config");
     }
 
     /* Loads and binds action mappings to keys based on a save file. TODO: The file
     name is currently hardcoded and needs to be parameterised. */
     private void LoadActionMappingsConfig()
     {
-        TeriaFile file = new TeriaFile(configFileInUserDirectory, configFilePath);
-        Error error = configFile.Load(file.GetFinalFilePath());
+        Error error = config.Load(configFile.GetFinalFilePath());
         if (error != Error.Ok)
         {
             GD.Print("LoadActionMappingsConfig() Load config Error: " + error);
@@ -414,14 +408,14 @@ public class ActionMapping : Node
         foreach (IInputMethod inputMethod in actionBindings.Keys)
         {
             String inputMethodName = inputMethod.GetInputMethodName();
-            if (!configFile.HasSection(inputMethodName))
+            if (!config.HasSection(inputMethodName))
             {
                 continue;
             }
 
-            foreach (String action in configFile.GetSectionKeys(inputMethodName))
+            foreach (String action in config.GetSectionKeys(inputMethodName))
             {
-                foreach (String binding in (Godot.Collections.Array)configFile.GetValue(inputMethodName, action))
+                foreach (String binding in (Godot.Collections.Array)config.GetValue(inputMethodName, action))
                 {
                     AddActionMapping(action, binding);
                 }
@@ -430,11 +424,11 @@ public class ActionMapping : Node
 
         // Load the dual axis mappings
         String dualAxisSection = "Dual Axis";
-        if (configFile.HasSection(dualAxisSection))
+        if (config.HasSection(dualAxisSection))
         {
-            foreach (String action in configFile.GetSectionKeys(dualAxisSection))
+            foreach (String action in config.GetSectionKeys(dualAxisSection))
             {
-                String value = (String)configFile.GetValue(dualAxisSection, action);
+                String value = (String)config.GetValue(dualAxisSection, action);
 
                 String[] daaActions = action.Split("|");
                 String firstAction = daaActions[0];
@@ -446,5 +440,7 @@ public class ActionMapping : Node
                 AddActionMappingAxis(firstAction, secondAction, device, joyAxis, useDeadZone);
             }
         }
+
+        GD.Print("ActionMapping.LoadActionMappingsConfig(): Loaded config");
     }
 }

@@ -1,124 +1,134 @@
 using Godot;
 using System;
 
+
+/* A WorldFile allows access to the images that make up the terrain. */
 public class WorldFile
 {
-    private String WORLD_DIRECTORY = "res://saves/worlds/";
-    private String BLOCKS_FILE = "blocks.png";
-    private String WALLS_FILE = "walls.png";
-    private ITerrainStack terrainStack = null;
-    public String SaveName;
-
+    private ITerrainStack terrainStack;
+    private TeriaFile blockFile;
+    private TeriaFile wallFile;
     private static Mutex loadMutex = new Mutex();
 
 
-    public WorldFile(String saveName)
+    public WorldFile(TeriaFile blockFile, TeriaFile wallFile)
     {
-        LoadWorld(saveName);
+        this.blockFile = blockFile;
+        this.wallFile = wallFile;
+
+        Image blockImage = LoadImage(blockFile);
+        Image wallImage = LoadImage(wallFile);
+        Developer.AssertNotNull(blockImage, "Block image was null");
+        Developer.AssertNotNull(wallImage, "Wall image was null");
+
+        this.terrainStack = new TerrainStack(blockImage, wallImage);
     }
 
-    private String GetSavePathForFile(String saveName, String fileName)
-    {
-        return WORLD_DIRECTORY + saveName + "/" + fileName;
-    }
-
+    /* Retrieve the images in the ITerrainStack.  */
     public ITerrainStack GetITerrainStack()
     {
         Developer.AssertNotNull(terrainStack);
         return terrainStack;
     }
 
-    public Error SaveWorld(String newSaveName)
+    /* Save the blocks and walls to the specifed TeriaFiles. If moveToUseTeriaFiles is true
+    then the new blockFile and wallFile will overwrite the current ones. */
+    public Error SaveWorld(TeriaFile blockFile, TeriaFile wallFile, bool moveToUseTeriaFiles)
     {
-        Error blockError = SaveImage(terrainStack.WorldBlocksImage, newSaveName, BLOCKS_FILE);
-        Error wallError = SaveImage(terrainStack.WorldWallsImage, newSaveName, WALLS_FILE);
-
-        if (blockError != Error.Ok)
+        if (moveToUseTeriaFiles)
         {
-            return blockError;
-        }
-        if (wallError != Error.Ok)
-        {
-            return wallError;
+            this.blockFile = blockFile;
+            this.wallFile = wallFile;
         }
 
-        GD.Print("SaveWorld(): Success");
-        return Error.Ok;
-    }
-
-    public Error SaveWorld()
-    {
-        return SaveWorld(SaveName);
-    }
-
-    public Error SaveImage(Image image, String newSaveName, String fileName)
-    {
-        String savePath = GetSavePathForFile(newSaveName, fileName);
-
-        // Creating the save directory if it doesn't exist
-        Directory saveDirectory = new Directory();
-        if (!saveDirectory.DirExists(WORLD_DIRECTORY + newSaveName))
-        {
-            Error directoryError = saveDirectory.MakeDir(WORLD_DIRECTORY + newSaveName);
-            if (directoryError != Error.Ok)
-            {
-                GD.Print("SaveWorld(): Directory Error: " + directoryError);
-                return directoryError;
-            }
-        }
-
-        GD.Print("SaveWorld(): Saving: " + savePath);
-        Error saveError = image.SavePng(savePath);
-        if (saveError != Error.Ok)
-        {
-            GD.Print("SaveWorld(): Error: " + saveError);
-            return saveError;
-        }
-        return Error.Ok;
-    }
-
-    public void LoadWorld(String saveName)
-    {
-        this.SaveName = saveName;
-        Image worldBlocksImage = LoadImage(saveName, BLOCKS_FILE);
-        Image worldWallsImage = LoadImage(saveName, WALLS_FILE);
-
-        this.terrainStack = terrainStack = new TerrainStack(
-            worldBlocksImage,
-            worldWallsImage
-        );
-
-        GD.Print("LoadWorld(): Success");
-    }
-
-    public Image LoadImage(String newSaveName, String fileName)
-    {
-        loadMutex.Lock();
-
-        String savePath = WORLD_DIRECTORY + newSaveName;
-        Directory loadDirectory = new Directory();
-        Error error = loadDirectory.Open(savePath);
+        Error error = SaveImage(terrainStack.WorldBlocksImage, blockFile);
         if (error != Error.Ok)
         {
-            GD.Print("LoadImage(): Opening directory error: " + error);
+            GD.Print("WorldFile.SaveWorld() Saving block Error: " + error);
+            return error;
+        }
+
+        error = SaveImage(terrainStack.WorldWallsImage, wallFile);
+        if (error != Error.Ok)
+        {
+            GD.Print("WorldFile.SaveWorld() Saving block Error: " + error);
+            return error;
+        }
+
+        GD.Print("WorldFile.SaveWorld(): Success");
+        return Error.Ok;
+    }
+
+    /* Save to the default location (Where the images were originally loaded from). */
+    public Error SaveWorld()
+    {
+        return SaveWorld(blockFile, wallFile, true);
+    }
+
+    /* Save an arbritray image to a location. */
+    public static Error SaveImage(Image image, TeriaFile saveLocation)
+    {
+        // Creating the save directory if it doesn't exist
+        saveLocation.CreateDirectoryForFile();
+
+        String savePath = saveLocation.GetFinalFilePath();
+        GD.Print("WorldFile.SaveImage(): Saving image: " + savePath);
+        Error error = image.SavePng(savePath);
+        if (error != Error.Ok)
+        {
+            GD.Print("WorldFile.SaveImage(): Saving PNG Error: " + error);
+            return error;
+        }
+        return Error.Ok;
+    }
+
+    /* Load an arbritray image from a location. */
+    public static Image LoadImage(TeriaFile teriaFileToImage)
+    {
+        loadMutex.Lock();
+        teriaFileToImage.CreateDirectoryForFile();
+
+        // https://www.reddit.com/r/godot/comments/eojihj/how_to_load_images_without_importer/
+        String imagePath = teriaFileToImage.GetFinalFilePath();
+        Image image = new Image();
+        File imageFile = teriaFileToImage.ReadFile();
+        if (imageFile == null)
+        {
+            GD.Print("WorldFile.LoadImage(): Image file not found " + imagePath);
+            // Developer.Fail();
+            return null;
+        }
+        byte[] binaryImageContents = imageFile.GetBuffer((int)imageFile.GetLen());
+        imageFile.Close();
+
+        // Get the file's extension
+        Error error;
+        if (imagePath.Extension().Equals("png"))
+        {
+            error = image.LoadPngFromBuffer(binaryImageContents);
+        }
+        else if (imagePath.Extension().Equals("jpg"))
+        {
+            error = image.LoadJpgFromBuffer(binaryImageContents);
+        }
+        else
+        {
+            GD.Print("WorldFile.LoadImage(): Unknown file extension: " + imagePath.Extension());
+            Developer.Fail();
             loadMutex.Unlock();
             return null;
         }
 
-        String imagePath = GetSavePathForFile(newSaveName, fileName);
-
-        // Note: Don't use Directory.FileExists cause it falsely flags files that exist
-        // Instead just load the resource and let it error out and return null.
-        Texture imageTexture = (Texture)GD.Load(imagePath);
-        if (imageTexture == null)
+        if (error != Error.Ok)
         {
-            GD.Print("LoadImage(): Resource " + imagePath + " does not exist.");
+            GD.Print("WorldFile.LoadImage(): Load image binary from buffer Error: " + error);
             Developer.Fail();
+            loadMutex.Unlock();
             return null;
         }
         loadMutex.Unlock();
 
-        GD.Print("LoadImage(): Loaded image: " + imagePath);
-        return imageTexture.GetData();
+        GD.Print("WorldFile.LoadImage(): Loaded image: " + imagePath);
+        return image;
     }
 }

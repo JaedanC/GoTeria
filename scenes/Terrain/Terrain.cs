@@ -14,6 +14,7 @@ public class Terrain : Node2D
     private WorldFile worldFile;
     private ObjectPool<Chunk> chunkPool;
     private ThreadPool threadPool;
+    private ChunkLighting chunkLighting;
 
     private Vector2 blockPixelSize;
     private Vector2 chunkBlockCount;
@@ -50,7 +51,8 @@ public class Terrain : Node2D
         lightLoadingChunks = new Dictionary<Vector2, Chunk>();
     }
 
-    public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player, WorldFile worldFile, Vector2 blockPixelSize, Vector2 chunkBlockCount)
+    public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player, WorldFile worldFile,
+                           Vector2 blockPixelSize, Vector2 chunkBlockCount, TeriaFile lightingCacheFile, TeriaFile lightingConfigFile)
     {
         this.threadPool = threadPool;
         this.inputLayering = inputLayering;
@@ -60,15 +62,16 @@ public class Terrain : Node2D
         this.chunkBlockCount = chunkBlockCount;
 
         // Instance locals
-        chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
+        this.chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
+        this.chunkLighting = new ChunkLighting(lightingEngine, lightingCacheFile, lightingConfigFile);
 
         // Use instances
-        chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
-        terrainStack = worldFile.GetITerrainStack();
-        chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
+        this.chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
+        this.terrainStack = worldFile.GetITerrainStack();
+        this.chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
 
         // Initialise further
-        lightingEngine.Initialise(inputLayering, this, player);
+        lightingEngine.Initialise(inputLayering, this, player, chunkLighting);
     }
 
     public override void _Process(float _delta)
@@ -76,7 +79,11 @@ public class Terrain : Node2D
         // Save the all chunks loaded in memory to a file.
         if (inputLayering.PopActionPressed("save_world"))
         {
-            worldFile.SaveWorld("SavedWorld");
+            // TODO: Make this save to the current file with just worldFile.SaveWorld()
+            TeriaFile blockFile = new TeriaFile(true, "saves/SavedWorld/worlds/blocks.png");
+            TeriaFile wallFile = new TeriaFile(true, "saves/SavedWorld/worlds/walls.png");
+            worldFile.SaveWorld(blockFile, wallFile, false);
+            lightingEngine.SaveLight();
         }
 
         loadedChunksMutex.Lock();
@@ -125,7 +132,8 @@ public class Terrain : Node2D
             // Only create chunks that have not already been loaded in
             if (!loadedChunks.ContainsKey(chunkPosition))
             {
-                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize, ChunkBlockCount, this);
+                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize,
+                                                    ChunkBlockCount, this, worldFile, chunkLighting);
                 AddChild(chunk);
                 loadedChunks[chunkPosition] = chunk;
             }

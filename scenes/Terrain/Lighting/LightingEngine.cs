@@ -44,6 +44,7 @@ public class LightingEngine : Node2D
     private InputLayering inputLayering;
     private Terrain terrain;
     private Player player;
+    private ChunkLighting chunkLighting;
 
     private Image screenLightLevels;
     private ImageTexture screenLightLevelsShaderTexture;
@@ -56,7 +57,7 @@ public class LightingEngine : Node2D
     private Vector2 nextPosition;
     private bool keepLightThread = true;
     private bool updateShader = true;
-    private DefferedUpdateImage WorldLightImage;
+    private DefferedUpdateImage worldLightImage;
     private Image worldLightSources;
 
 
@@ -81,41 +82,62 @@ public class LightingEngine : Node2D
         lightUpdateMutex = new Mutex();
     }
 
-    public void Initialise(InputLayering inputLayering, Terrain terrain, Player player)
+    public void Initialise(InputLayering inputLayering, Terrain terrain, Player player, ChunkLighting chunkLighting)
     {
         this.inputLayering = inputLayering;
         this.terrain = terrain;
         this.player = player;
+        this.chunkLighting = chunkLighting;
 
         Vector2 worldSize = terrain.GetWorldSize();
 
-        Image worldLightLevels = new Image();
-        worldLightLevels.Create((int)worldSize.x, (int)worldSize.y, false, Image.Format.Rgba8);
-        worldLightLevels.Lock();
+        Image worldLightLevels = chunkLighting.GetSavedLighting();
+        if (worldLightLevels == null)
+        {
+            worldLightLevels = new Image();
+            worldLightLevels.Create((int)worldSize.x, (int)worldSize.y, false, Image.Format.Rgba8);
+            worldLightLevels.Lock();
+            GenerateWorldLightSources(worldSize);
+            worldLightLevels.BlitRect(worldLightSources, new Rect2(Vector2.Zero, worldSize), Vector2.Zero);
+        }
+        else
+        {
+            worldLightLevels.Lock();
+            GenerateWorldLightSources(worldSize);
+        }
 
+        worldLightImage = new DefferedUpdateImage(worldLightLevels);
+        lightingThread.Start();
+    }
+
+    private void GenerateWorldLightSources(Vector2 worldSize)
+    {
         worldLightSources = new Image();
         worldLightSources.Create((int)worldSize.x, (int)worldSize.y, false, Image.Format.Rgba8);
         worldLightSources.Fill(Colors.Red);
         worldLightSources.Lock();
         for (int i = 0; i < worldSize.x; i++)
-            for (int j = 0; j < worldSize.y; j++)
-            {
-                Color blockColour = terrain.WorldBlocksImage.GetPixel(i, j);
-                Color wallColour = terrain.WorldWallsImage.GetPixel(i, j);
-                Color lightValue;
-                if (Helper.IsLight(blockColour) && Helper.IsLight(wallColour))
-                    lightValue = Colors.White;
-                else
-                    lightValue = Colors.Black;
-                worldLightSources.SetPixel(i, j, lightValue);
-            }
+        for (int j = 0; j < worldSize.y; j++)
+        {
+            Color blockColour = terrain.WorldBlocksImage.GetPixel(i, j);
+            Color wallColour = terrain.WorldWallsImage.GetPixel(i, j);
+            Color lightValue;
+            if (Helper.IsLight(blockColour) && Helper.IsLight(wallColour))
+                lightValue = Colors.White;
+            else
+                lightValue = Colors.Black;
+            worldLightSources.SetPixel(i, j, lightValue);
+        }
 
-        worldLightLevels.BlitRect(worldLightSources, new Rect2(Vector2.Zero, terrain.GetWorldSize()), Vector2.Zero);
-        WorldLightImage = new DefferedUpdateImage(worldLightLevels);
-
-        lightingThread.Start();
     }
 
+    public void SaveLight()
+    {
+        worldLightImage.CommitColourChangesToImage();
+        worldLightImage.LockImage();
+        chunkLighting.SaveToDisk(worldLightImage.GetImage());
+        worldLightImage.UnlockImage();
+    }
     public override void _PhysicsProcess(float delta)
     {
         if (inputLayering.PollAction("light_debug"))
@@ -182,7 +204,7 @@ public class LightingEngine : Node2D
         // Return if the position is out of bounds.
         // Return if the lightValue does not beat what's already present.
         if (Helper.OutOfBounds(worldBlockPosition, terrain.GetWorldSize()) ||
-            WorldLightImage.GetPixelv(worldBlockPosition).r >= lightValue.r)
+            worldLightImage.GetPixelv(worldBlockPosition).r >= lightValue.r)
             return;
 
         // Queue the light update to be computed by the worker thread.
@@ -198,14 +220,14 @@ public class LightingEngine : Node2D
         // Return if the position is out of bounds.
         // Return if the light at that block is already 0.
         if (Helper.OutOfBounds(worldBlockPosition, terrain.GetWorldSize()) ||
-            WorldLightImage.GetPixelv(worldBlockPosition).r == 0)
+            worldLightImage.GetPixelv(worldBlockPosition).r == 0)
             return;
 
         // Set the Remove Light Update to contain the current light level. This is 
         // required for the remove light function to work. The function will handle
         // the setting of pixels.
         // Queue the light update to be computed by the worker thread.
-        Color existingColour = WorldLightImage.GetPixelv(worldBlockPosition);
+        Color existingColour = worldLightImage.GetPixelv(worldBlockPosition);
         lightUpdateMutex.Lock();
         lightUpdateRemoveQueue.Enqueue(new LightUpdate(worldBlockPosition, existingColour));
         lightUpdateMutex.Unlock();
@@ -222,7 +244,7 @@ public class LightingEngine : Node2D
         // This precomputation prevents a lot of neighbour exploration for a large fringe.
         foreach (LightBFSNode node in addLightFringe.ToList())
         {
-            WorldLightImage.SetPixelv(node.WorldPosition, node.Colour);
+            worldLightImage.SetPixelv(node.WorldPosition, node.Colour);
         }
 
         while (addLightFringe.Count > 0)
@@ -230,14 +252,14 @@ public class LightingEngine : Node2D
             LightBFSNode node = addLightFringe.Dequeue();
 
             // Exit condition: The current nodes color is brighter than us already.
-            Color existingColour = WorldLightImage.GetPixelv(node.WorldPosition);
+            Color existingColour = worldLightImage.GetPixelv(node.WorldPosition);
             if (node.Colour.r < existingColour.r)
             {
                 continue;
             }
 
             // Set the colour then
-            WorldLightImage.SetPixelv(node.WorldPosition, node.Colour);
+            worldLightImage.SetPixelv(node.WorldPosition, node.Colour);
 
             IBlock topBlock = terrain.GetTopIBlockFromWorldBlockPosition(node.WorldPosition);
             if (topBlock == null)
@@ -269,7 +291,7 @@ public class LightingEngine : Node2D
             {
                 if (Helper.InBounds(neighbourPosition, terrain.GetWorldSize()))
                 {
-                    Color neighbourExistingColour = WorldLightImage.GetPixelv(neighbourPosition);
+                    Color neighbourExistingColour = worldLightImage.GetPixelv(neighbourPosition);
                     if (neighbourExistingColour.r < node.Colour.r)
                     {
                         addLightFringe.Enqueue(new LightBFSNode(neighbourPosition, newColour));
@@ -294,7 +316,7 @@ public class LightingEngine : Node2D
             LightBFSNode node = removeLightFringe.Dequeue();
 
             // Remove this blocks light. It doesn't have any light sources near it.
-            WorldLightImage.SetPixelv(node.WorldPosition, Colors.Black);
+            worldLightImage.SetPixelv(node.WorldPosition, Colors.Black);
 
             // To use the same terminolody as the blog post.
             Color lightLevel = node.Colour;
@@ -317,7 +339,7 @@ public class LightingEngine : Node2D
                 if (Helper.OutOfBounds(neighbourPosition, terrain.GetWorldSize()))
                     continue;
 
-                Color neighboursLevel = WorldLightImage.GetPixelv(neighbourPosition);
+                Color neighboursLevel = worldLightImage.GetPixelv(neighbourPosition);
                 if (neighboursLevel.r != 0 && neighboursLevel.r < lightLevel.r)
                 {
                     removeLightFringe.Enqueue(new LightBFSNode(neighbourPosition, neighboursLevel));
@@ -340,7 +362,7 @@ public class LightingEngine : Node2D
         // Cull the AddLight updates that will make false positive lights appear.
         foreach (LightUpdate update in removeAddLightUpdateList)
         {
-            if (WorldLightImage.GetPixelv(update.WorldPosition).r > 0)
+            if (worldLightImage.GetPixelv(update.WorldPosition).r > 0)
             {
                 lightUpdateRemoveToAddQueue.Enqueue(update);
             }
@@ -368,7 +390,7 @@ public class LightingEngine : Node2D
 
     private void LightUpdatePass()
     {
-        WorldLightImage.CommitColourChangesToImage();
+        worldLightImage.CommitColourChangesToImage();
 
         if (lightUpdateRemoveQueue.Count == 0 && lightUpdateAddQueue.Count == 0)
             return;
@@ -393,7 +415,7 @@ public class LightingEngine : Node2D
 
         lightUpdateMutex.Unlock();
 
-        WorldLightImage.CommitColourChangesToImage();
+        worldLightImage.CommitColourChangesToImage();
 
         updateShader = true;
     }
@@ -437,9 +459,9 @@ public class LightingEngine : Node2D
             screenLightLevelsShaderTexture.CreateFromImage(screenLightLevels, (uint)Texture.FlagsEnum.Filter);
         }
 
-        WorldLightImage.LockImage();
-        screenLightLevels.BlitRect(WorldLightImage.GetImage(), new Rect2(topLeftBlock, blocksOnScreen), Vector2.Zero);
-        WorldLightImage.UnlockImage();
+        worldLightImage.LockImage();
+        screenLightLevels.BlitRect(worldLightImage.GetImage(), new Rect2(topLeftBlock, blocksOnScreen), Vector2.Zero);
+        worldLightImage.UnlockImage();
         screenLightLevelsShaderTexture.SetData(screenLightLevels);
         (Material as ShaderMaterial).SetShaderParam("light_values_size", screenLightLevelsShaderTexture.GetSize());
         (Material as ShaderMaterial).SetShaderParam("light_values", screenLightLevelsShaderTexture);

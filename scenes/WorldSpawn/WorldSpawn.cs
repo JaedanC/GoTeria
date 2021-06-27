@@ -28,9 +28,12 @@ public class WorldSpawn : Node
     public static WorldSpawn ActiveWorldSpawn;
 
     // Instance variables
-    private String saveFileName = "SavedWorld";
-    private bool configFileInUserDirectory = true;
-    private String configFilePath;
+    private String saveFileName;
+    private TeriaFile configFile;
+    private TeriaFile blockFile;
+    private TeriaFile wallFile;
+    private TeriaFile lightingConfigFile;
+    private TeriaFile lightingCacheFile;
 
     // Singletons
     private ThreadPool threadPool;
@@ -45,7 +48,7 @@ public class WorldSpawn : Node
     // Local Instances
     private AnalogMapping analogMapping;
     private WorldFile worldFile;
-    private ConfigFile configFile;
+    private ConfigFile config;
 
     public WorldSpawn()
     {
@@ -53,12 +56,18 @@ public class WorldSpawn : Node
         WorldSpawn.ActiveWorldSpawn = this;
 
         // Constants
-        configFilePath = saveFileName + "/bindings.ini";
+        saveFileName = "SavedWorld";
 
         // Only instance what has no dependencies and isn't a Node
-        worldFile = new WorldFile(saveFileName);
+        configFile = new TeriaFile(true, "saves/" + saveFileName + "/bindings.ini");
+        blockFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/blocks.png");
+        wallFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/walls.png");
+        lightingCacheFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/light.png");
+        lightingConfigFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/lighting.json");
+
         analogMapping = new AnalogMapping();
-        configFile = new ConfigFile();
+        worldFile = new WorldFile(blockFile, wallFile);
+        config = new ConfigFile();
 
         // Value checks
         Developer.AssertGreaterThan(blockPixelSize.x, 0, "BlockPixelSize.x is 0");
@@ -84,9 +93,9 @@ public class WorldSpawn : Node
         inputLayering.Initialise(analogMapping);
 
         // Initialise children
-        actionMapping.Initialise(analogMapping, configFile, configFileInUserDirectory, configFilePath);
+        actionMapping.Initialise(analogMapping, config, configFile);
         player.Initialise(inputLayering, terrain, collisionSystem);
-        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount);
+        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount, lightingCacheFile, lightingConfigFile);
         collisionSystem.Initialise(terrain);
     }
 
