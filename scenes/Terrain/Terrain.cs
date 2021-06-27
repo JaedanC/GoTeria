@@ -76,7 +76,10 @@ public class Terrain : Node2D
         // Save the all chunks loaded in memory to a file.
         if (inputLayering.PopActionPressed("save_world"))
         {
-            worldFile.SaveWorld("SavedWorld");
+            // TODO: Make this save to th current file with just worldFile.SaveWorld()
+            TeriaFile blockFile = new TeriaFile(true, "saves/SavedWorld/worlds/blocks.png");
+            TeriaFile wallFile = new TeriaFile(true, "saves/SavedWorld/worlds/walls.png");
+            worldFile.SaveWorld(blockFile, wallFile, false);
         }
 
         loadedChunksMutex.Lock();
