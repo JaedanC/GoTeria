@@ -6,6 +6,7 @@ public class Chunk : Node2D, IResettable
 {
     private Terrain terrain;
     private WorldFile worldFile;
+    private ChunkLighting chunkLighting;
     private Image worldImage;
     private Vector2 chunkPosition;
     private Vector2 blockCount;
@@ -69,18 +70,18 @@ public class Chunk : Node2D, IResettable
     /* This is the method that is called when a chunk is reset before it is reused. */
     public void Initialise(object[] parameters)
     {
-        worldImage = (Image)parameters[0];
-        chunkPosition = (Vector2)parameters[1];
-        blockPixelSize = (Vector2)parameters[2];
-        blockCount = (Vector2)parameters[3];
-        terrain = (Terrain)parameters[4];
-        loadLocked = false;
-        lightingLocked = false;
-        LightingDone = false;
-        LoadingDone = false;
-        Position = blockPixelSize * chunkPosition * blockCount;
-        worldFile = WorldSpawn.ActiveWorldSpawn.GetWorldFile();
-        // chunkLighting = new ChunkLighting(this, terrain, worldFile);
+        this.worldImage = (Image)parameters[0];
+        this.chunkPosition = (Vector2)parameters[1];
+        this.blockPixelSize = (Vector2)parameters[2];
+        this.blockCount = (Vector2)parameters[3];
+        this.terrain = (Terrain)parameters[4];
+        this.worldFile = (WorldFile)parameters[5];
+        this.chunkLighting = (ChunkLighting)parameters[6];
+        this.loadLocked = false;
+        this.lightingLocked = false;
+        this.LightingDone = false;
+        this.LoadingDone = false;
+        this.Position = blockPixelSize * chunkPosition * blockCount;
     }
 
     public void Create(Vector2 chunkPosition, Vector2 blockCount, Image worldBlocksImages, Image worldWallsImage)
@@ -102,7 +103,8 @@ public class Chunk : Node2D, IResettable
     {
         // GD.Print("Computed Lighting for chunk: " + ChunkPosition);
         // chunkLighting.ComputeLightingPass();
-        terrain.LightingEngine.LightChunk(this);
+        // terrain.LightingEngine.LightChunk(this);
+        chunkLighting.CalculateLightOrUseCachedLight(this);
         LightingDone = true;
     }
 

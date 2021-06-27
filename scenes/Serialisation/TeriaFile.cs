@@ -66,7 +66,12 @@ public class TeriaFile
     public File GetFile(File.ModeFlags flags)
     {
         File file = new File();
-        file.Open(filePathPrefix + filePath, flags);
+        Error error = file.Open(filePathPrefix + filePath, flags);
+        if (error != Error.Ok)
+        {
+            GD.Print("TeriaFile.GetFile() Opening file Error: " + error);
+            return null;
+        }
         return file;
     }
 

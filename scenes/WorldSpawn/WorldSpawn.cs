@@ -32,6 +32,8 @@ public class WorldSpawn : Node
     private TeriaFile configFile;
     private TeriaFile blockFile;
     private TeriaFile wallFile;
+    private TeriaFile lightingConfigFile;
+    private TeriaFile lightingCacheFile;
 
     // Singletons
     private ThreadPool threadPool;
@@ -60,6 +62,8 @@ public class WorldSpawn : Node
         configFile = new TeriaFile(true, "saves/" + saveFileName + "/bindings.ini");
         blockFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/blocks.png");
         wallFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/walls.png");
+        lightingCacheFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/light.png");
+        lightingConfigFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/lighting.json");
 
         analogMapping = new AnalogMapping();
         worldFile = new WorldFile(blockFile, wallFile);
@@ -91,7 +95,7 @@ public class WorldSpawn : Node
         // Initialise children
         actionMapping.Initialise(analogMapping, config, configFile);
         player.Initialise(inputLayering, terrain, collisionSystem);
-        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount);
+        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount, lightingCacheFile, lightingConfigFile);
         collisionSystem.Initialise(terrain);
     }
 

@@ -92,6 +92,12 @@ public class WorldFile
         String imagePath = teriaFileToImage.GetFinalFilePath();
         Image image = new Image();
         File imageFile = teriaFileToImage.ReadFile();
+        if (imageFile == null)
+        {
+            GD.Print("WorldFile.LoadImage(): Image file not found " + imagePath);
+            // Developer.Fail();
+            return null;
+        }
         byte[] binaryImageContents = imageFile.GetBuffer((int)imageFile.GetLen());
         imageFile.Close();
 
