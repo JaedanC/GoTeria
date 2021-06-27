@@ -11,7 +11,7 @@ public class DualAxisAction
     private String secondAction;
     private int joyAxis;
     private int device;
-    public bool UseDeadZone;
+    private bool useDeadZone;
 
     public DualAxisAction(String firstAction, String secondAction, int device, int joyAxis, bool useDeadZone)
     {
@@ -19,7 +19,7 @@ public class DualAxisAction
         this.secondAction = secondAction;
         this.device = device;
         this.joyAxis = joyAxis;
-        this.UseDeadZone = useDeadZone;
+        this.useDeadZone = useDeadZone;
     }
 
     /* Returns the axisValue of the Joy Axis if the action is on the same side
@@ -34,5 +34,30 @@ public class DualAxisAction
             return Mathf.Abs(axisValue);
         }
         return 0;
+    }
+
+    public String GetFirstAction()
+    {
+        return firstAction;
+    }
+
+    public String GetSecondAction()
+    {
+        return secondAction;
+    }
+
+    public int GetJoyAxis()
+    {
+        return joyAxis;
+    }
+
+    public int GetDevice()
+    {
+        return device;
+    }
+
+    public bool UseDeadZone()
+    {
+        return useDeadZone;
     }
 }

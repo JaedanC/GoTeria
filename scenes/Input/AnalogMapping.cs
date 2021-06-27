@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Godot;
 
@@ -56,7 +57,7 @@ public class AnalogMapping
         float axisValue = dualAxisAction.GetAxisValueFromAction(action);
 
         // Remap to include the deadzone if the DAA was created to do so.
-        if (dualAxisAction.UseDeadZone)
+        if (dualAxisAction.UseDeadZone())
         {
             axisValue = ApplyDeadZone(DEAD_ZONE, axisValue);
         }
@@ -68,5 +69,15 @@ public class AnalogMapping
     {
         float newValue = (value - 0.2f) / (1 - deadZone);
         return Mathf.Clamp(newValue, 0, 1);
+    }
+
+    public List<DualAxisAction> GetDualAxisMappings()
+    {
+        HashSet<DualAxisAction> daaSet = new HashSet<DualAxisAction>();
+        foreach (DualAxisAction daa in dualAxisActions.Values)
+        {
+            daaSet.Add(daa);
+        }
+        return daaSet.ToList();
     }
 }

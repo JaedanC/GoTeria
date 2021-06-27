@@ -4,14 +4,9 @@ using Godot.Collections;
 
 public class Player : Entity
 {
-    private const float ZOOM_CLAMP = 20f;
-
     private InputLayering inputLayering;
-    private Camera2D camera;
+    private Camera camera;
 
-    /* Hide the player's position with the smoothing one. This returns the player's position
-    (which is actually the smoothing sprite's location) if you want the player's position on
-    any frame other than a physics frame. This is an linear interpolated Vector2. */
     public Vector2 CameraZoom { get { return camera.Zoom; } }
 
     PackedScene slimeScene = (PackedScene)ResourceLoader.Load("res://scenes/Entities/Enemies/AI/SlimeAI/Slime.tscn");
@@ -25,7 +20,7 @@ public class Player : Entity
         // Dependencies
         rigidBody = GetNode<KinematicBody2D>("RigidBody");
         hitbox = rigidBody.GetNode<CollisionShape2D>("Hitbox");
-        camera = GetNode<Camera2D>("Smoothing/Camera");
+        camera = GetNode<Camera>("Smoothing/Camera");
 
     }
 
@@ -86,11 +81,8 @@ public class Player : Entity
         float verticalAction = inputLayering.PollActionStrength("move_down") - inputLayering.PollActionStrength("move_up");
         velocity.y += verticalAction * veriticalMoveSpeed;
 
-        if (inputLayering.PollAction("zoom_in"))
-            camera.Zoom += new Vector2(0.5f, 0.5f);
-
-        if (inputLayering.PollAction("zoom_out"))
-            camera.Zoom -= new Vector2(0.5f, 0.5f);
+        float zoom = inputLayering.PollActionStrength("zoom_in_controller") - inputLayering.PollActionStrength("zoom_out_controller");
+        camera.Zoom += new Vector2(0.2f, 0.2f) * zoom;
         
         if (inputLayering.PollActionPressed("spawn_slime"))
         {
@@ -127,10 +119,10 @@ public class Player : Entity
         if (@event.IsActionPressed("zoom_out"))
             camera.Zoom -= new Vector2(0.5f, 0.5f);
 
-        camera.Zoom = new Vector2(
-            Mathf.Clamp(camera.Zoom.x, 1, ZOOM_CLAMP),
-            Mathf.Clamp(camera.Zoom.y, 1, ZOOM_CLAMP)
-        );
+        // camera.Zoom = new Vector2(
+        //     Mathf.Clamp(camera.Zoom.x, 1, ZOOM_CLAMP),
+        //     Mathf.Clamp(camera.Zoom.y, 1, ZOOM_CLAMP)
+        // );
     }
 
     /* This method returns an Array containing two Vector2's representing the world

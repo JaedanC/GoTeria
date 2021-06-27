@@ -23,6 +23,9 @@ public class ActionMapping : Node
     private JoypadInput joypadInput;
     private JoypadAxisInput joypadAxisInput;
     private AnalogMapping analogMapping;
+    private ConfigFile configFile;
+    private String configFilePath;
+    private bool configFileInUserDirectory;
 
     public override void _Ready()
     {
@@ -37,9 +40,12 @@ public class ActionMapping : Node
         actionBindings[joypadAxisInput] = new Dictionary<String, int>();
     }
 
-    public void Initialise(AnalogMapping analogMapping)
+    public void Initialise(AnalogMapping analogMapping, ConfigFile configFile, bool configFileInUserDirectory, String configFilePath)
     {
         this.analogMapping = analogMapping;
+        this.configFile = configFile;
+        this.configFileInUserDirectory = configFileInUserDirectory;
+        this.configFilePath = configFilePath;
         SetupAliases();
         SetupActionMappings();
     }
@@ -72,6 +78,8 @@ public class ActionMapping : Node
         AddActionMappingAxis("move_up", "move_down", 0, 1, true);
         AddActionMapping("quit", "select");
         AddActionMapping("toggle_fullscreen", "start");
+        AddActionMapping("zoom_in_controller", "axis6");
+        AddActionMapping("zoom_out_controller", "axis7");
 
         AddActionMapping("save_config", "i");
         AddActionMapping("load_config", "o");
@@ -368,19 +376,38 @@ public class ActionMapping : Node
                 configFile.SetValue(inputMethodName, action, saveableActionMappings[inputMethodName][action]);
             }
         }
-        configFile.Save("user://action_mapping_config_v2.ini");
+
+        foreach (DualAxisAction daa in analogMapping.GetDualAxisMappings())
+        {
+            String action = daa.GetFirstAction() + "|" + daa.GetSecondAction();
+            String binding = daa.GetDevice() + "|" + daa.GetJoyAxis() + "|" + daa.UseDeadZone();
+            configFile.SetValue("Dual Axis", action, binding);
+        }
+
+        TeriaFile file = new TeriaFile(configFileInUserDirectory, configFilePath);
+        Error error = file.CreateDirectoryForFile();
+        if (error != Error.Ok)
+        {
+            GD.Print("SaveActionMappingsConfig() Create directory Error: " + error);
+            return;
+        }
+        String filePath = file.GetFinalFilePath();
+        error = configFile.Save(filePath);
+        if (error != Error.Ok)
+        {
+            GD.Print("SaveActionMappingsConfig() Save config Error: " + error);
+        }
     }
 
     /* Loads and binds action mappings to keys based on a save file. TODO: The file
     name is currently hardcoded and needs to be parameterised. */
     private void LoadActionMappingsConfig()
     {
-        ConfigFile configFile = new ConfigFile();
-        Error error = configFile.Load("user://action_mapping_config_v2.ini");
-
+        TeriaFile file = new TeriaFile(configFileInUserDirectory, configFilePath);
+        Error error = configFile.Load(file.GetFinalFilePath());
         if (error != Error.Ok)
         {
-            GD.Print("Loading action mappings error: " + error);
+            GD.Print("LoadActionMappingsConfig() Load config Error: " + error);
             return;
         }
 
@@ -398,6 +425,25 @@ public class ActionMapping : Node
                 {
                     AddActionMapping(action, binding);
                 }
+            }
+        }
+
+        // Load the dual axis mappings
+        String dualAxisSection = "Dual Axis";
+        if (configFile.HasSection(dualAxisSection))
+        {
+            foreach (String action in configFile.GetSectionKeys(dualAxisSection))
+            {
+                String value = (String)configFile.GetValue(dualAxisSection, action);
+
+                String[] daaActions = action.Split("|");
+                String firstAction = daaActions[0];
+                String secondAction = daaActions[1];
+                String[] daaParameters = value.Split("|");
+                int device = int.Parse(daaParameters[0]);
+                int joyAxis = int.Parse(daaParameters[1]);
+                bool useDeadZone = bool.Parse(daaParameters[2]);
+                AddActionMappingAxis(firstAction, secondAction, device, joyAxis, useDeadZone);
             }
         }
     }

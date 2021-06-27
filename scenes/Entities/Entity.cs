@@ -17,6 +17,9 @@ public abstract class Entity : Node2D, ICollidable
             return smoothing.Position;
         }
     }
+    
+    /* Hide the Entity's position with the rigidbody one. If you require the smooth location
+    use SmoothPosition. */
     public new Vector2 Position {
         get
         {

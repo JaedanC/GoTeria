@@ -28,7 +28,9 @@ public class WorldSpawn : Node
     public static WorldSpawn ActiveWorldSpawn;
 
     // Instance variables
-    String saveFileName = "SavedWorld";
+    private String saveFileName = "SavedWorld";
+    private bool configFileInUserDirectory = true;
+    private String configFilePath;
 
     // Singletons
     private ThreadPool threadPool;
@@ -43,15 +45,20 @@ public class WorldSpawn : Node
     // Local Instances
     private AnalogMapping analogMapping;
     private WorldFile worldFile;
+    private ConfigFile configFile;
 
     public WorldSpawn()
     {
         // Make this instance static so arbritray nodes can request data
         WorldSpawn.ActiveWorldSpawn = this;
 
+        // Constants
+        configFilePath = saveFileName + "/bindings.ini";
+
         // Only instance what has no dependencies and isn't a Node
         worldFile = new WorldFile(saveFileName);
         analogMapping = new AnalogMapping();
+        configFile = new ConfigFile();
 
         // Value checks
         Developer.AssertGreaterThan(blockPixelSize.x, 0, "BlockPixelSize.x is 0");
@@ -77,7 +84,7 @@ public class WorldSpawn : Node
         inputLayering.Initialise(analogMapping);
 
         // Initialise children
-        actionMapping.Initialise(analogMapping);
+        actionMapping.Initialise(analogMapping, configFile, configFileInUserDirectory, configFilePath);
         player.Initialise(inputLayering, terrain, collisionSystem);
         terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount);
         collisionSystem.Initialise(terrain);
