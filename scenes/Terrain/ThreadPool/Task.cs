@@ -1,24 +1,24 @@
 using Godot;
-using Godot.Collections;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 /* This class represents a Task that is run on another thread. It contains all
 the data required for this operation. */
 // TODO: Have this use Tag, TagSpecific style Getters and Setters.
-public class Task : Resource
+public class Task
 {
     private object targetInstance;
     private String targetMethod;
     private object targetArgument;
-    private Array<object> targetArrayArgument;
+    private List<object> targetArrayArgument;
     private object result;
     private object tagSpecific;
     public object tag;
     private bool __noArgument;
     private bool __arrayArgument;
 
-    public Task(object instance, String method, object parameter, Array<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument, bool arrayArgument)
+    public Task(object instance, String method, object parameter, List<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument, bool arrayArgument)
     {
         targetInstance = instance;
         targetMethod = method;

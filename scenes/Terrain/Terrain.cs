@@ -1,6 +1,6 @@
 using Godot;
 using Godot.Collections;
-using System;
+
 
 public class Terrain : Node2D
 {
@@ -60,15 +60,15 @@ public class Terrain : Node2D
         this.worldFile = worldFile;
         this.blockPixelSize = blockPixelSize;
         this.chunkBlockCount = chunkBlockCount;
+        this.chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
+
+        // Use instances
+        this.terrainStack = worldFile.GetITerrainStack();
+        this.chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
 
         // Instance locals
         this.chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
-        this.chunkLighting = new ChunkLighting(lightingEngine, lightingCacheFile, lightingConfigFile);
-
-        // Use instances
-        this.chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
-        this.terrainStack = worldFile.GetITerrainStack();
-        this.chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
+        this.chunkLighting = new ChunkLighting(lightingEngine, lightingCacheFile, lightingConfigFile, GetWorldSizeInChunks());
 
         // Initialise further
         lightingEngine.Initialise(inputLayering, this, player, chunkLighting);
@@ -132,12 +132,18 @@ public class Terrain : Node2D
             // Only create chunks that have not already been loaded in
             if (!loadedChunks.ContainsKey(chunkPosition))
             {
-                Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize,
-                                                    ChunkBlockCount, this, worldFile, chunkLighting);
-                AddChild(chunk);
+                Chunk chunk = InstanceChunk(chunkPosition);
                 loadedChunks[chunkPosition] = chunk;
             }
         }
+    }
+
+    public Chunk InstanceChunk(Vector2 chunkPosition)
+    {
+        Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize,
+                                            ChunkBlockCount, this, worldFile, chunkLighting);
+        AddChild(chunk);
+        return chunk;
     }
 
     /* This method uses the visibility points to determine which chunks should be
@@ -290,6 +296,11 @@ public class Terrain : Node2D
     public Vector2 GetWorldSize()
     {
         return WorldBlocksImage.GetSize();
+    }
+
+    public Vector2 GetWorldSizeInChunks()
+    {
+        return (GetWorldSize() / ChunkBlockCount).Floor();
     }
 
     /* Returns a Chunk if it exists at the given chunkPosition in the world.

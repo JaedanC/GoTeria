@@ -101,7 +101,7 @@ public class Chunk : Node2D, IResettable
 
     public void ComputeLightingPass()
     {
-        // GD.Print("Computed Lighting for chunk: " + ChunkPosition);
+        GD.Print("Computed Lighting for chunk: " + ChunkPosition);
         // chunkLighting.ComputeLightingPass();
         // terrain.LightingEngine.LightChunk(this);
         chunkLighting.CalculateLightOrUseCachedLight(this);
