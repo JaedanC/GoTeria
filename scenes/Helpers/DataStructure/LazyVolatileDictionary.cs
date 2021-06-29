@@ -16,10 +16,16 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
         mutex = new SafeMutex();
     }
 
+    public bool ContainsKey(TKey key)
+    {
+        Developer.AssertTrue(IsLocked, "Must use ContainsKey() while locked.");
+        return volatileDictionary.ContainsKey(key) || lazyDictionary.ContainsKey(key);
+    }
+
     public TValue Get(TKey key)
     {
         Developer.AssertTrue(IsLocked, "Must use Get() while locked.");
-        
+
         TValue found = null;
         if (volatileDictionary.ContainsKey(key))
         {
@@ -42,12 +48,19 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
         mutex.Unlock();
     }
 
-    public void VolatileAdd(TKey key, TValue value)
+    public void Add(TKey key, TValue value, bool intoLazy)
     {
-        volatileDictionary[key] = value;
+        if (!intoLazy)
+        {
+            volatileDictionary[key] = value;
+        }
+        else
+        {
+            lazyDictionary[key] = value;
+        }
     }
 
-    public void VolatileAdd(IDictionary<TKey, TValue> items)
+    public void Add(IDictionary<TKey, TValue> items)
     {
         foreach (TKey key in items.Keys)
         {
@@ -75,16 +88,11 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
         return volatileDictionary.ContainsKey(key);
     }
 
-    public TValue VolatileTryGet(TKey key)
-    {
-        TValue item;
-        if (volatileDictionary.TryGetValue(key, out item))
-            return item;
-        return null;
-    }
-
     public IDictionary<TKey, TValue> VolatileKeepOnly(IEnumerable<TKey> keepKeys)
     {
+        Developer.AssertTrue(IsLocked, "Must use VolatileKeepOnly() while locked.");
+
+        // Create a temporary dictionary to store elements that need to stay
         ConcurrentDictionary<TKey, TValue> toKeep = new ConcurrentDictionary<TKey, TValue>();
 
         // Mark the keys we find to keep
@@ -93,20 +101,18 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
             if (volatileDictionary.ContainsKey(keepKey))
             {
                 toKeep[keepKey] = volatileDictionary[keepKey];
+
+                // Erase the ones to keep. This means that we will be left with
+                // the ones the replace.
                 TValue temp;
                 volatileDictionary.TryRemove(keepKey, out temp);
             }
         }
 
-        // Swap the two dictionaries. Return the old one. These were deleted.
+        // Swap the two dictionaries and return the old one. These were deleted.
         IDictionary<TKey, TValue> weRemoved = volatileDictionary;
         volatileDictionary = toKeep;
         return weRemoved;
-    }
-
-    public void LazyAdd(TKey key, TValue value)
-    {
-        lazyDictionary[key] = value;
     }
 
     public void LazyAdd(IDictionary<TKey, TValue> items)

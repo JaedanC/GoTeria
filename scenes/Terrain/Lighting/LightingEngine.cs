@@ -461,6 +461,7 @@ public class LightingEngine : Node2D
         if (!scaleSame)
         {
             // "Can't resize pool vector if locked"
+            screenLightLevels = new Image(); // Maybe this will fix it?
             screenLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8); // This is still the culprit...
             screenLightLevelsShaderTexture.CreateFromImage(screenLightLevels, (uint)Texture.FlagsEnum.Filter);
         }

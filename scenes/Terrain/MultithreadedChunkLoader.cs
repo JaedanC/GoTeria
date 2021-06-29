@@ -56,25 +56,27 @@ public class MultithreadedChunkLoader
         return LoadingPhase.ReadyToDraw;
     }
 
-    public void BeginLoadingChunk(Chunk chunk, Vector2 chunkPosition)
+    public void BeginLoadingChunk(Chunk chunk)
     {
-        if (chunksLoading.Contains(chunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLoading)
+        if (chunksLoading.Contains(chunk.ChunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLoading)
             return;
 
         // GD.Print("Loading: " + chunkPosition);
 
-        chunksLoading.Add(chunkPosition);
+        chunksLoading.Add(chunk.ChunkPosition);
 
         Array<object> chunkData = new Array<object>{
-            chunkPosition,
+            chunk.ChunkPosition,
             chunk
         };
 
-        threadPool.SubmitTask(this, "ThreadedLoadChunk", "ThreadedLoadChunkCallback", chunkData, 0, "loadingChunk", chunkPosition);
+        threadPool.SubmitTask(this, "ThreadedLoadChunk", "ThreadedLoadChunkCallback", chunkData, 0, "loadingChunk", chunk.ChunkPosition);
     }
 
     public void BeginLightingChunk(Chunk chunk, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
     {
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "BeginLightingChunk() requires the lock. ");
+
         if (chunksLighting.Contains(chunk.ChunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLighting)
             return;
         chunksLighting.Add(chunk.ChunkPosition);
@@ -101,12 +103,12 @@ public class MultithreadedChunkLoader
                 continue;
             }
 
-            Developer.AssertTrue(loadedChunksConcurrent.VolatileContainsKey(chunkToLoadDependency));
+            Developer.AssertTrue(loadedChunksConcurrent.ContainsKey(chunkToLoadDependency));
 
             Chunk dependencyChunk = loadedChunksConcurrent.Get(chunkToLoadDependency);
-            if (!chunksLoading.Contains(chunkToLoadDependency) && GetChunkPhase(chunk) == LoadingPhase.NeedsLoading)
+            if (!chunksLoading.Contains(chunkToLoadDependency) && GetChunkPhase(dependencyChunk) == LoadingPhase.NeedsLoading)
             {
-                BeginLoadingChunk(dependencyChunk, chunkToLoadDependency);
+                BeginLoadingChunk(dependencyChunk);
             }
         }
 
@@ -115,7 +117,9 @@ public class MultithreadedChunkLoader
             chunk
         };
 
+        loadedChunksConcurrent.Unlock();
         threadPool.SubmitTask(this, "ThreadedLightChunk", "ThreadedLightChunkCallback", chunkData, 0, "lightingChunk", chunk.ChunkPosition);
+        loadedChunksConcurrent.Lock();
     }
 
     public Chunk ThreadedLoadChunk(Array<object> data)
