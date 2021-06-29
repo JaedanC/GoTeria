@@ -1,6 +1,5 @@
 using Godot;
 using Godot.Collections;
-using System.Collections.Generic;
 
 
 public class MultithreadedChunkLoader
@@ -74,7 +73,7 @@ public class MultithreadedChunkLoader
         threadPool.SubmitTask(this, "ThreadedLoadChunk", "ThreadedLoadChunkCallback", chunkData, 0, "loadingChunk", chunkPosition);
     }
 
-    public void BeginLightingChunk(Chunk chunk, Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks)
+    public void BeginLightingChunk(Chunk chunk, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
     {
         if (chunksLighting.Contains(chunk.ChunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLighting)
             return;
@@ -102,12 +101,12 @@ public class MultithreadedChunkLoader
                 continue;
             }
 
-            Developer.AssertTrue(loadedChunks.ContainsKey(chunkToLoadDependency));
+            Developer.AssertTrue(loadedChunksConcurrent.VolatileContainsKey(chunkToLoadDependency));
 
-            Chunk dependencyChunk = loadedChunks[chunkToLoadDependency];
+            Chunk dependencyChunk = loadedChunksConcurrent.Get(chunkToLoadDependency);
             if (!chunksLoading.Contains(chunkToLoadDependency) && GetChunkPhase(chunk) == LoadingPhase.NeedsLoading)
             {
-                BeginLoadingChunk(loadedChunks[chunkToLoadDependency], chunkToLoadDependency);
+                BeginLoadingChunk(dependencyChunk, chunkToLoadDependency);
             }
         }
 
@@ -148,9 +147,16 @@ public class MultithreadedChunkLoader
 
     public void ThreadedLightChunkCallback(Chunk chunk)
     {
-        chunksLighting.Remove(chunk.ChunkPosition);
-        chunk.Update();
-        GD.Print("Finished Lighting chunk: " + chunk.ChunkPosition);
+        try
+        {
+            chunk.Update();
+            chunksLighting.Remove(chunk.ChunkPosition);
+            GD.Print("Finished Lighting chunk: " + chunk.ChunkPosition);
+        }
+        catch (System.ObjectDisposedException)
+        {
+            GD.Print("Lighting chunk disposed: " + chunk.ChunkPosition);
+        }
     }
 
     public void FinishLoadingChunkForcefully(Vector2 chunkPosition)

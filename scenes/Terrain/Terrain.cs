@@ -19,9 +19,9 @@ public class Terrain : Node2D
     private Vector2 blockPixelSize;
     private Vector2 chunkBlockCount;
 
-    private Mutex loadedChunksMutex;
     private Vector2 chunkPixelDimensions;
-    private Dictionary<Vector2, Chunk> loadedChunks;
+    // private Dictionary<Vector2, Chunk> loadedChunks;
+    private LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent;
     private Dictionary<Vector2, Chunk> urgentChunks;
     private Dictionary<Vector2, Chunk> lightDrawChunks;
     private Dictionary<Vector2, Chunk> lightLoadingChunks;
@@ -44,15 +44,14 @@ public class Terrain : Node2D
         lightingEngine = GetNode<LightingEngine>("Lighting");
 
         // Local variables
-        loadedChunksMutex = new Mutex();
-        loadedChunks = new Dictionary<Vector2, Chunk>();
+        loadedChunksConcurrent = new LazyVolatileDictionary<Vector2, Chunk>();
         urgentChunks = new Dictionary<Vector2, Chunk>();
         lightDrawChunks = new Dictionary<Vector2, Chunk>();
         lightLoadingChunks = new Dictionary<Vector2, Chunk>();
     }
 
     public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player, WorldFile worldFile,
-                           Vector2 blockPixelSize, Vector2 chunkBlockCount, TeriaFile lightingCacheFile, TeriaFile lightingConfigFile)
+                           Vector2 blockPixelSize, Vector2 chunkBlockCount, TeriaFile lightingCacheFile, TeriaFile lightingConfigFile, bool singleThreadedLightingEngine)
     {
         this.threadPool = threadPool;
         this.inputLayering = inputLayering;
@@ -71,7 +70,7 @@ public class Terrain : Node2D
         this.chunkLighting = new ChunkLighting(lightingEngine, lightingCacheFile, lightingConfigFile, GetWorldSizeInChunks());
 
         // Initialise further
-        lightingEngine.Initialise(inputLayering, this, player, chunkLighting);
+        lightingEngine.Initialise(inputLayering, this, player, chunkLighting, singleThreadedLightingEngine);
     }
 
     public override void _Process(float _delta)
@@ -86,10 +85,10 @@ public class Terrain : Node2D
             lightingEngine.SaveLight();
         }
 
-        loadedChunksMutex.Lock();
+        loadedChunksConcurrent.Lock();
         DeleteInvisibleChunks();
         LoadVisibleChunks();
-        loadedChunksMutex.Unlock();
+        loadedChunksConcurrent.Unlock();
         CreateChunkStreamingRegions();
         ContinueStreamingRegions();
 
@@ -118,6 +117,8 @@ public class Terrain : Node2D
     chunks are stored in the loadedChunks Dictionary. */
     private void LoadVisibleChunks()
     {
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "LoadVisibleChunks() Requires the lock to be on.");
+
         Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(loadMargin + lightingMargin);
         foreach (Vector2 chunkPosition in visibleChunkPositions)
         {
@@ -130,24 +131,27 @@ public class Terrain : Node2D
             }
 
             // Only create chunks that have not already been loaded in
-            if (!loadedChunks.ContainsKey(chunkPosition))
-            {
-                GetOrInstanceChunkInto(chunkPosition, loadedChunks);
-            }
+            GetOrInstanceChunkInto(chunkPosition, loadedChunksConcurrent);
+            // if (!loadedChunksConcurrent.VolatileContainsKey(chunkPosition))
+            // {
+            // }
         }
     }
 
-    public Chunk GetOrInstanceChunkInto(Vector2 chunkPosition, Dictionary<Vector2, Chunk> loadedChunksDictionary)
+    /* Requires the loadedChunkMutex to be Locked(). */
+    public Chunk GetOrInstanceChunkInto(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
     {
-        if (loadedChunksDictionary.ContainsKey(chunkPosition))
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "GetOrInstanceChunkInto() Requires the lock to be on.");
+
+        if (loadedChunksConcurrent.VolatileContainsKey(chunkPosition))
         {
-            return loadedChunksDictionary[chunkPosition];
+            return loadedChunksConcurrent.Get(chunkPosition);
         }
 
         Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize,
                                             ChunkBlockCount, this, worldFile, chunkLighting);
         AddChild(chunk);
-        loadedChunksDictionary[chunkPosition] = chunk;
+        loadedChunksConcurrent.VolatileAdd(chunkPosition, chunk);
         return chunk;
     }
     
@@ -155,37 +159,40 @@ public class Terrain : Node2D
     unloaded from memory. */
     private void DeleteInvisibleChunks()
     {
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "DeleteInvisibleChunks() Requires the lock to be on.");
+
         // First we grab a set the worldPositions that should be loaded in the game 
         Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(loadMargin + lightingMargin);
 
         // Create a temporary dictionary to store chunks that are already loaded
         // and should stay loaded
-        Dictionary<Vector2, Chunk> visibleChunks = new Dictionary<Vector2, Chunk>();
+        // LazyVolatileDictionary<Vector2, Chunk> visibleChunks = new LazyVolatileDictionary<Vector2, Chunk>();
 
         // Loop through the loaded chunks and store the ones that we should keep in
         // visibleChunks while erasing them from the old loadedChunks dictionary. 
-        foreach (Vector2 visiblePoint in visibleChunkPositions)
-        {
-            if (loadedChunks.ContainsKey(visiblePoint))
-            {
-                visibleChunks.Add(visiblePoint, loadedChunks[visiblePoint]);
-                loadedChunks.Remove(visiblePoint);
-            }
-        }
+        System.Collections.Generic.IDictionary<Vector2, Chunk> deletedChunks = loadedChunksConcurrent.VolatileKeepOnly(visibleChunkPositions);
+        // foreach (Vector2 visiblePoint in visibleChunkPositions)
+        // {
+        //     if (loadedChunksConcurrent.ContainsKey(visiblePoint))
+        //     {
+        //         visibleChunks.Add(visiblePoint, loadedChunksConcurrent[visiblePoint]);
+        //         loadedChunksConcurrent.Remove(visiblePoint);
+        //     }
+        // }
 
         // Now the remaining chunks in loadedChunks are invisible to the player
         // and can be deleted from memory.
-        foreach (Vector2 invisibleChunkPosition in loadedChunks.Keys)
+        foreach (Vector2 invisibleChunkPosition in deletedChunks.Keys)
         {
-            Chunk chunk = loadedChunks[invisibleChunkPosition];
+            Chunk chunk = deletedChunks[invisibleChunkPosition];
             RemoveChild(chunk);
             chunkPool.Die(chunk);
-            loadedChunks.Remove(invisibleChunkPosition);
+            // loadedChunksConcurrent.Remove(invisibleChunkPosition);
         }
 
         // Finally, our new visible chunks dictionary becomes the loaded chunks
         // dictionary
-        loadedChunks = visibleChunks;
+        // loadedChunksConcurrent = visibleChunks;
 
         // Also reset the region loading dictionaries. These will be repopulated
         // later.
@@ -254,14 +261,16 @@ public class Terrain : Node2D
     private void ContinueStreamingRegions()
     {
         // Loading chunks
+        loadedChunksConcurrent.Lock();
         Array<Vector2> chunksToLoad = new Array<Vector2>(urgentChunks.Keys) +
                                       new Array<Vector2>(lightDrawChunks.Keys) +
                                       new Array<Vector2>(lightLoadingChunks.Keys);
         foreach (Vector2 chunkPosition in chunksToLoad)
         {
-            Chunk chunk = loadedChunks[chunkPosition];
+            Chunk chunk = loadedChunksConcurrent.Get(chunkPosition);
             chunkLoader.BeginLoadingChunk(chunk, chunkPosition);
         }
+        loadedChunksConcurrent.Unlock();
 
         // Force load close chunks
         Array<Vector2> chunksToForceLoad = new Array<Vector2>(urgentChunks.Keys) +
@@ -274,13 +283,15 @@ public class Terrain : Node2D
         // chunkLoader.GetFinishedLoadingChunks(loadedChunks);
 
         // Lighting chunks
+        loadedChunksConcurrent.Lock();
         Array<Vector2> chunksToLight = new Array<Vector2>(urgentChunks.Keys) +
                                        new Array<Vector2>(lightDrawChunks.Keys);
         foreach (Vector2 chunkPosition in chunksToLight)
         {
-            Chunk chunk = loadedChunks[chunkPosition];
-            chunkLoader.BeginLightingChunk(chunk, loadedChunks);
+            Chunk chunk = loadedChunksConcurrent.Get(chunkPosition);
+            chunkLoader.BeginLightingChunk(chunk, loadedChunksConcurrent);
         }
+        loadedChunksConcurrent.Unlock();
 
         // Force light close chunks
         Array<Vector2> chunksToForceLight = new Array<Vector2>(urgentChunks.Keys);
@@ -310,14 +321,15 @@ public class Terrain : Node2D
     public Chunk GetChunkFromChunkPosition(Vector2 chunkPosition)
     {
         // if (CreateChunk(chunkPosition))
-        Chunk chunk = null;
-
-        loadedChunksMutex.Lock();
-        if (loadedChunks.ContainsKey(chunkPosition))
-            chunk = loadedChunks[chunkPosition];
-        loadedChunksMutex.Unlock();
-
-        return chunk;
+        loadedChunksConcurrent.Lock();
+        try
+        {
+            return loadedChunksConcurrent.VolatileTryGet(chunkPosition);
+        }
+        finally
+        {
+            loadedChunksConcurrent.Unlock();
+        }
     }
 
     /* Returns a Chunk if it exists at the given worldPosition in the world.

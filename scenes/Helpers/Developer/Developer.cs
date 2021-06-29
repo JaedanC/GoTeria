@@ -50,7 +50,7 @@ public class Developer
         if (value)
             return;
         
-        PrintStackTrace("Expected: {0} == true", value);
+        PrintStackTrace("Expected: true\nActual: {0}", value);
         throw new AssertionException(message);
     }
 

@@ -1,28 +1,26 @@
-using Godot;
-using Godot.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 
 public class LazyVolatileDictionary<TKey, TValue> where TValue : class
 {
-    private Mutex volatileMutex;
-    private Mutex lazyMutex;
-    private bool volatileWasLocked;
-    private bool lazyWasLocked;
-    private Dictionary<TKey, TValue> volatileDictionary;
-    private Dictionary<TKey, TValue> lazyDictionary;
+    private ConcurrentDictionary<TKey, TValue> volatileDictionary;
+    private ConcurrentDictionary<TKey, TValue> lazyDictionary;
+    private SafeMutex mutex;
+    public bool IsLocked { get { return mutex.IsLocked; } }
 
     public LazyVolatileDictionary()
     {
-        volatileMutex = new Mutex();
-        lazyMutex = new Mutex();
-        volatileDictionary = new Dictionary<TKey, TValue>();
+        volatileDictionary = new ConcurrentDictionary<TKey, TValue>();
+        lazyDictionary = new ConcurrentDictionary<TKey, TValue>();
+        mutex = new SafeMutex();
     }
 
     public TValue Get(TKey key)
     {
+        Developer.AssertTrue(IsLocked, "Must use Get() while locked.");
+        
         TValue found = null;
-        volatileMutex.Lock();
-        lazyMutex.Lock();
         if (volatileDictionary.ContainsKey(key))
         {
             found = volatileDictionary[key];
@@ -31,86 +29,63 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
         {
             found = lazyDictionary[key];
         }
-        volatileMutex.Unlock();
-        lazyMutex.Lock();
         return found;
     }
 
-    public void LockVolatile()
+    public void Lock()
     {
-        volatileWasLocked = true;
-        volatileMutex.Lock();
+        mutex.Lock();
     }
 
-    public void UnlockVolatile()
+    public void Unlock()
     {
-        volatileWasLocked = false;
-        volatileMutex.Unlock();
-    }
-
-    public Dictionary<TKey, TValue> GetVolatileDictionary()
-    {
-        Developer.AssertTrue(volatileWasLocked, "Make sure you lock and unlock the volatile dictionary if you want to do work with it");
-        return volatileDictionary;
-    }
-
-    public void LockLazy()
-    {
-        lazyWasLocked = true;
-        lazyMutex.Lock();
-    }
-
-    public void UnlockLazy()
-    {
-        lazyWasLocked = false;
-        lazyMutex.Unlock();
-    }
-
-    public Dictionary<TKey, TValue> GetLazyDictionary()
-    {
-        Developer.AssertTrue(lazyWasLocked, "Make sure you lock and unlock the lazy dictionary if you want to do work with it");
-        return lazyDictionary;
+        mutex.Unlock();
     }
 
     public void VolatileAdd(TKey key, TValue value)
     {
-        volatileMutex.Lock();
         volatileDictionary[key] = value;
-        volatileMutex.Unlock();
     }
 
-    public void VolatileAdd(Dictionary<TKey, TValue> items)
+    public void VolatileAdd(IDictionary<TKey, TValue> items)
     {
-        volatileMutex.Lock();
         foreach (TKey key in items.Keys)
         {
             volatileDictionary[key] = items[key];
         }
-        volatileMutex.Unlock();
     }
 
     public bool VolatileRemove(TKey key)
     {
-        volatileMutex.Lock();
-        bool removed = volatileDictionary.Remove(key);
-        volatileMutex.Unlock();
-        return removed;
+        TValue temp;
+        return volatileDictionary.TryRemove(key, out temp);;
     }
 
-    public void VolatileRemove(Array<TKey> keys)
+    public void VolatileRemove(IEnumerable<TKey> keys)
     {
-        volatileMutex.Lock();
         foreach (TKey key in keys)
         {
-            volatileDictionary.Remove(key);
+            TValue temp;
+            volatileDictionary.TryRemove(key, out temp);
         }
-        volatileMutex.Unlock();
     }
 
-    public Dictionary<TKey, TValue> VolatileKeepOnly(Array<TKey> keepKeys)
+    public bool VolatileContainsKey(TKey key)
     {
-        volatileMutex.Lock();
-        Dictionary<TKey, TValue> toKeep = new Dictionary<TKey, TValue>();
+        return volatileDictionary.ContainsKey(key);
+    }
+
+    public TValue VolatileTryGet(TKey key)
+    {
+        TValue item;
+        if (volatileDictionary.TryGetValue(key, out item))
+            return item;
+        return null;
+    }
+
+    public IDictionary<TKey, TValue> VolatileKeepOnly(IEnumerable<TKey> keepKeys)
+    {
+        ConcurrentDictionary<TKey, TValue> toKeep = new ConcurrentDictionary<TKey, TValue>();
 
         // Mark the keys we find to keep
         foreach (TKey keepKey in keepKeys)
@@ -118,49 +93,42 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
             if (volatileDictionary.ContainsKey(keepKey))
             {
                 toKeep[keepKey] = volatileDictionary[keepKey];
-                volatileDictionary.Remove(keepKey);
+                TValue temp;
+                volatileDictionary.TryRemove(keepKey, out temp);
             }
         }
 
         // Swap the two dictionaries. Return the old one. These were deleted.
-        Dictionary<TKey, TValue> weRemoved = volatileDictionary;
+        IDictionary<TKey, TValue> weRemoved = volatileDictionary;
         volatileDictionary = toKeep;
-        volatileMutex.Unlock();
         return weRemoved;
     }
 
     public void LazyAdd(TKey key, TValue value)
     {
-        lazyMutex.Lock();
         lazyDictionary[key] = value;
-        lazyMutex.Unlock();
     }
 
-    public void LazyAdd(Dictionary<TKey, TValue> items)
+    public void LazyAdd(IDictionary<TKey, TValue> items)
     {
-        lazyMutex.Lock();
         foreach (TKey key in items.Keys)
         {
             lazyDictionary[key] = items[key];
         }
-        lazyMutex.Unlock();
     }
 
     public bool LazyRemove(TKey key)
     {
-        lazyMutex.Lock();
-        bool removed = lazyDictionary.Remove(key);
-        lazyMutex.Unlock();
-        return removed;
+         TValue temp;
+         return volatileDictionary.TryRemove(key, out temp);
     }
 
-    public void LazyRemove(Array<TKey> keys)
+    public void LazyRemove(IEnumerable<TKey> keys)
     {
-        lazyMutex.Lock();
         foreach (TKey key in keys)
         {
-            lazyDictionary.Remove(key);
+            TValue temp;
+            volatileDictionary.TryRemove(key, out temp);
         }
-        lazyMutex.Unlock();
     }
 }

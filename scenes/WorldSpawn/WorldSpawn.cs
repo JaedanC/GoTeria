@@ -20,9 +20,9 @@ public class WorldSpawn : Node
     [Export]
     // private Vector2 chunkBlockCount = new Vector2(420, 400);
     private Vector2 chunkBlockCount = new Vector2(210, 200);
-
-    [Export]
-    private bool singleThreadedThreadPool = false;
+    private bool singleThreadedThreadPool;
+    private bool singleThreadedLightingEngine;
+    private int threadPoolThreads;
 
     // Static reference to the current active WorldSpawn
     public static WorldSpawn ActiveWorldSpawn;
@@ -56,7 +56,11 @@ public class WorldSpawn : Node
         WorldSpawn.ActiveWorldSpawn = this;
 
         // Constants
+        singleThreadedThreadPool = false;
+        singleThreadedLightingEngine = false;
         saveFileName = "SavedWorld";
+        threadPoolThreads = OS.GetProcessorCount() / 2;
+        // threadPoolThreads = 1;
 
         // Only instance what has no dependencies and isn't a Node
         configFile = new TeriaFile(true, "saves/" + saveFileName + "/bindings.ini");
@@ -89,13 +93,13 @@ public class WorldSpawn : Node
         collisionSystem = GetNode<CollisionSystem>("CollisionSystem");
 
         // Initialise Singletons
-        threadPool.Initialise(singleThreadedThreadPool, true, OS.GetProcessorCount() / 2);
+        threadPool.Initialise(singleThreadedThreadPool, true, threadPoolThreads);
         inputLayering.Initialise(analogMapping);
 
         // Initialise children
         actionMapping.Initialise(analogMapping, config, configFile);
         player.Initialise(inputLayering, terrain, collisionSystem);
-        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount, lightingCacheFile, lightingConfigFile);
+        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount, lightingCacheFile, lightingConfigFile, singleThreadedLightingEngine);
         collisionSystem.Initialise(terrain);
     }
 

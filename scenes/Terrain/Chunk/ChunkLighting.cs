@@ -39,45 +39,45 @@ public class ChunkLighting
         ReadCachedChunksConfig();
     }
 
-    public void BackgroundLightAChunk(Terrain terrain, MultithreadedChunkLoader chunkLoader)
-    {
-        Vector2? nextChunkPositionToLight = GetNextNotCachedChunkPosition();
-        if (nextChunkPositionToLight == null)
-        {
-            return;
-        }
-        Vector2 chunkPosition = (Vector2)nextChunkPositionToLight;
+    // public void BackgroundLightAChunk(Terrain terrain, MultithreadedChunkLoader chunkLoader)
+    // {
+    //     Vector2? nextChunkPositionToLight = GetNextNotCachedChunkPosition();
+    //     if (nextChunkPositionToLight == null)
+    //     {
+    //         return;
+    //     }
+    //     Vector2 chunkPosition = (Vector2)nextChunkPositionToLight;
 
-        // This will act as out loadedChunks Dictionary
-        var backgroundloadedChunks = new Dictionary<Vector2, Chunk>();
+    //     // This will act as out loadedChunks Dictionary
+    //     var backgroundloadedChunks = new Dictionary<Vector2, Chunk>();
 
-        // Add the chunk we want to give light to
-        Chunk chunkToLight = terrain.GetOrInstanceChunkInto(chunkPosition, backgroundloadedChunks);
+    //     // Add the chunk we want to give light to
+    //     Chunk chunkToLight = terrain.GetOrInstanceChunkInto(chunkPosition, backgroundloadedChunks);
 
-        // Add the chunk's dependencies
-        Array<Vector2> dependencies = new Array<Vector2>() {
-            new Vector2(chunkPosition.x,     chunkPosition.y),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y - 1),
-            new Vector2(chunkPosition.x,     chunkPosition.y - 1),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y - 1),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y + 1),
-            new Vector2(chunkPosition.x    , chunkPosition.y + 1),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y + 1),
-        };
+    //     // Add the chunk's dependencies
+    //     Array<Vector2> dependencies = new Array<Vector2>() {
+    //         new Vector2(chunkPosition.x,     chunkPosition.y),
+    //         new Vector2(chunkPosition.x - 1, chunkPosition.y),
+    //         new Vector2(chunkPosition.x - 1, chunkPosition.y - 1),
+    //         new Vector2(chunkPosition.x,     chunkPosition.y - 1),
+    //         new Vector2(chunkPosition.x + 1, chunkPosition.y - 1),
+    //         new Vector2(chunkPosition.x + 1, chunkPosition.y),
+    //         new Vector2(chunkPosition.x + 1, chunkPosition.y + 1),
+    //         new Vector2(chunkPosition.x    , chunkPosition.y + 1),
+    //         new Vector2(chunkPosition.x - 1, chunkPosition.y + 1),
+    //     };
 
-        foreach (Vector2 dependencyChunkPosition in dependencies)
-        {
-            terrain.GetOrInstanceChunkInto(dependencyChunkPosition, backgroundloadedChunks);
-        }
+    //     foreach (Vector2 dependencyChunkPosition in dependencies)
+    //     {
+    //         terrain.GetOrInstanceChunkInto(dependencyChunkPosition, backgroundloadedChunks);
+    //     }
 
-        // Requires fresh eyes because chunks that can't be seen by the player are unloaded. This will
-        // need to be changed in the future because I'll need a way to support bullets and other things
-        // flying around! They will need to keep chunks loaded. A new way to keep chunks from being
-        // unloaded needs to be devised.
-        chunkLoader.BeginLightingChunk(chunkToLight, backgroundloadedChunks);
-    }
+    //     // Requires fresh eyes because chunks that can't be seen by the player are unloaded. This will
+    //     // need to be changed in the future because I'll need a way to support bullets and other things
+    //     // flying around! They will need to keep chunks loaded. A new way to keep chunks from being
+    //     // unloaded needs to be devised.
+    //     chunkLoader.BeginLightingChunk(chunkToLight, backgroundloadedChunks);
+    // }
 
     private Vector2? GetNextNotCachedChunkPosition()
     {

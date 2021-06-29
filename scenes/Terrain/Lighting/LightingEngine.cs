@@ -59,6 +59,7 @@ public class LightingEngine : Node2D
     private bool updateShader = true;
     private DefferedUpdateImage worldLightImage;
     private Image worldLightSources;
+    private bool singleThreadedLightingEngine;
 
 
     public override void _Notification(int what)
@@ -82,12 +83,13 @@ public class LightingEngine : Node2D
         lightUpdateMutex = new Mutex();
     }
 
-    public void Initialise(InputLayering inputLayering, Terrain terrain, Player player, ChunkLighting chunkLighting)
+    public void Initialise(InputLayering inputLayering, Terrain terrain, Player player, ChunkLighting chunkLighting, bool singleThreadedLightingEngine)
     {
         this.inputLayering = inputLayering;
         this.terrain = terrain;
         this.player = player;
         this.chunkLighting = chunkLighting;
+        this.singleThreadedLightingEngine = singleThreadedLightingEngine;
 
         Vector2 worldSize = terrain.GetWorldSize();
 
@@ -107,7 +109,9 @@ public class LightingEngine : Node2D
         }
 
         worldLightImage = new DefferedUpdateImage(worldLightLevels);
-        lightingThread.Start();
+
+        if (!singleThreadedLightingEngine)
+            lightingThread.Start();
     }
 
     private void GenerateWorldLightSources(Vector2 worldSize)
@@ -153,7 +157,9 @@ public class LightingEngine : Node2D
             GD.Print("RemoveAdd: " + lightUpdateRemoveToAddQueue.Count);
         }
 
-        // LightUpdatePass();
+        if (singleThreadedLightingEngine)
+            LightUpdatePass();
+        
         UpdateLightShaderParameters();
     }
 
@@ -455,7 +461,7 @@ public class LightingEngine : Node2D
         if (!scaleSame)
         {
             // "Can't resize pool vector if locked"
-            screenLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8);
+            screenLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8); // This is still the culprit...
             screenLightLevelsShaderTexture.CreateFromImage(screenLightLevels, (uint)Texture.FlagsEnum.Filter);
         }
 

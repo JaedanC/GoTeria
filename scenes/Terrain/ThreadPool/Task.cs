@@ -5,7 +5,6 @@ using System.Linq;
 
 /* This class represents a Task that is run on another thread. It contains all
 the data required for this operation. */
-// TODO: Have this use Tag, TagSpecific style Getters and Setters.
 public class Task
 {
     private object targetInstance;
