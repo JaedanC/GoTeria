@@ -12,28 +12,39 @@ public class Task
     private String targetMethod;
     private object targetArgument;
     private List<object> targetArrayArgument;
+    private String callbackMethod;
     private object result;
     private object tagSpecific;
-    public object tag;
-    private bool __noArgument;
-    private bool __arrayArgument;
+    private bool noArgument;
+    private bool arrayArgument;
+    public object TaskTag;
 
-    public Task(object instance, String method, object parameter, List<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument, bool arrayArgument)
+    private Task(object instance, String method, String callbackMethod, object parameter, List<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument, bool arrayArgument)
     {
-        targetInstance = instance;
-        targetMethod = method;
-        targetArgument = parameter;
-        targetArrayArgument = arrayParameter;
-        tagSpecific = taskTagSpecific;
-        tag = taskTag;
-        __noArgument = noArgument;
-        __arrayArgument = arrayArgument;
-        result = null;
+        this.targetInstance = instance;
+        this.targetMethod = method;
+        this.callbackMethod = callbackMethod;
+        this.targetArgument = parameter;
+        this.targetArrayArgument = arrayParameter;
+        this.tagSpecific = taskTagSpecific;
+        this.TaskTag = taskTag;
+        this.noArgument = noArgument;
+        this.arrayArgument = arrayArgument;
+        this.result = null;
     }
+
+    public Task(object instance, String method, String callbackMethod, object taskTag, object taskTagSpecific)
+        : this(instance, method, callbackMethod, null,      null,           taskTag, taskTagSpecific, true, false) { }
+
+    public Task(object instance, String method, String callbackMethod, object parameter, object taskTag, object taskTagSpecific)
+        : this(instance, method, callbackMethod, parameter, null,           taskTag, taskTagSpecific, false, false) { }
+
+    public Task(object instance, String method, String callbackMethod, List<object> arrayParameter, object taskTag, object taskTagSpecific)
+        : this(instance, method, callbackMethod, null,      arrayParameter,  taskTag, taskTagSpecific, false, true) { }
 
     public object GetTag()
     {
-        return tag;
+        return TaskTag;
     }
 
     public object GetArgument()
@@ -53,20 +64,28 @@ public class Task
 
     public void __ExecuteTask()
     {
+        StartTargetMethod();
+        if (callbackMethod != null)
+        {
+            StartCallBackMethod();
+        }
+    }
+
+    private void StartTargetMethod()
+    {
         // The method must be public otherwise it will error.
         Type type = targetInstance.GetType();
         System.Reflection.MethodInfo method = type.GetMethod(targetMethod);
-
         if (method == null)
         {
-            GD.Print(String.Format("Method {0} was null. Is the method private or does it not exist?", targetMethod));
+            GD.Print(String.Format("Target Method {0} was null. Is the method private or does it not exist?", targetMethod));
         }
 
-        if (__noArgument)
+        if (noArgument)
         {
             result = method.Invoke(targetInstance, new object[] { });
         }
-        else if (__arrayArgument)
+        else if (arrayArgument)
         {
             // Array Argument as object.
             result = method.Invoke(targetInstance, targetArrayArgument.ToArray());
@@ -75,5 +94,16 @@ public class Task
         {
             result = method.Invoke(targetInstance, new object[] { targetArgument });
         }
+    }
+
+    private void StartCallBackMethod()
+    {
+        Type type = targetInstance.GetType();
+        System.Reflection.MethodInfo method = type.GetMethod(callbackMethod);
+        if (method == null)
+        {
+            GD.Print(String.Format("Callback Method {0} was null. Is the method private or does it not exist?", callbackMethod));
+        }
+        method.Invoke(targetInstance, new object[] { result });
     }
 }

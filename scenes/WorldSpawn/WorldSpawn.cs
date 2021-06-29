@@ -89,7 +89,7 @@ public class WorldSpawn : Node
         collisionSystem = GetNode<CollisionSystem>("CollisionSystem");
 
         // Initialise Singletons
-        threadPool.Initialise(singleThreadedThreadPool);
+        threadPool.Initialise(singleThreadedThreadPool, true, OS.GetProcessorCount() / 2);
         inputLayering.Initialise(analogMapping);
 
         // Initialise children

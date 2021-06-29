@@ -132,20 +132,25 @@ public class Terrain : Node2D
             // Only create chunks that have not already been loaded in
             if (!loadedChunks.ContainsKey(chunkPosition))
             {
-                Chunk chunk = InstanceChunk(chunkPosition);
-                loadedChunks[chunkPosition] = chunk;
+                GetOrInstanceChunkInto(chunkPosition, loadedChunks);
             }
         }
     }
 
-    public Chunk InstanceChunk(Vector2 chunkPosition)
+    public Chunk GetOrInstanceChunkInto(Vector2 chunkPosition, Dictionary<Vector2, Chunk> loadedChunksDictionary)
     {
+        if (loadedChunksDictionary.ContainsKey(chunkPosition))
+        {
+            return loadedChunksDictionary[chunkPosition];
+        }
+
         Chunk chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize,
                                             ChunkBlockCount, this, worldFile, chunkLighting);
         AddChild(chunk);
+        loadedChunksDictionary[chunkPosition] = chunk;
         return chunk;
     }
-
+    
     /* This method uses the visibility points to determine which chunks should be
     unloaded from memory. */
     private void DeleteInvisibleChunks()
@@ -266,7 +271,7 @@ public class Terrain : Node2D
             chunkLoader.FinishLoadingChunkForcefully(chunkPosition);
         }
 
-        chunkLoader.GetFinishedLoadingChunks(loadedChunks);
+        // chunkLoader.GetFinishedLoadingChunks(loadedChunks);
 
         // Lighting chunks
         Array<Vector2> chunksToLight = new Array<Vector2>(urgentChunks.Keys) +
@@ -282,12 +287,6 @@ public class Terrain : Node2D
         foreach (Vector2 chunkPosition in chunksToForceLight)
         {
             chunkLoader.FinishLightingChunkForcefully(chunkPosition);
-        }
-
-        // Draw ready chunks
-        foreach (Chunk chunk in chunkLoader.GetFinishedLightingChunks(loadedChunks))
-        {
-            chunk.Update();
         }
     }
 

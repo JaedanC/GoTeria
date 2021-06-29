@@ -17,8 +17,8 @@ public class MultithreadedChunkLoader
     private Image worldBlocksImage;
     private Image worldWallsImage;
 
-    private HashSet<Vector2> chunksLoading;
-    private HashSet<Vector2> chunksLighting;
+    private ConcurrentSet<Vector2> chunksLoading;
+    private ConcurrentSet<Vector2> chunksLighting;
 
     public MultithreadedChunkLoader(Vector2 chunkBlockCount, ThreadPool threadPool, Image worldBlocksImage, Image worldWallsImage)
     {
@@ -27,8 +27,23 @@ public class MultithreadedChunkLoader
         this.worldBlocksImage = worldBlocksImage;
         this.worldWallsImage = worldWallsImage;
 
-        chunksLoading = new HashSet<Vector2>();
-        chunksLighting = new HashSet<Vector2>();
+        chunksLoading = new ConcurrentSet<Vector2>();
+        chunksLighting = new ConcurrentSet<Vector2>();
+    }
+
+    public void LightAllChunks(Terrain terrain, Vector2 worldSizeInChunks)
+    {
+        for (int i = 0; i < worldSizeInChunks.x; i++)
+        for (int j = 0; j < worldSizeInChunks.y; j++)
+        {
+            // BeginLightingChunk(new Vector2(i, j));
+        }
+
+        for (int i = 0; i < worldSizeInChunks.x; i++)
+        for (int j = 0; j < worldSizeInChunks.y; j++)
+        {
+            FinishLightingChunkForcefully(new Vector2(i, j));
+        }
     }
 
     public LoadingPhase GetChunkPhase(Chunk chunk)
@@ -56,7 +71,7 @@ public class MultithreadedChunkLoader
             chunk
         };
 
-        threadPool.SubmitTask(this, "ThreadedLoadChunk", chunkData, 0, "loadingChunk", chunkPosition);
+        threadPool.SubmitTask(this, "ThreadedLoadChunk", "ThreadedLoadChunkCallback", chunkData, 0, "loadingChunk", chunkPosition);
     }
 
     public void BeginLightingChunk(Chunk chunk, Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks)
@@ -101,7 +116,7 @@ public class MultithreadedChunkLoader
             chunk
         };
 
-        threadPool.SubmitTask(this, "ThreadedLightChunk", chunkData, 0, "lightingChunk", chunk.ChunkPosition);
+        threadPool.SubmitTask(this, "ThreadedLightChunk", "ThreadedLightChunkCallback", chunkData, 0, "lightingChunk", chunk.ChunkPosition);
     }
 
     public Chunk ThreadedLoadChunk(Array<object> data)
@@ -109,9 +124,16 @@ public class MultithreadedChunkLoader
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
 
+        // OS.DelayMsec(2000);
+
         chunk.Create(chunkPosition, chunkBlockCount, worldBlocksImage, worldWallsImage);
 
         return chunk;
+    }
+
+    public void ThreadedLoadChunkCallback(Chunk chunk)
+    {
+        chunksLoading.Remove(chunk.ChunkPosition);
     }
 
     public Chunk ThreadedLightChunk(Array<object> data)
@@ -124,12 +146,20 @@ public class MultithreadedChunkLoader
         return chunk;
     }
 
+    public void ThreadedLightChunkCallback(Chunk chunk)
+    {
+        chunksLighting.Remove(chunk.ChunkPosition);
+        chunk.Update();
+        GD.Print("Finished Lighting chunk: " + chunk.ChunkPosition);
+    }
+
     public void FinishLoadingChunkForcefully(Vector2 chunkPosition)
     {
-        if (!chunksLoading.Contains(chunkPosition))
-            return;
+        // if (!chunksLoading.Contains(chunkPosition))
+            // return;
 
-        threadPool.WaitForTaskSpecific(chunkPosition);
+        // threadPool.WaitForTaskSpecific(chunkPosition);
+        WaitForLoadingTask(chunkPosition);
     }
 
     public void FinishLightingChunkForcefully(Vector2 chunkPosition)
@@ -157,44 +187,65 @@ public class MultithreadedChunkLoader
             }
         }
 
-        threadPool.WaitForTaskSpecific(chunkPosition);
+        WaitForLightingTask(chunkPosition);
+        // threadPool.WaitForTaskSpecific(chunkPosition);
     }
 
-    public Array<Chunk> GetFinishedLoadingChunks(Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks) //TODO: Check if remove parameter
+    public void WaitForLoadingTask(Vector2 chunkPosition)
     {
-        Array<Chunk> finishedChunks = new Array<Chunk>();
-        List<Task> completedChunkTasks = threadPool.FetchFinishedTasksByTag("loadingChunk");
-        foreach (Task completedChunkTask in completedChunkTasks)
+        while (true)
         {
-            Chunk completedChunk = (Chunk)completedChunkTask.GetResult();
-            completedChunk.LoadingDone = true;
-            chunksLoading.Remove(completedChunk.ChunkPosition);
-            finishedChunks.Add(completedChunk);
-
-            // Don't know if break. Shouldn't be required as the reference hasn't changed.
-            // if (!loadedChunks.ContainsKey(completedChunkPosition))
-            //     continue;
+            if (!chunksLoading.Contains(chunkPosition))
+                return;
+            OS.DelayMsec(2);
         }
-
-        return finishedChunks;
     }
 
-    public Array<Chunk> GetFinishedLightingChunks(Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks) //TODO: Check if remove parameter
+    public void WaitForLightingTask(Vector2 chunkPosition)
     {
-        Array<Chunk> finishedChunks = new Array<Chunk>();
-        List<Task> completedChunkTasks = threadPool.FetchFinishedTasksByTag("lightingChunk");
-        foreach (Task completedChunkTask in completedChunkTasks)
+        while (true)
         {
-            Chunk completedChunk = (Chunk)completedChunkTask.GetResult();
-            completedChunk.LightingDone = true;
-            finishedChunks.Add(completedChunk);
-            chunksLighting.Remove(completedChunk.ChunkPosition);
-
-            // Don't know if break. Shouldn't be required as the reference hasn't changed.
-            // if (loadedChunks.ContainsKey(completedChunk.Position))
-                // loadedChunks[completedChunk.Position] = completedChunk;
+            if (!chunksLighting.Contains(chunkPosition))
+                return;
+            OS.DelayMsec(2);
         }
-
-        return finishedChunks;
     }
+
+    // public Array<Chunk> GetFinishedLoadingChunks(Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks) //TODO: Check if remove parameter
+    // {
+    //     Array<Chunk> finishedChunks = new Array<Chunk>();
+    //     List<Task> completedChunkTasks = threadPool.FetchFinishedTasksByTag("loadingChunk");
+    //     foreach (Task completedChunkTask in completedChunkTasks)
+    //     {
+    //         Chunk completedChunk = (Chunk)completedChunkTask.GetResult();
+    //         completedChunk.LoadingDone = true;
+    //         chunksLoading.Remove(completedChunk.ChunkPosition);
+    //         finishedChunks.Add(completedChunk);
+
+    //         // Don't know if break. Shouldn't be required as the reference hasn't changed.
+    //         // if (!loadedChunks.ContainsKey(completedChunkPosition))
+    //         //     continue;
+    //     }
+
+    //     return finishedChunks;
+    // }
+
+    // public Array<Chunk> GetFinishedLightingChunks(Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks) //TODO: Check if remove parameter
+    // {
+    //     Array<Chunk> finishedChunks = new Array<Chunk>();
+    //     List<Task> completedChunkTasks = threadPool.FetchFinishedTasksByTag("lightingChunk");
+    //     foreach (Task completedChunkTask in completedChunkTasks)
+    //     {
+    //         Chunk completedChunk = (Chunk)completedChunkTask.GetResult();
+    //         completedChunk.LightingDone = true;
+    //         finishedChunks.Add(completedChunk);
+    //         chunksLighting.Remove(completedChunk.ChunkPosition);
+
+    //         // Don't know if break. Shouldn't be required as the reference hasn't changed.
+    //         // if (loadedChunks.ContainsKey(completedChunk.Position))
+    //             // loadedChunks[completedChunk.Position] = completedChunk;
+    //     }
+
+    //     return finishedChunks;
+    // }
 }

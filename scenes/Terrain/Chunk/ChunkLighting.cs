@@ -52,8 +52,7 @@ public class ChunkLighting
         var backgroundloadedChunks = new Dictionary<Vector2, Chunk>();
 
         // Add the chunk we want to give light to
-        Chunk chunkToLight = terrain.InstanceChunk(chunkPosition);
-        backgroundloadedChunks[chunkPosition] = chunkToLight;
+        Chunk chunkToLight = terrain.GetOrInstanceChunkInto(chunkPosition, backgroundloadedChunks);
 
         // Add the chunk's dependencies
         Array<Vector2> dependencies = new Array<Vector2>() {
@@ -70,7 +69,7 @@ public class ChunkLighting
 
         foreach (Vector2 dependencyChunkPosition in dependencies)
         {
-            backgroundloadedChunks[dependencyChunkPosition] = terrain.InstanceChunk(dependencyChunkPosition);
+            terrain.GetOrInstanceChunkInto(dependencyChunkPosition, backgroundloadedChunks);
         }
 
         // Requires fresh eyes because chunks that can't be seen by the player are unloaded. This will
