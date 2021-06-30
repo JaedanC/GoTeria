@@ -97,8 +97,9 @@ public class Terrain : Node2D
         LoadVisibleChunks();
         loadedChunksConcurrent.Unlock();
         CreateChunkStreamingRegions();
+        loadedChunksConcurrent.Lock();
         ContinueStreamingRegions();
-
+        loadedChunksConcurrent.Unlock();
 
         // Draw the chunk borders
         Update();
@@ -254,8 +255,9 @@ public class Terrain : Node2D
     TODO: Make them editable in a configuration file in the future. */
     private void ContinueStreamingRegions()
     {
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "ContinueStreamingRegions() Requires the lock to be on.");
+
         // Loading chunks
-        loadedChunksConcurrent.Lock();
         Array<Vector2> chunksToLoad = new Array<Vector2>(urgentChunks.Keys) +
                                       new Array<Vector2>(lightDrawChunks.Keys) +
                                       new Array<Vector2>(lightLoadingChunks.Keys);
@@ -263,31 +265,28 @@ public class Terrain : Node2D
         {
             chunkLoader.BeginLoadingChunk(chunkPosition, loadedChunksConcurrent, false);
         }
-        loadedChunksConcurrent.Unlock();
 
         // Force load close chunks
         Array<Vector2> chunksToForceLoad = new Array<Vector2>(urgentChunks.Keys) +
                                            new Array<Vector2>(lightDrawChunks.Keys);
         foreach (Vector2 chunkPosition in chunksToForceLoad)
         {
-            chunkLoader.FinishLoadingChunkForcefully(chunkPosition);
+            chunkLoader.FinishLoadingChunkForcefully(chunkPosition, loadedChunksConcurrent);
         }
 
         // Lighting chunks
-        loadedChunksConcurrent.Lock();
         Array<Vector2> chunksToLight = new Array<Vector2>(urgentChunks.Keys) +
                                        new Array<Vector2>(lightDrawChunks.Keys);
         foreach (Vector2 chunkPosition in chunksToLight)
         {
             chunkLoader.BeginLightingChunk(chunkPosition, loadedChunksConcurrent, false);
         }
-        loadedChunksConcurrent.Unlock();
 
         // Force light close chunks
         Array<Vector2> chunksToForceLight = new Array<Vector2>(urgentChunks.Keys);
         foreach (Vector2 chunkPosition in chunksToForceLight)
         {
-            chunkLoader.FinishLightingChunkForcefully(chunkPosition);
+            chunkLoader.FinishLightingChunkForcefully(chunkPosition, loadedChunksConcurrent);
         }
     }
 

@@ -167,6 +167,7 @@ public class ThreadPool : Node
 
     private List<Thread> __CreatePool(int numThreads)
     {
+        GD.Print("ThreadPool(): Spawning " + numThreads + " threads.");
         List<Thread> threads = new List<Thread>();
         for (int i = 0; i < numThreads; i++)
         {

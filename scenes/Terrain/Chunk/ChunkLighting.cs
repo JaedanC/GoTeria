@@ -44,6 +44,9 @@ public class ChunkLighting
     {
         Developer.AssertTrue(loadedChunks.IsLocked, "BackgroundLightAChunk() requires the lock. ");
 
+        Godot.Collections.Array<Vector2> lightingChunks = new Godot.Collections.Array<Vector2>();
+
+        // Light all the chunks
         while (true)
         {
             Vector2? nextChunkPositionToLight = GetNextNotCachedChunkPosition();
@@ -51,12 +54,21 @@ public class ChunkLighting
             {
                 break;
             }
-            chunkLoader.BeginLightingChunk((Vector2)nextChunkPositionToLight, loadedChunks, true);
-            chunkLoader.FinishLightingChunkForcefully((Vector2)nextChunkPositionToLight);
-            // loadedChunks.Unlock();
-            // OS.DelayMsec(5);
-            // loadedChunks.Lock();
+            Vector2 chunkPosition = (Vector2)nextChunkPositionToLight;
+            foreach (Vector2 dependency in Chunk.GetDependencies(chunkPosition, terrain.GetWorldSizeInChunks()))
+            {
+                chunkLoader.BeginLoadingChunk(dependency, loadedChunks, true);
+            }
+            lightingChunks.Add(chunkPosition);
         }
+
+        // Now wait until they're all done
+        foreach (Vector2 chunkPosition in lightingChunks)
+        {
+            chunkLoader.BeginLightingChunk(chunkPosition, loadedChunks, true);
+            chunkLoader.FinishLightingChunkForcefully(chunkPosition, loadedChunks);
+        }
+
 
         System.Collections.Generic.IDictionary<Vector2, Chunk> deletedChunks = loadedChunks.LazyClear();
         foreach (Chunk chunk in deletedChunks.Values)
@@ -147,7 +159,7 @@ public class ChunkLighting
         bool recalculate = !cache.ContainsKey(chunk.ChunkPosition) || cache[chunk.ChunkPosition] == ChunkLightingState.NotCached;
         cacheLock.Unlock();
 
-        if (recalculate || true)
+        if (recalculate)
         {
             // Don't lock this because this would be block multithreaded lighting!
             lightingEngine.LightChunk(chunk);

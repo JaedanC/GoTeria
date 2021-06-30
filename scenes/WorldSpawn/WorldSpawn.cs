@@ -59,8 +59,9 @@ public class WorldSpawn : Node
         singleThreadedThreadPool = false;
         singleThreadedLightingEngine = true;
         saveFileName = "SavedWorld";
-        // threadPoolThreads = OS.GetProcessorCount() / 2;
-        threadPoolThreads = 1;
+        // threadPoolThreads = Mathf.Max(1, OS.GetProcessorCount() - 2);
+        threadPoolThreads = OS.GetProcessorCount();
+        // threadPoolThreads = 1;
 
         // Only instance what has no dependencies and isn't a Node
         configFile = new TeriaFile(true, "saves/" + saveFileName + "/bindings.ini");

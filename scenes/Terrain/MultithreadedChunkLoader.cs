@@ -35,7 +35,7 @@ public class MultithreadedChunkLoader
         for (int i = 0; i < worldSizeInChunks.x; i++)
         for (int j = 0; j < worldSizeInChunks.y; j++)
         {
-            FinishLightingChunkForcefully(new Vector2(i, j));
+            // FinishLightingChunkForcefully(new Vector2(i, j));
         }
     }
 
@@ -104,10 +104,8 @@ public class MultithreadedChunkLoader
         // It's okay if chunks that aren't loading are in here
         foreach (Vector2 chunkToLoadDependency in dependencies)
         {
-            FinishLoadingChunkForcefully(chunkToLoadDependency);
+            FinishLoadingChunkForcefully(chunkToLoadDependency, loadedChunksConcurrent);
         }
-
-        // OS.DelayMsec(100);
 
         // Finally we can start the task that lights this chunk.
         Array<object> chunkData = new Array<object>{ chunkPosition, chunk };
@@ -165,32 +163,35 @@ public class MultithreadedChunkLoader
     }
 
     // Blocks until this chunk position isn't in the set anymore
-    public void FinishLoadingChunkForcefully(Vector2 chunkPosition)
+    public void FinishLoadingChunkForcefully(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
     {
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "FinishLoadingChunkForcefully() requires the lock. ");
+        loadedChunksConcurrent.Unlock();
         while (true)
         {
             if (!chunksLoading.Contains(chunkPosition))
-                return;
+                break;
             OS.DelayMsec(2);
         }
+        loadedChunksConcurrent.Lock();
     }
     
     /* This function blocks while acquiring the lock yet lighting requires the lock! */
-    public void FinishLightingChunkForcefully(Vector2 chunkPosition)
+    public void FinishLightingChunkForcefully(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
     {
-        // if (!chunksLighting.Contains(chunkPosition))
-        //     return;
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "FinishLightingChunkForcefully() requires the lock. ");
 
         foreach (Vector2 dependency in Chunk.GetDependencies(chunkPosition, terrain.GetWorldSizeInChunks()))
         {
-            FinishLoadingChunkForcefully(dependency);
+            FinishLoadingChunkForcefully(dependency, loadedChunksConcurrent);
         }
-
+        loadedChunksConcurrent.Unlock();
         while (true)
         {
             if (!chunksLighting.Contains(chunkPosition))
-                return;
+                break;
             OS.DelayMsec(2);
         }
+        loadedChunksConcurrent.Lock();
     }
 }
