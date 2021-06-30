@@ -24,7 +24,7 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
 
     public TValue Get(TKey key)
     {
-        Developer.AssertTrue(IsLocked, "Must use Get() while locked.");
+        // Developer.AssertTrue(IsLocked, "Must use Get() while locked.");
 
         TValue found = null;
         if (volatileDictionary.ContainsKey(key))

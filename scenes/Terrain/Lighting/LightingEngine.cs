@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 public class LightingEngine : Node2D
 {
-    private struct LightBFSNode
+    private readonly struct LightBFSNode
     {
         public readonly Vector2 WorldPosition;
         public readonly Color Colour;
@@ -30,13 +30,13 @@ public class LightingEngine : Node2D
 
         public LightUpdate(Vector2 worldPosition)
         {
-            this.WorldPosition = worldPosition;
+            WorldPosition = worldPosition;
         }
 
         public LightUpdate(Vector2 worldPosition, Color colour)
         {
-            this.WorldPosition = worldPosition;
-            this.Colour = colour;
+            WorldPosition = worldPosition;
+            Colour = colour;
         }
     }
 
@@ -75,7 +75,7 @@ public class LightingEngine : Node2D
     {
         screenLightLevels = new Image();
         screenLightLevelsShaderTexture = new ImageTexture();
-        lightingThread = new System.Threading.Thread(new System.Threading.ThreadStart(LightingThread));
+        lightingThread = new System.Threading.Thread(LightingThread);
         lightUpdateAddQueue = new LightUpdateColourQueueSet();
         lightUpdateRemoveQueue = new LightUpdateQueueSet();
         lightUpdateRemoveToAddQueue = new LightUpdateColourQueueSet();
@@ -138,7 +138,7 @@ public class LightingEngine : Node2D
     {
         worldLightImage.CommitColourChangesToImage();
         worldLightImage.LockImage();
-        chunkLighting.SaveToDisk(worldLightImage.GetImage());
+        chunkLighting.SaveCacheToDisk(worldLightImage.GetImage());
         worldLightImage.UnlockImage();
     }
     public override void _PhysicsProcess(float delta)

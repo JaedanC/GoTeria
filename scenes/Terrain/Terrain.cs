@@ -1,11 +1,12 @@
+using System.Collections.Generic;
 using Godot;
 using Godot.Collections;
 
 
 public class Terrain : Node2D
 {
-    private const int loadMargin = 1;
-    private const int lightingMargin = 1;
+    private const int LoadMargin = 2;
+    private const int LightingMargin = 1;
 
     private Player player;
     private InputLayering inputLayering;
@@ -15,45 +16,41 @@ public class Terrain : Node2D
     private ThreadPool threadPool;
     private ChunkLighting chunkLighting;
 
-    private bool singleThreadedThreadPool;
-
-    // private Dictionary<Vector2, Chunk> loadedChunks;
     private LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent;
-    private Dictionary<Vector2, Chunk> urgentChunks;
-    private Dictionary<Vector2, Chunk> lightDrawChunks;
-    private Dictionary<Vector2, Chunk> lightLoadingChunks;
-    private MultithreadedChunkLoader chunkLoader;
+    private Godot.Collections.Dictionary<Vector2, Chunk> urgentChunks;
+    private Godot.Collections.Dictionary<Vector2, Chunk> lightDrawChunks;
+    private Godot.Collections.Dictionary<Vector2, Chunk> lightLoadingChunks;
+    private ChunkLoader chunkLoader;
 
     /* Returns the size of a block in pixels as a Vector2 */
     public Vector2 BlockPixelSize { get; private set; }
-
     public Vector2 ChunkPixelDimensions { get; private set; }
-
     public Vector2 ChunkBlockCount { get; private set; }
-
     public Image WorldBlocksImage => terrainStack.WorldBlocksImage;
     public Image WorldWallsImage => terrainStack.WorldWallsImage;
-    public LightingEngine LightingEngine { get; private set; }
+    private LightingEngine lightingEngine;
 
 
     public override void _Ready()
     {
         Name = "Terrain";
+        
+        // Variable checks
+        Developer.AssertGreaterThanEquals(LoadMargin, 2, "Any less than 2 and light will force load on chunk borders and stutter the game. ");
 
         // Dependencies
-        LightingEngine = GetNode<LightingEngine>("Lighting");
+        lightingEngine = GetNode<LightingEngine>("Lighting");
 
         // Local variables
         loadedChunksConcurrent = new LazyVolatileDictionary<Vector2, Chunk>();
-        urgentChunks = new Dictionary<Vector2, Chunk>();
-        lightDrawChunks = new Dictionary<Vector2, Chunk>();
-        lightLoadingChunks = new Dictionary<Vector2, Chunk>();
+        urgentChunks = new Godot.Collections.Dictionary<Vector2, Chunk>();
+        lightDrawChunks = new Godot.Collections.Dictionary<Vector2, Chunk>();
+        lightLoadingChunks = new Godot.Collections.Dictionary<Vector2, Chunk>();
     }
 
     public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player,
                            WorldFile worldFile, Vector2 blockPixelSize, Vector2 chunkBlockCount,
-                           TeriaFile lightingCacheFile, TeriaFile lightingConfigFile, bool singleThreadedLightingEngine,
-                           bool singleThreadedThreadPool)
+                           TeriaFile lightingCacheFile, TeriaFile lightingConfigFile, bool singleThreadedLightingEngine)
     {
         this.threadPool = threadPool;
         this.inputLayering = inputLayering;
@@ -62,25 +59,24 @@ public class Terrain : Node2D
         this.BlockPixelSize = blockPixelSize;
         this.ChunkBlockCount = chunkBlockCount;
         this.ChunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
-        this.singleThreadedThreadPool = singleThreadedThreadPool;
 
         // Use instances
         this.terrainStack = worldFile.GetITerrainStack();
-        this.chunkLoader = new MultithreadedChunkLoader(this, threadPool, singleThreadedThreadPool);
+        this.chunkLoader = new ChunkLoader(this, threadPool);
 
         // Instance locals
         this.chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
-        this.chunkLighting = new ChunkLighting(LightingEngine, lightingCacheFile, lightingConfigFile, GetWorldSizeInChunks());
+        this.chunkLighting = new ChunkLighting(lightingEngine, lightingCacheFile, lightingConfigFile, GetWorldSizeInChunks());
 
         // Initialise further
-        LightingEngine.Initialise(inputLayering, this, player, chunkLighting, singleThreadedLightingEngine);
+        lightingEngine.Initialise(inputLayering, this, player, chunkLighting, singleThreadedLightingEngine);
 
         loadedChunksConcurrent.Lock();
-        chunkLighting.BackgroundLightAChunk(this, chunkLoader, loadedChunksConcurrent, chunkPool);
+        chunkLighting.BackgroundLightAChunk(this, chunkLoader, loadedChunksConcurrent);
         loadedChunksConcurrent.Unlock();
     }
 
-    public override void _Process(float _delta)
+    public override void _Process(float delta)
     {
         // Save the all chunks loaded in memory to a file.
         if (inputLayering.PopActionPressed("save_world"))
@@ -89,17 +85,16 @@ public class Terrain : Node2D
             TeriaFile blockFile = new TeriaFile(true, "saves/SavedWorld/worlds/blocks.png");
             TeriaFile wallFile = new TeriaFile(true, "saves/SavedWorld/worlds/walls.png");
             worldFile.SaveWorld(blockFile, wallFile, false);
-            LightingEngine.SaveLight();
+            lightingEngine.SaveLight();
         }
-        // loadedChunksConcurrent.Lock();
-        // chunkLighting.BackgroundLightAChunk(this, chunkLoader, loadedChunksConcurrent, chunkPool);
-        // loadedChunksConcurrent.Unlock();
 
         loadedChunksConcurrent.Lock();
         DeleteInvisibleChunks();
         LoadVisibleChunks();
         loadedChunksConcurrent.Unlock();
+        
         CreateChunkStreamingRegions();
+        
         loadedChunksConcurrent.Lock();
         ContinueStreamingRegions();
         loadedChunksConcurrent.Unlock();
@@ -115,13 +110,13 @@ public class Terrain : Node2D
     {
         const int thickness = 10;
         foreach (Vector2 point in lightLoadingChunks.Keys)
-            DrawRect(new Rect2(point * ChunkPixelDimensions, ChunkPixelDimensions), Colors.Green, false, thickness, false);
+            DrawRect(new Rect2(point * ChunkPixelDimensions, ChunkPixelDimensions), Colors.Green, false, thickness);
 
         foreach (Vector2 point in lightDrawChunks.Keys)
-            DrawRect(new Rect2(point * ChunkPixelDimensions, ChunkPixelDimensions), Colors.Orange, false, thickness, false);
+            DrawRect(new Rect2(point * ChunkPixelDimensions, ChunkPixelDimensions), Colors.Orange, false, thickness);
 
         foreach (Vector2 point in urgentChunks.Keys)
-            DrawRect(new Rect2(point * ChunkPixelDimensions, ChunkPixelDimensions), Colors.Red, false, thickness, false);
+            DrawRect(new Rect2(point * ChunkPixelDimensions, ChunkPixelDimensions), Colors.Red, false, thickness);
     }
 
     /* This method creates chunks (from the ObjectPool) that are visible to the player. These
@@ -130,7 +125,7 @@ public class Terrain : Node2D
     {
         Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "LoadVisibleChunks() Requires the lock to be on.");
 
-        Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(loadMargin + lightingMargin);
+        Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin);
         foreach (Vector2 chunkPosition in visibleChunkPositions)
         {
             Vector2 worldImageInChunks = WorldBlocksImage.GetSize() / ChunkBlockCount;
@@ -143,9 +138,6 @@ public class Terrain : Node2D
 
             // Only create chunks that have not already been loaded in
             GetOrInstanceChunkInto(chunkPosition, loadedChunksConcurrent, false);
-            // if (!loadedChunksConcurrent.VolatileContainsKey(chunkPosition))
-            // {
-            // }
         }
     }
 
@@ -169,7 +161,23 @@ public class Terrain : Node2D
         loadedChunksConcurrent.Add(chunkPosition, chunk, intoLazy);
         return chunk;
     }
+
+    public void KillChunk(Chunk chunk)
+    {
+        Developer.AssertNotNull(chunk, "Chunk cannot be null.");
+        RemoveChild(chunk);
+        chunkPool.Die(chunk);
+    }
     
+    public void KillChunks(IEnumerable<Chunk> chunks)
+    {
+        Developer.AssertNotNull(chunks, "Chunks IEnumerable cannot be null.");
+        foreach (Chunk chunk in chunks)
+        {
+            KillChunk(chunk);
+        }
+    }
+
     /* This method uses the visibility points to determine which chunks should be
     unloaded from memory. */
     private void DeleteInvisibleChunks()
@@ -177,19 +185,15 @@ public class Terrain : Node2D
         Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "DeleteInvisibleChunks() Requires the lock to be on.");
 
         // First we grab a set the worldPositions that should be loaded in the game 
-        Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(loadMargin + lightingMargin);
+        Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin);
 
         // Loop through the loaded chunks and store the ones that we should keep in
         // visibleChunks while erasing them from the old loadedChunks dictionary. 
-        System.Collections.Generic.IDictionary<Vector2, Chunk> deletedChunks = loadedChunksConcurrent.VolatileKeepOnly(visibleChunkPositions);
+        IDictionary<Vector2, Chunk> deletedChunks = loadedChunksConcurrent.VolatileKeepOnly(visibleChunkPositions);
 
         // Now the remaining chunks in loadedChunks are invisible to the player
         // and can be deleted from memory.
-        foreach (Chunk chunk in deletedChunks.Values)
-        {
-            RemoveChild(chunk);
-            chunkPool.Die(chunk);
-        }
+        KillChunks(deletedChunks.Values);
 
         // Also reset the region loading dictionaries. These will be repopulated
         // later.
@@ -201,8 +205,8 @@ public class Terrain : Node2D
     private void CreateChunkStreamingRegions()
     {
         Array<Vector2> urgentVisibilityPoints = player.GetVisibilityChunkPositions();
-        Array<Vector2> drawVisibilityPoints = player.GetVisibilityChunkPositions(lightingMargin, true);
-        Array<Vector2> loadVisibilityPoints = player.GetVisibilityChunkPositions(loadMargin + lightingMargin, true, lightingMargin);
+        Array<Vector2> drawVisibilityPoints = player.GetVisibilityChunkPositions(LightingMargin, true);
+        Array<Vector2> loadVisibilityPoints = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin, true, LightingMargin);
 
         // GD.Print("Urgent:", urgentVisibilityPoints);
         // GD.Print("Load:", loadVisibilityPoints);
@@ -467,8 +471,8 @@ public class Terrain : Node2D
     {
         IBlock topBlock = GetTopIBlockFromWorldBlockPosition(worldBlockPosition);
         if (Helper.IsLight(topBlock.Colour))
-            LightingEngine.AddLight(worldBlockPosition, Colors.White);
+            lightingEngine.AddLight(worldBlockPosition, Colors.White);
         else
-            LightingEngine.RemoveLight(worldBlockPosition);
+            lightingEngine.RemoveLight(worldBlockPosition);
     }
 }

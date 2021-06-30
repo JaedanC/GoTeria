@@ -6,7 +6,7 @@ public class WorldSpawn : Node
     {
         public static Player Redeem(Future<Player> future)
         {
-            return WorldSpawn.activeWorldSpawn.GetPlayer();
+            return activeWorldSpawn.GetPlayer();
         }
     }
 
@@ -17,8 +17,8 @@ public class WorldSpawn : Node
     private Vector2 blockPixelSize = new Vector2(16, 16);
 
     [Export]
-    // private Vector2 chunkBlockCount = new Vector2(420, 400);
-    private readonly Vector2 chunkBlockCount = new Vector2(210, 200);
+    private readonly Vector2 chunkBlockCount = new Vector2(420, 400);
+    // private readonly Vector2 chunkBlockCount = new Vector2(210, 200);
     private readonly bool singleThreadedThreadPool;
     private readonly bool singleThreadedLightingEngine;
     private readonly int threadPoolThreads;
@@ -100,7 +100,7 @@ public class WorldSpawn : Node
         actionMapping.Initialise(analogMapping, config, configFile);
         player.Initialise(inputLayering, terrain, collisionSystem);
         terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount,
-                           lightingCacheFile, lightingConfigFile, singleThreadedLightingEngine, singleThreadedThreadPool);
+                           lightingCacheFile, lightingConfigFile, singleThreadedLightingEngine);
         collisionSystem.Initialise(terrain);
     }
 

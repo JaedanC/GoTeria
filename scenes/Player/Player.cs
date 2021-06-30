@@ -118,11 +118,6 @@ public class Player : Entity
 
         if (@event.IsActionPressed("zoom_out"))
             camera.Zoom -= new Vector2(0.5f, 0.5f);
-
-        // camera.Zoom = new Vector2(
-        //     Mathf.Clamp(camera.Zoom.x, 1, ZOOM_CLAMP),
-        //     Mathf.Clamp(camera.Zoom.y, 1, ZOOM_CLAMP)
-        // );
     }
 
     /* This method returns an Array containing two Vector2's representing the world

@@ -65,7 +65,7 @@ public class CollisionComponent : Node2D
         Vector2 oldParentPosition = parent.GetRigidBody().Position;
 
         Vector2 response = parent.GetRigidBody().MoveAndSlide(vector, Vector2.Up);
-        Vector2 newPosition = parent.GetRigidBody().Position;
+        // Vector2 newPosition = parent.GetRigidBody().Position;
         parent.SetVelocity(response);
 
         // Let's do the collision in two parts. This seems to fix many edge case with movement hitting
