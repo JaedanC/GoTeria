@@ -10,12 +10,11 @@ public class MouseInput : IInputMethod
     }
     public InputEvent GetInputEvent(int keyCode)
     {
-        InputEventMouseButton inputEventMouseButton = new InputEventMouseButton();
-        inputEventMouseButton.ButtonIndex = keyCode;
+        InputEventMouseButton inputEventMouseButton = new InputEventMouseButton {ButtonIndex = keyCode};
         return inputEventMouseButton;
     }
 
-    public String GetInputMethodName()
+    public string GetInputMethodName()
     {
         return "Mouse";
     }

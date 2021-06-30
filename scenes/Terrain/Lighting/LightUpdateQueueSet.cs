@@ -5,7 +5,7 @@ public class LightUpdateQueueSet
 {
     private Queue<LightingEngine.LightUpdate> updateQueue;
     private HashSet<Vector2> updateSet;
-    public int Count { get { return updateQueue.Count; } }
+    public int Count => updateQueue.Count;
 
     public LightUpdateQueueSet()
     {

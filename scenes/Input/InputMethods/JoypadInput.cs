@@ -10,12 +10,11 @@ public class JoypadInput : IInputMethod
     }
     public InputEvent GetInputEvent(int keyCode)
     {
-        InputEventJoypadButton inputEventJoypadButton = new InputEventJoypadButton();
-        inputEventJoypadButton.ButtonIndex = keyCode;
+        InputEventJoypadButton inputEventJoypadButton = new InputEventJoypadButton {ButtonIndex = keyCode};
         return inputEventJoypadButton;
     }
 
-    public String GetInputMethodName()
+    public string GetInputMethodName()
     {
         return "Joypad";
     }

@@ -1,9 +1,8 @@
 using Godot;
-using System;
 
 public class GravityComponent : Node2D
 {
-    private bool enabled = false;
+    private const bool Enabled = false;
 
     public override void _Ready()
     {
@@ -13,10 +12,10 @@ public class GravityComponent : Node2D
     /* Adds Gravity to the Node. */
     public override void _PhysicsProcess(float _delta)
     {
-        if (enabled)
-        {
-            ICollidable parent = GetParent<ICollidable>();
-            parent.SetVelocity(parent.GetVelocity() + new Vector2(0, 98));
-        }
+        if (!Enabled)
+            return;
+        
+        ICollidable parent = GetParent<ICollidable>();
+        parent.SetVelocity(parent.GetVelocity() + new Vector2(0, 98));
     }
 }

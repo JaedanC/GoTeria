@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 
 public abstract class Projectile : Entity
@@ -69,7 +68,7 @@ public abstract class Projectile : Entity
             Vector2? collisionPosition = collision.GetCollisionPosition();
             if (collisionPosition != null)
             {
-                this.Position = (Vector2)collisionPosition;
+                Position = (Vector2)collisionPosition;
             }
             done = true;
         }
@@ -81,12 +80,12 @@ public abstract class Projectile : Entity
             Vector2? collisionPosition = collision.GetCollisionPosition();
             if (collisionPosition != null)
             {
-                this.Position = (Vector2)collisionPosition;
+                Position = (Vector2)collisionPosition;
                 done = true;
             }
             else
             {
-                this.Position += direction * speed * delta;
+                Position += direction * speed * delta;
             }
         }
         return collision;
@@ -108,5 +107,5 @@ public abstract class Projectile : Entity
         return shooter;
     }
 
-    public virtual void AI(int alive, TeriaFastRayCastCollision collision, float delta) {}
+    protected virtual void AI(int alive, TeriaFastRayCastCollision collision, float delta) {}
 }

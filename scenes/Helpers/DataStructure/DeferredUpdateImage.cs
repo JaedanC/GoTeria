@@ -1,20 +1,21 @@
 using Godot;
+using System.Collections.Generic;
 
 
 /* An image that that can have its pixel's read live, but the image only updated when
 the updates are commit. Intended for concurrent reading and writing to a Image. */
 public class DefferedUpdateImage
 {
-    private Image image;
-    private System.Collections.Generic.Dictionary<Vector2, Color> colourChanges;
-    private Mutex imageMutex;
+    private readonly Image image;
+    private readonly Dictionary<Vector2, Color> colourChanges;
+    private readonly Mutex imageMutex;
 
     public DefferedUpdateImage(Image image)
     {
         this.image = image;
         Developer.AssertGreaterThan(image.GetWidth(), 0, "Image size.x is 0");
         Developer.AssertGreaterThan(image.GetHeight(), 0, "Image size.y is 0");
-        colourChanges = new System.Collections.Generic.Dictionary<Vector2, Color>();
+        colourChanges = new Dictionary<Vector2, Color>();
         imageMutex = new Mutex();
     }
 

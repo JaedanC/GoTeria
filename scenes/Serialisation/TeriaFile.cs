@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 
 /* This is a wrapper around Godot.File that automatically creates the folder the file needs
@@ -7,36 +6,34 @@ to exist in, loads from the res:// or user:// folders, and easily constructs the
 path for reading and writing a file. */
 public class TeriaFile
 {
-    private bool userDirectory;
-    private String filePathDirectory;
-    private String filePath;
-    private String filePathPrefix;
+    private readonly string filePathDirectory;
+    private readonly string filePath;
+    private readonly string filePathPrefix;
 
 
     /* If userDirectory is true, then the final path will be prefixed with "user://". Otherwise,
     it will be prefixed with "res://". The filePath parameter should not include the prefix. The
     folder to the filePath does not need to exist yet. */
-    public TeriaFile(bool userDirectory, String filePath)
+    public TeriaFile(bool userDirectory, string filePath)
     {
-        this.userDirectory = userDirectory;
         this.filePath = filePath;
         if (userDirectory)
         {
-            this.filePathPrefix = "user://";
+            filePathPrefix = "user://";
         }
         else
         {
-            this.filePathPrefix = "res://";
+            filePathPrefix = "res://";
             GD.Print("TeriaFile() Open into " + filePathPrefix + ". This is the executable. ");
         }
 
         int lastSlash = filePath.FindLast("/");
         if (lastSlash != -1)
         {
-            this.filePathDirectory = filePath.Substr(0, lastSlash);
+            filePathDirectory = filePath.Substr(0, lastSlash);
         }
         else
-            this.filePathDirectory = null;
+            filePathDirectory = null;
     }
 
     /* Creates the Folder that this file will live in. */
@@ -67,12 +64,10 @@ public class TeriaFile
     {
         File file = new File();
         Error error = file.Open(filePathPrefix + filePath, flags);
-        if (error != Error.Ok)
-        {
-            GD.Print("TeriaFile.GetFile() Opening file Error: " + error);
-            return null;
-        }
-        return file;
+        if (error == Error.Ok)
+            return file;
+        GD.Print("TeriaFile.GetFile() Opening file Error: " + error);
+        return null;
     }
 
     public File ReadFile()
@@ -82,7 +77,7 @@ public class TeriaFile
 
     /* Returns the final file path with the prefix so that you can save and load from
     this file. */
-    public String GetFinalFilePath()
+    public string GetFinalFilePath()
     {
         return filePathPrefix + filePath;
     }

@@ -3,9 +3,9 @@ using System.Linq;
 
 public class QueueSet<T>
 {
-    private Queue<T> queue;
-    private HashSet<T> set;
-    public int Count { get { return queue.Count; } }
+    private readonly Queue<T> queue;
+    private readonly HashSet<T> set;
+    public int Count => queue.Count;
 
 
     public QueueSet(params T[] initialValues)

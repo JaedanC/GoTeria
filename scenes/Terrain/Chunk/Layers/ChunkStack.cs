@@ -1,23 +1,20 @@
 using Godot;
 using Godot.Collections;
-using System;
 
 public class ChunkStack
 {
-    private ChunkLayer<Block> blocks;
-    private ChunkLayer<Wall> walls;
-    private Array<ImageTexture> textures;
+    private readonly ChunkLayer<Block> blocks;
+    private readonly ChunkLayer<Wall> walls;
+    private readonly Array<ImageTexture> textures;
     private Vector2 chunkSize;
-    public Block[] Blocks { get { return blocks.Blocks; } }
-    public Wall[] Walls { get { return walls.Blocks; } }
+    public Block[] Blocks => blocks.Blocks;
+    public Wall[] Walls => walls.Blocks;
 
     public ChunkStack()
     {
         blocks = new ChunkLayer<Block>();
         walls = new ChunkLayer<Wall>();
-        textures = new Array<ImageTexture>();
-        textures.Add(new ImageTexture());
-        textures.Add(new ImageTexture());
+        textures = new Array<ImageTexture> {new ImageTexture(), new ImageTexture()};
     }
 
     public void AllocateMemory(Vector2 chunkSize)

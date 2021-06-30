@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 namespace SlimeAI
 {
@@ -12,7 +11,7 @@ namespace SlimeAI
             if (alive == 0)
             {
                 Vector2 jumpDirection;
-                int jumpHeight = 900;
+                const int jumpHeight = 900;
                 // GD.Print("Slime: Me[" + myself.Position + "] Player[" + player.Position + "]");
                 if (player.Position.x < myself.Position.x)
                 {

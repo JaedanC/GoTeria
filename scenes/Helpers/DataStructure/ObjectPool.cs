@@ -1,6 +1,5 @@
 using Godot;
 using Godot.Collections;
-using System;
 
 /* This class is a generic ObjectPool. This class stores an Array of objects in a pool, and
 when you request an instance with GetInstance(), an instance is created if the pool is empty,
@@ -10,7 +9,7 @@ also need to define a default constructor.
 */
 public class ObjectPool<T> : Resource where T : Node, IResettable, new()
 {
-    private Array<T> pool;
+    private readonly Array<T> pool;
 
     public ObjectPool(int numberOfInstances, params object[] memoryAllocationParameters)
     {
@@ -65,5 +64,4 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
         pool.Add(instance);
         instance.OnDeath();
     }
-
 }

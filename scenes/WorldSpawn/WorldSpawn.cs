@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 public class WorldSpawn : Node
 {
@@ -7,33 +6,33 @@ public class WorldSpawn : Node
     {
         public static Player Redeem(Future<Player> future)
         {
-            return WorldSpawn.ActiveWorldSpawn.GetPlayer();
+            return activeWorldSpawn.GetPlayer();
         }
     }
 
     [Export]
-    private String windowTitle = "Teria";
+    private string windowTitle = "Teria";
 
     [Export]
     private Vector2 blockPixelSize = new Vector2(16, 16);
 
     [Export]
-    // private Vector2 chunkBlockCount = new Vector2(420, 400);
-    private Vector2 chunkBlockCount = new Vector2(210, 200);
-
-    [Export]
-    private bool singleThreadedThreadPool = false;
+    private readonly Vector2 chunkBlockCount = new Vector2(420, 400);
+    // private readonly Vector2 chunkBlockCount = new Vector2(210, 200);
+    private readonly bool singleThreadedThreadPool;
+    private readonly bool singleThreadedLightingEngine;
+    private readonly int threadPoolThreads;
 
     // Static reference to the current active WorldSpawn
-    public static WorldSpawn ActiveWorldSpawn;
+    private static WorldSpawn activeWorldSpawn;
 
     // Instance variables
-    private String saveFileName;
-    private TeriaFile configFile;
-    private TeriaFile blockFile;
-    private TeriaFile wallFile;
-    private TeriaFile lightingConfigFile;
-    private TeriaFile lightingCacheFile;
+    private readonly string saveFileName;
+    private readonly TeriaFile configFile;
+    private readonly TeriaFile blockFile;
+    private readonly TeriaFile wallFile;
+    private readonly TeriaFile lightingConfigFile;
+    private readonly TeriaFile lightingCacheFile;
 
     // Singletons
     private ThreadPool threadPool;
@@ -46,17 +45,22 @@ public class WorldSpawn : Node
     private CollisionSystem collisionSystem;
 
     // Local Instances
-    private AnalogMapping analogMapping;
-    private WorldFile worldFile;
-    private ConfigFile config;
+    private readonly AnalogMapping analogMapping;
+    private readonly WorldFile worldFile;
+    private readonly ConfigFile config;
 
     public WorldSpawn()
     {
-        // Make this instance static so arbritray nodes can request data
-        WorldSpawn.ActiveWorldSpawn = this;
+        // Make this instance static so arbitrary nodes can request data
+        activeWorldSpawn = this;
 
         // Constants
+        singleThreadedThreadPool = false;
+        singleThreadedLightingEngine = false;
         saveFileName = "SavedWorld";
+        threadPoolThreads = Mathf.Max(1, OS.GetProcessorCount() - 2);
+        // threadPoolThreads = OS.GetProcessorCount();
+        // threadPoolThreads = 1;
 
         // Only instance what has no dependencies and isn't a Node
         configFile = new TeriaFile(true, "saves/" + saveFileName + "/bindings.ini");
@@ -89,13 +93,14 @@ public class WorldSpawn : Node
         collisionSystem = GetNode<CollisionSystem>("CollisionSystem");
 
         // Initialise Singletons
-        threadPool.Initialise(singleThreadedThreadPool);
+        threadPool.Initialise(singleThreadedThreadPool, true, threadPoolThreads);
         inputLayering.Initialise(analogMapping);
 
         // Initialise children
         actionMapping.Initialise(analogMapping, config, configFile);
         player.Initialise(inputLayering, terrain, collisionSystem);
-        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount, lightingCacheFile, lightingConfigFile);
+        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount,
+                           lightingCacheFile, lightingConfigFile, singleThreadedLightingEngine);
         collisionSystem.Initialise(terrain);
     }
 
@@ -104,14 +109,14 @@ public class WorldSpawn : Node
         return worldFile;
     }
 
-    public Player GetPlayer()
+    private Player GetPlayer()
     {
         return player;
     }
 
     public override void _Process(float delta)
     {
-        OS.SetWindowTitle(String.Format("{0} | FPS: {1}", windowTitle, Engine.GetFramesPerSecond()));
+        OS.SetWindowTitle($"{windowTitle} | FPS: {Engine.GetFramesPerSecond()}");
 
         if (inputLayering.PopActionPressed("toggle_fullscreen"))
         {

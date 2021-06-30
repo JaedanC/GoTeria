@@ -7,10 +7,10 @@ public class Player : Entity
     private InputLayering inputLayering;
     private Camera camera;
 
-    public Vector2 CameraZoom { get { return camera.Zoom; } }
+    private Vector2 CameraZoom => camera.Zoom;
 
-    PackedScene slimeScene = (PackedScene)ResourceLoader.Load("res://scenes/Entities/Enemies/AI/SlimeAI/Slime.tscn");
-    PackedScene bulletScene = (PackedScene)ResourceLoader.Load("res://scenes/Entities/Projectiles/Bullet.tscn");
+    private readonly PackedScene slimeScene = (PackedScene)ResourceLoader.Load("res://scenes/Entities/Enemies/AI/SlimeAI/Slime.tscn");
+    private readonly PackedScene bulletScene = (PackedScene)ResourceLoader.Load("res://scenes/Entities/Projectiles/Bullet.tscn");
 
     public override void _Ready()
     {
@@ -73,13 +73,13 @@ public class Player : Entity
             velocity.y = -1000;
         }
 
-        float horizontalMoveSpeed = 50f;
+        const float horizontalMoveSpeed = 50f;
         float horizontalAction = inputLayering.PollActionStrength("move_right") - inputLayering.PollActionStrength("move_left");
         velocity.x += horizontalAction * horizontalMoveSpeed;
 
-        float veriticalMoveSpeed = 50f;
+        const float verticalMoveSpeed = 50f;
         float verticalAction = inputLayering.PollActionStrength("move_down") - inputLayering.PollActionStrength("move_up");
-        velocity.y += verticalAction * veriticalMoveSpeed;
+        velocity.y += verticalAction * verticalMoveSpeed;
 
         float zoom = inputLayering.PollActionStrength("zoom_in_controller") - inputLayering.PollActionStrength("zoom_out_controller");
         camera.Zoom += new Vector2(0.2f, 0.2f) * zoom;
@@ -118,11 +118,6 @@ public class Player : Entity
 
         if (@event.IsActionPressed("zoom_out"))
             camera.Zoom -= new Vector2(0.5f, 0.5f);
-
-        // camera.Zoom = new Vector2(
-        //     Mathf.Clamp(camera.Zoom.x, 1, ZOOM_CLAMP),
-        //     Mathf.Clamp(camera.Zoom.y, 1, ZOOM_CLAMP)
-        // );
     }
 
     /* This method returns an Array containing two Vector2's representing the world
@@ -158,9 +153,9 @@ public class Player : Entity
 
         // Use this to temporarily reduce the size of the viewport loading rectangle
         // to watch the chunks be streamed in. 0 is no effect. 1 is no vision.
-        // float viewportModifier = 0.4f;
-        // float viewportModifier = 0.2f;
-        float viewportModifier = 0f;
+        // const float viewportModifier = 0.4f;
+        // const float viewportModifier = 0.2f;
+        const float viewportModifier = 0f;
         Vector2 size = viewportRectangle.Size * new Vector2(viewportModifier, viewportModifier);
         viewportRectangle = viewportRectangle.GrowIndividual(-size.x, -size.y, -size.x, -size.y);
 

@@ -3,17 +3,17 @@ using Godot;
 
 public class ChunkLayer<T> where T : IBlock, new()
 {
-    private T[] blocks;
-    private Image image;
     private Vector2 chunkSize;
-    public T[] Blocks { get { return blocks; } }
-    public Image ChunkLayerImage { get { return image; } }
+    public T[] Blocks { get; private set; }
+
+    public Image ChunkLayerImage { get; private set; }
+
     private bool allocated = false;
 
     public void Create(Vector2 chunkPosition, Vector2 chunkSize, Image worldLayerImage)
     {
-        image.Fill(Colors.Red);
-        image.BlitRect(worldLayerImage, new Rect2(chunkPosition * chunkSize, chunkSize), Vector2.Zero);
+        ChunkLayerImage.Fill(Colors.Red);
+        ChunkLayerImage.BlitRect(worldLayerImage, new Rect2(chunkPosition * chunkSize, chunkSize), Vector2.Zero);
 
         for (int j = 0; j < chunkSize.y; j++)
         for (int i = 0; i < chunkSize.x; i++)
@@ -35,11 +35,11 @@ public class ChunkLayer<T> where T : IBlock, new()
                 pixel = worldLayerImage.GetPixelv(worldBlockPosition);
 
             int blockIndex = Chunk.BlockPositionToBlockIndex(chunkSize, blockPosition);
-            if (blocks[blockIndex] == null)
-                blocks[blockIndex] = new T();
+            if (Blocks[blockIndex] == null)
+                Blocks[blockIndex] = new T();
 
-            blocks[blockIndex].Id = (int)pixel.a;
-            blocks[blockIndex].Colour = pixel;
+            Blocks[blockIndex].Id = (int)pixel.a;
+            Blocks[blockIndex].Colour = pixel;
         }
     }
 
@@ -53,10 +53,10 @@ public class ChunkLayer<T> where T : IBlock, new()
         }
 
         this.chunkSize = chunkSize;
-        blocks = new T[(int)(chunkSize.x * chunkSize.y)];
-        image = new Image();
-        image.Create((int)chunkSize.x, (int)chunkSize.y, false, Image.Format.Rgba8);
-        image.Lock();
+        Blocks = new T[(int)(chunkSize.x * chunkSize.y)];
+        ChunkLayerImage = new Image();
+        ChunkLayerImage.Create((int)chunkSize.x, (int)chunkSize.y, false, Image.Format.Rgba8);
+        ChunkLayerImage.Lock();
         allocated = true;
     }
 }

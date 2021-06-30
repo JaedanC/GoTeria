@@ -5,10 +5,10 @@ using System.Collections.Generic;
 
 public class LightingEngine : Node2D
 {
-    public struct LightBFSNode
+    private readonly struct LightBFSNode
     {
-        public Vector2 WorldPosition;
-        public Color Colour;
+        public readonly Vector2 WorldPosition;
+        public readonly Color Colour;
 
         public LightBFSNode(Vector2 worldPosition, Color colour)
         {
@@ -16,12 +16,11 @@ public class LightingEngine : Node2D
             this.Colour = colour;
         }
 
-        public LightBFSNode(LightUpdate LightUpdate)
+        public LightBFSNode(LightUpdate lightUpdate)
         {
-            this.WorldPosition = LightUpdate.WorldPosition;
-            this.Colour = LightUpdate.Colour;
+            this.WorldPosition = lightUpdate.WorldPosition;
+            this.Colour = lightUpdate.Colour;
         }
-
     }
 
     public class LightUpdate
@@ -31,13 +30,13 @@ public class LightingEngine : Node2D
 
         public LightUpdate(Vector2 worldPosition)
         {
-            this.WorldPosition = worldPosition;
+            WorldPosition = worldPosition;
         }
 
         public LightUpdate(Vector2 worldPosition, Color colour)
         {
-            this.WorldPosition = worldPosition;
-            this.Colour = colour;
+            WorldPosition = worldPosition;
+            Colour = colour;
         }
     }
 
@@ -59,6 +58,7 @@ public class LightingEngine : Node2D
     private bool updateShader = true;
     private DefferedUpdateImage worldLightImage;
     private Image worldLightSources;
+    private bool singleThreadedLightingEngine;
 
 
     public override void _Notification(int what)
@@ -75,19 +75,20 @@ public class LightingEngine : Node2D
     {
         screenLightLevels = new Image();
         screenLightLevelsShaderTexture = new ImageTexture();
-        lightingThread = new System.Threading.Thread(new System.Threading.ThreadStart(LightingThread));
+        lightingThread = new System.Threading.Thread(LightingThread);
         lightUpdateAddQueue = new LightUpdateColourQueueSet();
         lightUpdateRemoveQueue = new LightUpdateQueueSet();
         lightUpdateRemoveToAddQueue = new LightUpdateColourQueueSet();
         lightUpdateMutex = new Mutex();
     }
 
-    public void Initialise(InputLayering inputLayering, Terrain terrain, Player player, ChunkLighting chunkLighting)
+    public void Initialise(InputLayering inputLayering, Terrain terrain, Player player, ChunkLighting chunkLighting, bool singleThreadedLightingEngine)
     {
         this.inputLayering = inputLayering;
         this.terrain = terrain;
         this.player = player;
         this.chunkLighting = chunkLighting;
+        this.singleThreadedLightingEngine = singleThreadedLightingEngine;
 
         Vector2 worldSize = terrain.GetWorldSize();
 
@@ -107,7 +108,9 @@ public class LightingEngine : Node2D
         }
 
         worldLightImage = new DefferedUpdateImage(worldLightLevels);
-        lightingThread.Start();
+
+        if (!singleThreadedLightingEngine)
+            lightingThread.Start();
     }
 
     private void GenerateWorldLightSources(Vector2 worldSize)
@@ -135,7 +138,7 @@ public class LightingEngine : Node2D
     {
         worldLightImage.CommitColourChangesToImage();
         worldLightImage.LockImage();
-        chunkLighting.SaveToDisk(worldLightImage.GetImage());
+        chunkLighting.SaveCacheToDisk(worldLightImage.GetImage());
         worldLightImage.UnlockImage();
     }
     public override void _PhysicsProcess(float delta)
@@ -153,7 +156,9 @@ public class LightingEngine : Node2D
             GD.Print("RemoveAdd: " + lightUpdateRemoveToAddQueue.Count);
         }
 
-        // LightUpdatePass();
+        if (singleThreadedLightingEngine)
+            LightUpdatePass();
+        
         UpdateLightShaderParameters();
     }
 
@@ -318,7 +323,7 @@ public class LightingEngine : Node2D
             // Remove this blocks light. It doesn't have any light sources near it.
             worldLightImage.SetPixelv(node.WorldPosition, Colors.Black);
 
-            // To use the same terminolody as the blog post.
+            // To use the same terminology as the blog post.
             Color lightLevel = node.Colour;
 
             // "Look at all neighbouring blocks to that node.
@@ -347,7 +352,7 @@ public class LightingEngine : Node2D
                 else if (neighboursLevel.r >= lightLevel.r)
                 {
                     // These are recomputed as lights with the neighbours light level because this
-                    // neighbour has recieved its light from another source. We then need to consider that
+                    // neighbour has received its light from another source. We then need to consider that
                     // this block which is having its light source removed may be filled in by another block
                     // instead. You can't simply add these to the Queue first, because a BFS may visit a node
                     // with a higher light level (hence thinking it's a source) but then is visited by another
@@ -455,7 +460,8 @@ public class LightingEngine : Node2D
         if (!scaleSame)
         {
             // "Can't resize pool vector if locked"
-            screenLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8);
+            screenLightLevels = new Image(); // Maybe this will fix it?
+            screenLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8); // This is still the culprit...
             screenLightLevelsShaderTexture.CreateFromImage(screenLightLevels, (uint)Texture.FlagsEnum.Filter);
         }
 

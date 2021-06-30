@@ -1,14 +1,13 @@
 using Godot;
-using System;
 
 
 /* A WorldFile allows access to the images that make up the terrain. */
 public class WorldFile
 {
-    private ITerrainStack terrainStack;
+    private readonly ITerrainStack terrainStack;
     private TeriaFile blockFile;
     private TeriaFile wallFile;
-    private static Mutex loadMutex = new Mutex();
+    private static readonly Mutex LoadMutex = new Mutex();
 
 
     public WorldFile(TeriaFile blockFile, TeriaFile wallFile)
@@ -21,7 +20,7 @@ public class WorldFile
         Developer.AssertNotNull(blockImage, "Block image was null");
         Developer.AssertNotNull(wallImage, "Wall image was null");
 
-        this.terrainStack = new TerrainStack(blockImage, wallImage);
+        terrainStack = new TerrainStack(blockImage, wallImage);
     }
 
     /* Retrieve the images in the ITerrainStack.  */
@@ -31,7 +30,7 @@ public class WorldFile
         return terrainStack;
     }
 
-    /* Save the blocks and walls to the specifed TeriaFiles. If moveToUseTeriaFiles is true
+    /* Save the blocks and walls to the specified TeriaFiles. If moveToUseTeriaFiles is true
     then the new blockFile and wallFile will overwrite the current ones. */
     public Error SaveWorld(TeriaFile blockFile, TeriaFile wallFile, bool moveToUseTeriaFiles)
     {
@@ -65,13 +64,13 @@ public class WorldFile
         return SaveWorld(blockFile, wallFile, true);
     }
 
-    /* Save an arbritray image to a location. */
+    /* Save an arbitrary image to a location. */
     public static Error SaveImage(Image image, TeriaFile saveLocation)
     {
         // Creating the save directory if it doesn't exist
         saveLocation.CreateDirectoryForFile();
 
-        String savePath = saveLocation.GetFinalFilePath();
+        string savePath = saveLocation.GetFinalFilePath();
         GD.Print("WorldFile.SaveImage(): Saving image: " + savePath);
         Error error = image.SavePng(savePath);
         if (error != Error.Ok)
@@ -82,14 +81,14 @@ public class WorldFile
         return Error.Ok;
     }
 
-    /* Load an arbritray image from a location. */
+    /* Load an arbitrary image from a location. */
     public static Image LoadImage(TeriaFile teriaFileToImage)
     {
-        loadMutex.Lock();
+        LoadMutex.Lock();
         teriaFileToImage.CreateDirectoryForFile();
 
         // https://www.reddit.com/r/godot/comments/eojihj/how_to_load_images_without_importer/
-        String imagePath = teriaFileToImage.GetFinalFilePath();
+        string imagePath = teriaFileToImage.GetFinalFilePath();
         Image image = new Image();
         File imageFile = teriaFileToImage.ReadFile();
         if (imageFile == null)
@@ -115,7 +114,7 @@ public class WorldFile
         {
             GD.Print("WorldFile.LoadImage(): Unknown file extension: " + imagePath.Extension());
             Developer.Fail();
-            loadMutex.Unlock();
+            LoadMutex.Unlock();
             return null;
         }
 
@@ -123,10 +122,10 @@ public class WorldFile
         {
             GD.Print("WorldFile.LoadImage(): Load image binary from buffer Error: " + error);
             Developer.Fail();
-            loadMutex.Unlock();
+            LoadMutex.Unlock();
             return null;
         }
-        loadMutex.Unlock();
+        LoadMutex.Unlock();
 
         GD.Print("WorldFile.LoadImage(): Loaded image: " + imagePath);
         return image;
