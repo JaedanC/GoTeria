@@ -1,9 +1,16 @@
 using Godot;
-using System;
+using System.Collections.Generic;
 
 
 public class Chunk : Node2D, IResettable
 {
+    public enum LoadingPhase
+    {
+        NeedsLoading,
+        NeedsLighting,
+        ReadyToDraw
+    }
+
     private Terrain terrain;
     private WorldFile worldFile;
     private ChunkLighting chunkLighting;
@@ -11,35 +18,9 @@ public class Chunk : Node2D, IResettable
     private Vector2 chunkPosition;
     private Vector2 blockCount;
     private Vector2 blockPixelSize;
-    private bool loadLocked;
-    private bool lightingLocked;
     private bool memoryAllocated;
     private ChunkStack chunkStack;
     public Vector2 ChunkPosition { get { return chunkPosition; } }
-    public bool LoadLocked
-    {
-        get { return loadLocked; }
-        set
-        {
-            if (value)
-            {
-                Developer.AssertFalse(loadLocked);
-            }
-            loadLocked = value;
-        }
-    }
-    public bool LightingLocked
-    {
-        get { return lightingLocked; }
-        set
-        {
-            if (value)
-            {
-                Developer.AssertFalse(lightingLocked);
-            }
-            lightingLocked = value;
-        }
-    }
     public bool LoadingDone { get; set; }
     public bool LightingDone { get; set; }
     // private ChunkLighting chunkLighting;
@@ -52,11 +33,37 @@ public class Chunk : Node2D, IResettable
         return (int)(chunkSize.x * blockPosition.y + blockPosition.x);
     }
 
+    public static IList<Vector2> GetDependencies(Vector2 chunkPosition, Vector2 worldSizeInChunks)
+    {
+        List<Vector2> legit = new List<Vector2>();
+        List<Vector2> dependencies = new List<Vector2>() {
+            new Vector2(chunkPosition.x,     chunkPosition.y),
+            new Vector2(chunkPosition.x - 1, chunkPosition.y),
+            new Vector2(chunkPosition.x - 1, chunkPosition.y - 1),
+            new Vector2(chunkPosition.x,     chunkPosition.y - 1),
+            new Vector2(chunkPosition.x + 1, chunkPosition.y - 1),
+            new Vector2(chunkPosition.x + 1, chunkPosition.y),
+            new Vector2(chunkPosition.x + 1, chunkPosition.y + 1),
+            new Vector2(chunkPosition.x    , chunkPosition.y + 1),
+            new Vector2(chunkPosition.x - 1, chunkPosition.y + 1),
+        };
+
+        foreach (Vector2 dependency in dependencies)
+        {
+            if (Helper.InBounds(dependency, worldSizeInChunks))
+            {
+                legit.Add(dependency);
+            }
+        }
+        return legit;
+    }
+
     public Chunk()
     {
         Name = "Chunk";
         chunkStack = new ChunkStack();
     }
+
 
     /* This function should only be run once. This initialises a chunk to have the memory it requires
     to be allocated on the heap. */
@@ -77,11 +84,20 @@ public class Chunk : Node2D, IResettable
         this.terrain = (Terrain)parameters[4];
         this.worldFile = (WorldFile)parameters[5];
         this.chunkLighting = (ChunkLighting)parameters[6];
-        this.loadLocked = false;
-        this.lightingLocked = false;
         this.LightingDone = false;
         this.LoadingDone = false;
         this.Position = blockPixelSize * chunkPosition * blockCount;
+    }
+
+    public LoadingPhase GetLoadingPhase()
+    {
+        if (!LoadingDone)
+            return LoadingPhase.NeedsLoading;
+
+        if (!LightingDone)
+            return LoadingPhase.NeedsLighting;
+
+        return LoadingPhase.ReadyToDraw;
     }
 
     public void Create(Vector2 chunkPosition, Vector2 blockCount, Image worldBlocksImages, Image worldWallsImage)
@@ -91,6 +107,11 @@ public class Chunk : Node2D, IResettable
 
         chunkStack.Create(chunkPosition, blockCount, worldBlocksImages, worldWallsImage);
         LoadingDone = true;
+    }
+
+    public IList<Vector2> GetDependencies()
+    {
+        return Chunk.GetDependencies(chunkPosition, terrain.GetWorldSizeInChunks());
     }
 
     public override void _Draw()

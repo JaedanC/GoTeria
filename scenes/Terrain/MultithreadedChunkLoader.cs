@@ -1,30 +1,22 @@
 using Godot;
 using Godot.Collections;
+using System.Collections.Generic;
 
 
 public class MultithreadedChunkLoader
 {
-    public enum LoadingPhase
-    {
-        NeedsLoading,
-        NeedsLighting,
-        ReadyToDraw
-    }
-
+    private Terrain terrain;
     private ThreadPool threadPool;
-    private Vector2 chunkBlockCount;
-    private Image worldBlocksImage;
-    private Image worldWallsImage;
+    bool singleThreadedThreadPool;
 
     private ConcurrentSet<Vector2> chunksLoading;
     private ConcurrentSet<Vector2> chunksLighting;
 
-    public MultithreadedChunkLoader(Vector2 chunkBlockCount, ThreadPool threadPool, Image worldBlocksImage, Image worldWallsImage)
+    public MultithreadedChunkLoader(Terrain terrain, ThreadPool threadPool, bool singleThreadedThreadPool)
     {
+        this.terrain = terrain;
         this.threadPool = threadPool;
-        this.chunkBlockCount = chunkBlockCount;
-        this.worldBlocksImage = worldBlocksImage;
-        this.worldWallsImage = worldWallsImage;
+        this.singleThreadedThreadPool = singleThreadedThreadPool;
 
         chunksLoading = new ConcurrentSet<Vector2>();
         chunksLighting = new ConcurrentSet<Vector2>();
@@ -32,6 +24,8 @@ public class MultithreadedChunkLoader
 
     public void LightAllChunks(Terrain terrain, Vector2 worldSizeInChunks)
     {
+        Developer.Fail("Unused");
+
         for (int i = 0; i < worldSizeInChunks.x; i++)
         for (int j = 0; j < worldSizeInChunks.y; j++)
         {
@@ -45,81 +39,91 @@ public class MultithreadedChunkLoader
         }
     }
 
-    public LoadingPhase GetChunkPhase(Chunk chunk)
+    /* Starts to load a chunk if it needs to be loaded and isn't already loading. */
+    public bool BeginLoadingChunk(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent, bool lazy)
     {
-        if (!chunk.LoadingDone)
-            return LoadingPhase.NeedsLoading;
+        Developer.AssertTrue(Helper.InBounds(chunkPosition, terrain.GetWorldSizeInChunks()), "BeginLoadingChunk(): " + chunkPosition + " was out of bounds.");
+        Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "BeginLoadingChunk() requires the lock. ");
 
-        if (!chunk.LightingDone)
-            return LoadingPhase.NeedsLighting;
+        if (chunksLoading.Contains(chunkPosition))
+            return false;
 
-        return LoadingPhase.ReadyToDraw;
-    }
+        Chunk chunk = terrain.GetOrInstanceChunkInto(chunkPosition, loadedChunksConcurrent, lazy);
+        if (chunk.GetLoadingPhase() != Chunk.LoadingPhase.NeedsLoading)
+            return false;
 
-    public void BeginLoadingChunk(Chunk chunk)
-    {
-        if (chunksLoading.Contains(chunk.ChunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLoading)
-            return;
-
-        // GD.Print("Loading: " + chunkPosition);
-
-        chunksLoading.Add(chunk.ChunkPosition);
+        chunksLoading.Add(chunkPosition);
+        GD.Print("Loading Chunk: " + chunkPosition);
 
         Array<object> chunkData = new Array<object>{
-            chunk.ChunkPosition,
+            chunkPosition,
             chunk
         };
 
-        threadPool.SubmitTask(this, "ThreadedLoadChunk", "ThreadedLoadChunkCallback", chunkData, 0, "loadingChunk", chunk.ChunkPosition);
+        threadPool.SubmitTask(this, "ThreadedLoadChunk", chunkData, 0, "loadingChunk", chunk.ChunkPosition);
+        return true;
     }
 
-    public void BeginLightingChunk(Chunk chunk, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
+    /* This method requires the lock, but it also requires that the lock is released at some point on another thread. This is
+    because will spawn a thread a ask for the lock a second time. If the original function caller has not released the lock, a
+    deadlock occurs. */
+    public void BeginLightingChunk(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent, bool lazy)
     {
+        Developer.AssertTrue(Helper.InBounds(chunkPosition, terrain.GetWorldSizeInChunks()), "BeginLightingChunk(): " + chunkPosition + " was out of bounds.");
         Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "BeginLightingChunk() requires the lock. ");
 
-        if (chunksLighting.Contains(chunk.ChunkPosition) || GetChunkPhase(chunk) != LoadingPhase.NeedsLighting)
+        // The chunk is already lighting
+        if (chunksLighting.Contains(chunkPosition))
             return;
-        chunksLighting.Add(chunk.ChunkPosition);
+        
+        Chunk chunk = terrain.GetOrInstanceChunkInto(chunkPosition, loadedChunksConcurrent, lazy);
+        Developer.AssertNotNull(chunk, "Chunk: " + chunkPosition + " is null.");
+
+        // Check the loading phase of the chunk. If the chunk is already complete, then we'll do nothing
+        // If the chunk needs loading, that's okay, this is checked later as GetDependencies also returns
+        // the chunk itself and we force those to load first.
+        if (chunk.GetLoadingPhase() == Chunk.LoadingPhase.ReadyToDraw)
+            return;
+        
+        // Add this chunk to the set, marking it as lighting
+        chunksLighting.Add(chunkPosition);
+        GD.Print("Lighting chunk: " + chunkPosition);
 
         // Check the dependencies are loading or loaded.
-        Array<Vector2> dependencies = new Array<Vector2>() {
-            new Vector2(chunk.ChunkPosition.x,     chunk.ChunkPosition.y),
-            new Vector2(chunk.ChunkPosition.x - 1, chunk.ChunkPosition.y),
-            new Vector2(chunk.ChunkPosition.x - 1, chunk.ChunkPosition.y - 1),
-            new Vector2(chunk.ChunkPosition.x,     chunk.ChunkPosition.y - 1),
-            new Vector2(chunk.ChunkPosition.x + 1, chunk.ChunkPosition.y - 1),
-            new Vector2(chunk.ChunkPosition.x + 1, chunk.ChunkPosition.y),
-            new Vector2(chunk.ChunkPosition.x + 1, chunk.ChunkPosition.y + 1),
-            new Vector2(chunk.ChunkPosition.x    , chunk.ChunkPosition.y + 1),
-            new Vector2(chunk.ChunkPosition.x - 1, chunk.ChunkPosition.y + 1),
-        };
-
+        IList<Vector2> dependencies = chunk.GetDependencies();
         foreach (Vector2 chunkToLoadDependency in dependencies)
         {
-            // Ignore dependencies out of bounds
-            Vector2 worldImageInChunks = worldBlocksImage.GetSize() / chunkBlockCount;
-            if (Helper.OutOfBounds(chunkToLoadDependency, worldImageInChunks))
+            bool neededLoading = BeginLoadingChunk(chunkToLoadDependency, loadedChunksConcurrent, lazy);
+            if (neededLoading)
             {
-                continue;
-            }
-
-            Developer.AssertTrue(loadedChunksConcurrent.ContainsKey(chunkToLoadDependency));
-
-            Chunk dependencyChunk = loadedChunksConcurrent.Get(chunkToLoadDependency);
-            if (!chunksLoading.Contains(chunkToLoadDependency) && GetChunkPhase(dependencyChunk) == LoadingPhase.NeedsLoading)
-            {
-                BeginLoadingChunk(dependencyChunk);
+                GD.Print("Loading chunk: " + chunkToLoadDependency + " for light: " + chunkPosition);
             }
         }
 
-        Array<object> chunkData = new Array<object>{
-            chunk.ChunkPosition,
-            chunk
-        };
+        // Now force load the chunks that need loading still. This avoids nasty race conditions
+        // It's okay if chunks that aren't loading are in here
+        foreach (Vector2 chunkToLoadDependency in dependencies)
+        {
+            FinishLoadingChunkForcefully(chunkToLoadDependency);
+        }
 
-        loadedChunksConcurrent.Unlock();
-        threadPool.SubmitTask(this, "ThreadedLightChunk", "ThreadedLightChunkCallback", chunkData, 0, "lightingChunk", chunk.ChunkPosition);
-        loadedChunksConcurrent.Lock();
+        // OS.DelayMsec(100);
+
+        // Finally we can start the task that lights this chunk.
+        Array<object> chunkData = new Array<object>{ chunkPosition, chunk };
+
+        // If the thread above won't release lock (single threaded or no Unlock call) then unlock for us so the
+        // thread can do it
+        if (singleThreadedThreadPool)
+        {
+            loadedChunksConcurrent.Unlock();
+            threadPool.SubmitTask(this, "ThreadedLightChunk", chunkData, 0, "lightingChunk", chunkPosition);
+            loadedChunksConcurrent.Lock();
+        }
+        else
+        {
+            threadPool.SubmitTask(this, "ThreadedLightChunk", chunkData, 0, "lightingChunk", chunkPosition);
+        }
     }
 
     public Chunk ThreadedLoadChunk(Array<object> data)
@@ -127,16 +131,14 @@ public class MultithreadedChunkLoader
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
 
-        // OS.DelayMsec(2000);
+        GD.Print("ThreadPool(): Started loading chunk: " + chunkPosition);
 
-        chunk.Create(chunkPosition, chunkBlockCount, worldBlocksImage, worldWallsImage);
+        chunk.Create(chunkPosition, terrain.ChunkBlockCount, terrain.WorldBlocksImage, terrain.WorldWallsImage);
+        chunksLoading.Remove(chunk.ChunkPosition);
+
+        GD.Print("ThreadPool(): Finished loading chunk: " + chunkPosition);
 
         return chunk;
-    }
-
-    public void ThreadedLoadChunkCallback(Chunk chunk)
-    {
-        chunksLoading.Remove(chunk.ChunkPosition);
     }
 
     public Chunk ThreadedLightChunk(Array<object> data)
@@ -144,64 +146,26 @@ public class MultithreadedChunkLoader
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
 
+        GD.Print("ThreadPool(): Started lighting chunk: " + chunkPosition);
+
         chunk.ComputeLightingPass();
 
-        return chunk;
-    }
-
-    public void ThreadedLightChunkCallback(Chunk chunk)
-    {
         try
         {
             chunk.Update();
             chunksLighting.Remove(chunk.ChunkPosition);
-            GD.Print("Finished Lighting chunk: " + chunk.ChunkPosition);
+            GD.Print("ThreadPool(): Finished lighting chunk: " + chunkPosition);
         }
         catch (System.ObjectDisposedException)
         {
-            GD.Print("Lighting chunk disposed: " + chunk.ChunkPosition);
+           GD.Print("ThreadPool(): Lighting chunk disposed: " + chunkPosition);
         }
+
+        return chunk;
     }
 
+    // Blocks until this chunk position isn't in the set anymore
     public void FinishLoadingChunkForcefully(Vector2 chunkPosition)
-    {
-        // if (!chunksLoading.Contains(chunkPosition))
-            // return;
-
-        // threadPool.WaitForTaskSpecific(chunkPosition);
-        WaitForLoadingTask(chunkPosition);
-    }
-
-    public void FinishLightingChunkForcefully(Vector2 chunkPosition)
-    {
-        if (!chunksLighting.Contains(chunkPosition))
-            return;
-
-        Array<Vector2> dependencies = new Array<Vector2>() {
-            new Vector2(chunkPosition.x,     chunkPosition.y),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y - 1),
-            new Vector2(chunkPosition.x,     chunkPosition.y - 1),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y - 1),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y + 1),
-            new Vector2(chunkPosition.x    , chunkPosition.y + 1),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y + 1),
-        };
-
-        foreach (Vector2 chunkToLoadDependency in dependencies)
-        {
-            if (chunksLoading.Contains(chunkToLoadDependency))
-            {
-                FinishLoadingChunkForcefully(chunkToLoadDependency);
-            }
-        }
-
-        WaitForLightingTask(chunkPosition);
-        // threadPool.WaitForTaskSpecific(chunkPosition);
-    }
-
-    public void WaitForLoadingTask(Vector2 chunkPosition)
     {
         while (true)
         {
@@ -210,9 +174,18 @@ public class MultithreadedChunkLoader
             OS.DelayMsec(2);
         }
     }
-
-    public void WaitForLightingTask(Vector2 chunkPosition)
+    
+    /* This function blocks while acquiring the lock yet lighting requires the lock! */
+    public void FinishLightingChunkForcefully(Vector2 chunkPosition)
     {
+        // if (!chunksLighting.Contains(chunkPosition))
+        //     return;
+
+        foreach (Vector2 dependency in Chunk.GetDependencies(chunkPosition, terrain.GetWorldSizeInChunks()))
+        {
+            FinishLoadingChunkForcefully(dependency);
+        }
+
         while (true)
         {
             if (!chunksLighting.Contains(chunkPosition))
@@ -220,42 +193,4 @@ public class MultithreadedChunkLoader
             OS.DelayMsec(2);
         }
     }
-
-    // public Array<Chunk> GetFinishedLoadingChunks(Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks) //TODO: Check if remove parameter
-    // {
-    //     Array<Chunk> finishedChunks = new Array<Chunk>();
-    //     List<Task> completedChunkTasks = threadPool.FetchFinishedTasksByTag("loadingChunk");
-    //     foreach (Task completedChunkTask in completedChunkTasks)
-    //     {
-    //         Chunk completedChunk = (Chunk)completedChunkTask.GetResult();
-    //         completedChunk.LoadingDone = true;
-    //         chunksLoading.Remove(completedChunk.ChunkPosition);
-    //         finishedChunks.Add(completedChunk);
-
-    //         // Don't know if break. Shouldn't be required as the reference hasn't changed.
-    //         // if (!loadedChunks.ContainsKey(completedChunkPosition))
-    //         //     continue;
-    //     }
-
-    //     return finishedChunks;
-    // }
-
-    // public Array<Chunk> GetFinishedLightingChunks(Godot.Collections.Dictionary<Vector2, Chunk> loadedChunks) //TODO: Check if remove parameter
-    // {
-    //     Array<Chunk> finishedChunks = new Array<Chunk>();
-    //     List<Task> completedChunkTasks = threadPool.FetchFinishedTasksByTag("lightingChunk");
-    //     foreach (Task completedChunkTask in completedChunkTasks)
-    //     {
-    //         Chunk completedChunk = (Chunk)completedChunkTask.GetResult();
-    //         completedChunk.LightingDone = true;
-    //         finishedChunks.Add(completedChunk);
-    //         chunksLighting.Remove(completedChunk.ChunkPosition);
-
-    //         // Don't know if break. Shouldn't be required as the reference hasn't changed.
-    //         // if (loadedChunks.ContainsKey(completedChunk.Position))
-    //             // loadedChunks[completedChunk.Position] = completedChunk;
-    //     }
-
-    //     return finishedChunks;
-    // }
 }

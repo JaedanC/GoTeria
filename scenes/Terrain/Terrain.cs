@@ -18,6 +18,7 @@ public class Terrain : Node2D
 
     private Vector2 blockPixelSize;
     private Vector2 chunkBlockCount;
+    private bool singleThreadedThreadPool;
 
     private Vector2 chunkPixelDimensions;
     // private Dictionary<Vector2, Chunk> loadedChunks;
@@ -50,8 +51,10 @@ public class Terrain : Node2D
         lightLoadingChunks = new Dictionary<Vector2, Chunk>();
     }
 
-    public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player, WorldFile worldFile,
-                           Vector2 blockPixelSize, Vector2 chunkBlockCount, TeriaFile lightingCacheFile, TeriaFile lightingConfigFile, bool singleThreadedLightingEngine)
+    public void Initialise(ThreadPool threadPool, InputLayering inputLayering, Player player,
+                           WorldFile worldFile, Vector2 blockPixelSize, Vector2 chunkBlockCount,
+                           TeriaFile lightingCacheFile, TeriaFile lightingConfigFile, bool singleThreadedLightingEngine,
+                           bool singleThreadedThreadPool)
     {
         this.threadPool = threadPool;
         this.inputLayering = inputLayering;
@@ -60,10 +63,11 @@ public class Terrain : Node2D
         this.blockPixelSize = blockPixelSize;
         this.chunkBlockCount = chunkBlockCount;
         this.chunkPixelDimensions = BlockPixelSize * ChunkBlockCount;
+        this.singleThreadedThreadPool = singleThreadedThreadPool;
 
         // Use instances
         this.terrainStack = worldFile.GetITerrainStack();
-        this.chunkLoader = new MultithreadedChunkLoader(ChunkBlockCount, threadPool, WorldBlocksImage, WorldWallsImage);
+        this.chunkLoader = new MultithreadedChunkLoader(this, threadPool, singleThreadedThreadPool);
 
         // Instance locals
         this.chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
@@ -84,17 +88,17 @@ public class Terrain : Node2D
             worldFile.SaveWorld(blockFile, wallFile, false);
             lightingEngine.SaveLight();
         }
-
         loadedChunksConcurrent.Lock();
+        chunkLighting.BackgroundLightAChunk(this, chunkLoader, loadedChunksConcurrent, chunkPool);
+        // loadedChunksConcurrent.Unlock();
+
+        // loadedChunksConcurrent.Lock();
         DeleteInvisibleChunks();
         LoadVisibleChunks();
         loadedChunksConcurrent.Unlock();
         CreateChunkStreamingRegions();
         ContinueStreamingRegions();
 
-        loadedChunksConcurrent.Lock();
-        chunkLighting.BackgroundLightAChunk(this, chunkLoader, loadedChunksConcurrent);
-        loadedChunksConcurrent.Unlock();
 
         // Draw the chunk borders
         Update();
@@ -178,9 +182,8 @@ public class Terrain : Node2D
 
         // Now the remaining chunks in loadedChunks are invisible to the player
         // and can be deleted from memory.
-        foreach (Vector2 invisibleChunkPosition in deletedChunks.Keys)
+        foreach (Chunk chunk in deletedChunks.Values)
         {
-            Chunk chunk = deletedChunks[invisibleChunkPosition];
             RemoveChild(chunk);
             chunkPool.Die(chunk);
         }
@@ -258,8 +261,7 @@ public class Terrain : Node2D
                                       new Array<Vector2>(lightLoadingChunks.Keys);
         foreach (Vector2 chunkPosition in chunksToLoad)
         {
-            Chunk chunk = loadedChunksConcurrent.Get(chunkPosition);
-            chunkLoader.BeginLoadingChunk(chunk);
+            chunkLoader.BeginLoadingChunk(chunkPosition, loadedChunksConcurrent, false);
         }
         loadedChunksConcurrent.Unlock();
 
@@ -277,8 +279,7 @@ public class Terrain : Node2D
                                        new Array<Vector2>(lightDrawChunks.Keys);
         foreach (Vector2 chunkPosition in chunksToLight)
         {
-            Chunk chunk = loadedChunksConcurrent.Get(chunkPosition);
-            chunkLoader.BeginLightingChunk(chunk, loadedChunksConcurrent);
+            chunkLoader.BeginLightingChunk(chunkPosition, loadedChunksConcurrent, false);
         }
         loadedChunksConcurrent.Unlock();
 

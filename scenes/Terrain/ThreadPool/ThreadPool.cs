@@ -68,19 +68,19 @@ public class ThreadPool : Node
         base.QueueFree();
     }
 
-    public void SubmitTaskUnparameterized(object instance, String method, String callbackMethod, float priority, object taskTag = null, object taskTagSpecific = null)
+    public void SubmitTaskUnparameterized(object instance, String method, float priority, object taskTag = null, object taskTagSpecific = null)
     {
-        __EnqueueTask(instance, method, callbackMethod, null, null, taskTag, taskTagSpecific, priority, ParameterType.None);
+        __EnqueueTask(instance, method, null, null, taskTag, taskTagSpecific, priority, ParameterType.None);
     }
 
-    public void SubmitTask(object instance, String method, String callbackMethod, object parameter, float priority, object taskTag = null, object taskTagSpecific = null)
+    public void SubmitTask(object instance, String method, object parameter, float priority, object taskTag = null, object taskTagSpecific = null)
     {
-        __EnqueueTask(instance, method, callbackMethod, parameter, null, taskTag, taskTagSpecific, priority, ParameterType.Object);
+        __EnqueueTask(instance, method, parameter, null, taskTag, taskTagSpecific, priority, ParameterType.Object);
     }
 
-    public void SubmitTaskArrayParameterized(object instance, String method, String callbackMethod, List<object> listParameter, float priority, object taskTag = null, object taskTagSpecific = null)
+    public void SubmitTaskArrayParameterized(object instance, String method, List<object> listParameter, float priority, object taskTag = null, object taskTagSpecific = null)
     {
-        __EnqueueTask(instance, method, callbackMethod, null, listParameter, taskTag, taskTagSpecific, priority, ParameterType.Array);
+        __EnqueueTask(instance, method, null, listParameter, taskTag, taskTagSpecific, priority, ParameterType.Array);
     }
 
     public void Shutdown()
@@ -128,7 +128,7 @@ public class ThreadPool : Node
         OS.DelayMsec(1); // if there is nothing to do, go sleep
     }
 
-    private void __EnqueueTask(object instance, String method, String callbackMethod, object parameter, List<object> arrayParameter,
+    private void __EnqueueTask(object instance, String method, object parameter, List<object> arrayParameter,
                                object taskTag, object taskTagSpecific, float priority, ParameterType parameterType)
     {
         if (__finished)
@@ -137,13 +137,13 @@ public class ThreadPool : Node
         switch (parameterType)
         {
             case ParameterType.None:
-                __tasks.Enqueue(new Task(instance, method, callbackMethod, taskTag, taskTagSpecific), priority);
+                __tasks.Enqueue(new Task(instance, method, taskTag, taskTagSpecific), priority);
                 break;
             case ParameterType.Object:
-                __tasks.Enqueue(new Task(instance, method, callbackMethod, parameter, taskTag, taskTagSpecific), priority);
+                __tasks.Enqueue(new Task(instance, method, parameter, taskTag, taskTagSpecific), priority);
                 break;
             case ParameterType.Array:
-                __tasks.Enqueue(new Task(instance, method, callbackMethod, arrayParameter, taskTag, taskTagSpecific), priority);
+                __tasks.Enqueue(new Task(instance, method, arrayParameter, taskTag, taskTagSpecific), priority);
                 break;
             default:
                 Developer.Fail();
@@ -153,7 +153,6 @@ public class ThreadPool : Node
         __tasksWait.Post();
         __Start();
         __tasksLock.Unlock();
-
     }
 
     private void __WaitForShutdown()
@@ -169,9 +168,6 @@ public class ThreadPool : Node
     private List<Thread> __CreatePool(int numThreads)
     {
         List<Thread> threads = new List<Thread>();
-        // for (int i = 0; i < OS.GetProcessorCount(); i++)
-        // for (int i = 0; i < OS.GetProcessorCount() / 2; i++)
-        // for (int i = 0; i < 1; i++)
         for (int i = 0; i < numThreads; i++)
         {
             threads.Add(new Thread());

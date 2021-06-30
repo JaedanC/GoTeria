@@ -7,6 +7,7 @@ public class ChunkLighting
 {
     private enum ChunkLightingState
     {
+        InBackground,
         NotCached,
         Cached
     }
@@ -39,81 +40,51 @@ public class ChunkLighting
         ReadCachedChunksConfig();
     }
 
-    public void BackgroundLightAChunk(Terrain terrain, MultithreadedChunkLoader chunkLoader, LazyVolatileDictionary<Vector2, Chunk> loadedChunks)
+    public void BackgroundLightAChunk(Terrain terrain, MultithreadedChunkLoader chunkLoader, LazyVolatileDictionary<Vector2, Chunk> loadedChunks, ObjectPool<Chunk> chunkPool)
     {
         Developer.AssertTrue(loadedChunks.IsLocked, "BackgroundLightAChunk() requires the lock. ");
 
-        Vector2? nextChunkPositionToLight = GetNextNotCachedChunkPosition();
-        if (nextChunkPositionToLight == null)
+        while (true)
         {
-            return;
-        }
-        Vector2 chunkPosition = (Vector2)nextChunkPositionToLight;
-
-        // Add the chunk we want to give light to
-        Chunk chunkToLight = terrain.GetOrInstanceChunkInto(chunkPosition, loadedChunks, true);
-
-        // Add the chunk's dependencies
-        Array<Vector2> dependencies = GetDependencies(terrain, chunkPosition);
-
-        foreach (Vector2 dependencyChunkPosition in dependencies)
-        {
-            Chunk chunk = terrain.GetOrInstanceChunkInto(dependencyChunkPosition, loadedChunks, true);
-            chunkLoader.BeginLoadingChunk(chunk);
-        }
-
-        foreach (Vector2 dependencyChunkPosition in dependencies)
-        {
-            Chunk chunk = terrain.GetOrInstanceChunkInto(dependencyChunkPosition, loadedChunks, true);
-            chunkLoader.FinishLoadingChunkForcefully(dependencyChunkPosition);
-        }
-
-        // Requires fresh eyes because chunks that can't be seen by the player are unloaded. This will
-        // need to be changed in the future because I'll need a way to support bullets and other things
-        // flying around! They will need to keep chunks loaded. A new way to keep chunks from being
-        // unloaded needs to be devised.
-        chunkLoader.BeginLightingChunk(chunkToLight, loadedChunks);
-        loadedChunks.Unlock();
-        // chunkLoader.FinishLightingChunkForcefully(chunkPosition);
-        loadedChunks.Lock();
-    }
-
-    private Array<Vector2> GetDependencies(Terrain terrain, Vector2 chunkPosition)
-    {
-        Array<Vector2> legit = new Array<Vector2>();
-
-        Array<Vector2> dependencies = new Array<Vector2>() {
-            new Vector2(chunkPosition.x,     chunkPosition.y),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y - 1),
-            new Vector2(chunkPosition.x,     chunkPosition.y - 1),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y - 1),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y),
-            new Vector2(chunkPosition.x + 1, chunkPosition.y + 1),
-            new Vector2(chunkPosition.x    , chunkPosition.y + 1),
-            new Vector2(chunkPosition.x - 1, chunkPosition.y + 1),
-        };
-
-        foreach (Vector2 dependency in dependencies)
-        {
-            if (Helper.InBounds(dependency, terrain.GetWorldSizeInChunks()))
+            Vector2? nextChunkPositionToLight = GetNextNotCachedChunkPosition();
+            if (nextChunkPositionToLight == null)
             {
-                legit.Add(dependency);
+                break;
             }
+            chunkLoader.BeginLightingChunk((Vector2)nextChunkPositionToLight, loadedChunks, true);
+            chunkLoader.FinishLightingChunkForcefully((Vector2)nextChunkPositionToLight);
+            // loadedChunks.Unlock();
+            // OS.DelayMsec(5);
+            // loadedChunks.Lock();
         }
-        return legit;
+
+        System.Collections.Generic.IDictionary<Vector2, Chunk> deletedChunks = loadedChunks.LazyClear();
+        foreach (Chunk chunk in deletedChunks.Values)
+        {
+            chunkPool.Die(chunk);
+            terrain.RemoveChild(chunk);
+        }
     }
 
     private Vector2? GetNextNotCachedChunkPosition()
     {
-        foreach (Vector2 chunkPosition in cache.Keys)
+        try
         {
-            if (cache[chunkPosition] == ChunkLightingState.NotCached)
+            cacheLock.Lock();
+            foreach (Vector2 chunkPosition in cache.Keys)
             {
-                return chunkPosition;
+                if (cache[chunkPosition] == ChunkLightingState.NotCached)
+                {
+                    cache[chunkPosition] = ChunkLightingState.InBackground;
+                    return chunkPosition;
+                }
             }
+            return null;
         }
-        return null;
+        finally
+        {
+            cacheLock.Unlock();
+        }
     }
 
     private void ReadCachedChunksConfig()
@@ -148,15 +119,14 @@ public class ChunkLighting
         WorldFile.SaveImage(image, imageCache);
         GD.Print("ChunkLighting.SaveToDisk() Saved image to: " + imageCache.GetFinalFilePath());
 
-        // Save the chunks that are loaded or in the
-        var toSaveDictionary = new Dictionary<String, Array<String>>();
-        toSaveDictionary["cache"] = new Array<String>();
+        // Save the chunks that are loaded in the cache
+        var toSaveDictionary = new Dictionary<String, Godot.Collections.Array<String>>();
+        toSaveDictionary["cache"] = new Godot.Collections.Array<String>();
 
         cacheLock.Lock();
         foreach (Vector2 chunkPosition in cache.Keys)
         {
             ChunkLightingState state = cache[chunkPosition];
-
             if (state == ChunkLightingState.Cached)
             {
                 toSaveDictionary["cache"].Add("" + chunkPosition);
@@ -165,7 +135,6 @@ public class ChunkLighting
         cacheLock.Unlock();
 
         String json = JSON.Print(toSaveDictionary, "    ");
-
         File lightingFileContents = configFile.GetFile(File.ModeFlags.Write);
         lightingFileContents.StoreString(json);
         lightingFileContents.Close();
@@ -178,11 +147,9 @@ public class ChunkLighting
         bool recalculate = !cache.ContainsKey(chunk.ChunkPosition) || cache[chunk.ChunkPosition] == ChunkLightingState.NotCached;
         cacheLock.Unlock();
 
-        if (recalculate)
+        if (recalculate || true)
         {
             // Don't lock this because this would be block multithreaded lighting!
-            // Can't Resize Pool Vector if locked! Mutexing this does not fix the issue, but
-            // making the ThreadPool single threaded does.
             lightingEngine.LightChunk(chunk);
 
             cacheLock.Lock();

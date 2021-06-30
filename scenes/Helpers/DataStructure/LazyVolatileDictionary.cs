@@ -137,4 +137,20 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
             volatileDictionary.TryRemove(key, out temp);
         }
     }
+
+    public IDictionary<TKey, TValue> LazyClear()
+    {
+        Developer.AssertTrue(IsLocked, "Must use LazyClear() while locked.");
+
+        IDictionary<TKey, TValue> toDelete = new Dictionary<TKey, TValue>();
+        foreach (TKey key in lazyDictionary.Keys)
+        {
+            if (!volatileDictionary.ContainsKey(key))
+            {
+                toDelete[key] = lazyDictionary[key];
+            }
+        }
+        lazyDictionary = new ConcurrentDictionary<TKey, TValue>();
+        return toDelete;
+    }
 }

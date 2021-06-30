@@ -57,10 +57,10 @@ public class WorldSpawn : Node
 
         // Constants
         singleThreadedThreadPool = false;
-        singleThreadedLightingEngine = false;
+        singleThreadedLightingEngine = true;
         saveFileName = "SavedWorld";
-        threadPoolThreads = OS.GetProcessorCount() / 2;
-        // threadPoolThreads = 1;
+        // threadPoolThreads = OS.GetProcessorCount() / 2;
+        threadPoolThreads = 1;
 
         // Only instance what has no dependencies and isn't a Node
         configFile = new TeriaFile(true, "saves/" + saveFileName + "/bindings.ini");
@@ -99,7 +99,8 @@ public class WorldSpawn : Node
         // Initialise children
         actionMapping.Initialise(analogMapping, config, configFile);
         player.Initialise(inputLayering, terrain, collisionSystem);
-        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount, lightingCacheFile, lightingConfigFile, singleThreadedLightingEngine);
+        terrain.Initialise(threadPool, inputLayering, player, worldFile, blockPixelSize, chunkBlockCount,
+                           lightingCacheFile, lightingConfigFile, singleThreadedLightingEngine, singleThreadedThreadPool);
         collisionSystem.Initialise(terrain);
     }
 
