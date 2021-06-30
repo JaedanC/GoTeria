@@ -5,10 +5,10 @@ using System.Collections.Generic;
 
 public class LightingEngine : Node2D
 {
-    public struct LightBFSNode
+    private struct LightBFSNode
     {
-        public Vector2 WorldPosition;
-        public Color Colour;
+        public readonly Vector2 WorldPosition;
+        public readonly Color Colour;
 
         public LightBFSNode(Vector2 worldPosition, Color colour)
         {
@@ -16,12 +16,11 @@ public class LightingEngine : Node2D
             this.Colour = colour;
         }
 
-        public LightBFSNode(LightUpdate LightUpdate)
+        public LightBFSNode(LightUpdate lightUpdate)
         {
-            this.WorldPosition = LightUpdate.WorldPosition;
-            this.Colour = LightUpdate.Colour;
+            this.WorldPosition = lightUpdate.WorldPosition;
+            this.Colour = lightUpdate.Colour;
         }
-
     }
 
     public class LightUpdate
@@ -324,7 +323,7 @@ public class LightingEngine : Node2D
             // Remove this blocks light. It doesn't have any light sources near it.
             worldLightImage.SetPixelv(node.WorldPosition, Colors.Black);
 
-            // To use the same terminolody as the blog post.
+            // To use the same terminology as the blog post.
             Color lightLevel = node.Colour;
 
             // "Look at all neighbouring blocks to that node.
@@ -353,7 +352,7 @@ public class LightingEngine : Node2D
                 else if (neighboursLevel.r >= lightLevel.r)
                 {
                     // These are recomputed as lights with the neighbours light level because this
-                    // neighbour has recieved its light from another source. We then need to consider that
+                    // neighbour has received its light from another source. We then need to consider that
                     // this block which is having its light source removed may be filled in by another block
                     // instead. You can't simply add these to the Queue first, because a BFS may visit a node
                     // with a higher light level (hence thinking it's a source) but then is visited by another

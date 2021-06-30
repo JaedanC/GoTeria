@@ -1,6 +1,5 @@
 using Godot;
 using Godot.Collections;
-using System;
 
 
 public class ChunkLighting
@@ -12,12 +11,11 @@ public class ChunkLighting
         Cached
     }
 
-    private LightingEngine lightingEngine;
-    private TeriaFile imageCache;
-    private TeriaFile configFile;
-    private Dictionary<Vector2, ChunkLightingState> cache;
-
-    private Mutex cacheLock;
+    private readonly LightingEngine lightingEngine;
+    private readonly TeriaFile imageCache;
+    private readonly TeriaFile configFile;
+    private readonly Dictionary<Vector2, ChunkLightingState> cache;
+    private readonly Mutex cacheLock;
 
 
     public ChunkLighting(LightingEngine lightingEngine, TeriaFile imageCache, TeriaFile configFile, Vector2 worldSizeInChunks)
@@ -44,7 +42,7 @@ public class ChunkLighting
     {
         Developer.AssertTrue(loadedChunks.IsLocked, "BackgroundLightAChunk() requires the lock. ");
 
-        Godot.Collections.Array<Vector2> lightingChunks = new Godot.Collections.Array<Vector2>();
+        Array<Vector2> lightingChunks = new Array<Vector2>();
 
         // Light all the chunks
         while (true)
@@ -66,6 +64,11 @@ public class ChunkLighting
         foreach (Vector2 chunkPosition in lightingChunks)
         {
             chunkLoader.BeginLightingChunk(chunkPosition, loadedChunks, true);
+        }
+
+        // Now wait until they're all done
+        foreach (Vector2 chunkPosition in lightingChunks)
+        {
             chunkLoader.FinishLightingChunkForcefully(chunkPosition, loadedChunks);
         }
 
@@ -85,11 +88,11 @@ public class ChunkLighting
             cacheLock.Lock();
             foreach (Vector2 chunkPosition in cache.Keys)
             {
-                if (cache[chunkPosition] == ChunkLightingState.NotCached)
-                {
-                    cache[chunkPosition] = ChunkLightingState.InBackground;
-                    return chunkPosition;
-                }
+                if (cache[chunkPosition] != ChunkLightingState.NotCached)
+                    continue;
+                
+                cache[chunkPosition] = ChunkLightingState.InBackground;
+                return chunkPosition;
             }
             return null;
         }
@@ -111,9 +114,9 @@ public class ChunkLighting
         JSONParseResult lightingConfig = JSON.Parse(lightingConfigContents.GetAsText());
         lightingConfigContents.Close();
         Dictionary jsonResults = (Dictionary)lightingConfig.Result;
-        Godot.Collections.Array cachedChunks = (Godot.Collections.Array)jsonResults["cache"];
+        Array cachedChunks = (Array)jsonResults["cache"];
 
-        foreach (String vectorString in cachedChunks)
+        foreach (string vectorString in cachedChunks)
         {
             Vector2 cachedChunk = Helper.StringToVector2(vectorString);
             cache[cachedChunk] = ChunkLightingState.Cached;
@@ -132,8 +135,10 @@ public class ChunkLighting
         GD.Print("ChunkLighting.SaveToDisk() Saved image to: " + imageCache.GetFinalFilePath());
 
         // Save the chunks that are loaded in the cache
-        var toSaveDictionary = new Dictionary<String, Godot.Collections.Array<String>>();
-        toSaveDictionary["cache"] = new Godot.Collections.Array<String>();
+        Dictionary<string, Array<string>> toSaveDictionary = new Dictionary<string, Array<string>>
+        {
+            ["cache"] = new Array<string>()
+        };
 
         cacheLock.Lock();
         foreach (Vector2 chunkPosition in cache.Keys)
@@ -146,7 +151,7 @@ public class ChunkLighting
         }
         cacheLock.Unlock();
 
-        String json = JSON.Print(toSaveDictionary, "    ");
+        string json = JSON.Print(toSaveDictionary, "    ");
         File lightingFileContents = configFile.GetFile(File.ModeFlags.Write);
         lightingFileContents.StoreString(json);
         lightingFileContents.Close();
@@ -156,17 +161,17 @@ public class ChunkLighting
     public void CalculateLightOrUseCachedLight(Chunk chunk)
     {
         cacheLock.Lock();
-        bool recalculate = !cache.ContainsKey(chunk.ChunkPosition) || cache[chunk.ChunkPosition] == ChunkLightingState.NotCached;
+        bool recalculate = !cache.ContainsKey(chunk.ChunkPosition) || cache[chunk.ChunkPosition] != ChunkLightingState.Cached;
         cacheLock.Unlock();
 
-        if (recalculate)
-        {
-            // Don't lock this because this would be block multithreaded lighting!
-            lightingEngine.LightChunk(chunk);
+        if (!recalculate)
+            return;
+        
+        // Don't lock this because this would be block multithreaded lighting!
+        lightingEngine.LightChunk(chunk);
 
-            cacheLock.Lock();
-            cache[chunk.ChunkPosition] = ChunkLightingState.Cached;
-            cacheLock.Unlock();
-        }
+        cacheLock.Lock();
+        cache[chunk.ChunkPosition] = ChunkLightingState.Cached;
+        cacheLock.Unlock();
     }
 }

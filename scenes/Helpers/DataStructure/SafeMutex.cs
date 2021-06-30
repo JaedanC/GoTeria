@@ -3,14 +3,12 @@ using Godot;
 
 public class SafeMutex
 {
-    private Mutex mutex;
-    private Mutex mutexMutex;
+    private readonly Mutex mutex;
     public bool IsLocked;
 
     public SafeMutex()
     {
         mutex = new Mutex();
-        mutexMutex = new Mutex();
         IsLocked = false;
     }
 

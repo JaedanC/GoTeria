@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -7,17 +6,17 @@ public class ActionMapping : Node
 {
     private class ClassPair
     {
-        public IInputMethod InputMethod;
-        public int KeyCode;
+        public readonly IInputMethod InputMethod;
+        public readonly int KeyCode;
 
         public ClassPair(IInputMethod inputMethod, int keyCode)
         {
-            this.InputMethod = inputMethod;
-            this.KeyCode = keyCode;
+            InputMethod = inputMethod;
+            KeyCode = keyCode;
         }
     }
 
-    private Dictionary<IInputMethod, Dictionary<String, int>> actionBindings;
+    private Dictionary<IInputMethod, Dictionary<string, int>> actionBindings;
     private KeyboardInput keyboardInput;
     private MouseInput mouseInput;
     private JoypadInput joypadInput;
@@ -29,15 +28,15 @@ public class ActionMapping : Node
 
     public override void _Ready()
     {
-        actionBindings = new Dictionary<IInputMethod, Dictionary<String, int>>();
+        actionBindings = new Dictionary<IInputMethod, Dictionary<string, int>>();
         keyboardInput = new KeyboardInput();
         mouseInput = new MouseInput();
         joypadInput = new JoypadInput();
         joypadAxisInput = new JoypadAxisInput();
-        actionBindings[keyboardInput] = new Dictionary<String, int>();
-        actionBindings[mouseInput] = new Dictionary<String, int>();
-        actionBindings[joypadInput] = new Dictionary<String, int>();
-        actionBindings[joypadAxisInput] = new Dictionary<String, int>();
+        actionBindings[keyboardInput] = new Dictionary<string, int>();
+        actionBindings[mouseInput] = new Dictionary<string, int>();
+        actionBindings[joypadInput] = new Dictionary<string, int>();
+        actionBindings[joypadAxisInput] = new Dictionary<string, int>();
     }
 
     public void Initialise(AnalogMapping analogMapping, ConfigFile config, TeriaFile configFile)
@@ -101,7 +100,7 @@ public class ActionMapping : Node
     across input methods. */
     private void SetupAliases()
     {
-        Dictionary<String, int> keys = actionBindings[keyboardInput];
+        Dictionary<string, int> keys = actionBindings[keyboardInput];
         keys.Add("a", (int)KeyList.A); keys.Add("b", (int)KeyList.B); keys.Add("c", (int)KeyList.C);
         keys.Add("d", (int)KeyList.D); keys.Add("e", (int)KeyList.E); keys.Add("f", (int)KeyList.F);
         keys.Add("g", (int)KeyList.G); keys.Add("h", (int)KeyList.H); keys.Add("i", (int)KeyList.I);
@@ -166,7 +165,7 @@ public class ActionMapping : Node
         keys.Add("kp*", (int)KeyList.KpMultiply);
         keys.Add("kp/", (int)KeyList.KpDivide);
 
-        Dictionary<String, int> mouse = actionBindings[mouseInput];
+        Dictionary<string, int> mouse = actionBindings[mouseInput];
         mouse.Add("mouse1", (int)ButtonList.Left);
         mouse.Add("mouse2", (int)ButtonList.Right);
         mouse.Add("mouse3", (int)ButtonList.Middle);
@@ -175,7 +174,7 @@ public class ActionMapping : Node
         mouse.Add("mwheelup", (int)ButtonList.WheelUp);
         mouse.Add("mwheeldown", (int)ButtonList.WheelDown);
 
-        Dictionary<String, int> joy = actionBindings[joypadInput];
+        Dictionary<string, int> joy = actionBindings[joypadInput];
         joy.Add("joy_a", (int)JoystickList.XboxA);
         joy.Add("joy_b", (int)JoystickList.XboxB);
         joy.Add("joy_x", (int)JoystickList.XboxX);
@@ -193,7 +192,7 @@ public class ActionMapping : Node
         joy.Add("start", (int)JoystickList.Start);
         joy.Add("select", (int)JoystickList.Select);
 
-        Dictionary<String, int> axis = actionBindings[joypadAxisInput];
+        Dictionary<string, int> axis = actionBindings[joypadAxisInput];
         axis.Add("axis0", (int)JoystickList.Axis0); // Left Stick LR [-1, 1]
         axis.Add("axis1", (int)JoystickList.Axis1); // Left Stick UD [-1, 1]
         axis.Add("axis2", (int)JoystickList.Axis2); // Right Stick LR [-1, 1]
@@ -207,7 +206,7 @@ public class ActionMapping : Node
     }
 
     /* See AnalogMapping for more information. */
-    private void AddActionMappingAxis(String firstAction, String secondAction, int device, int joyAxis, bool useDeadZone)
+    private void AddActionMappingAxis(string firstAction, string secondAction, int device, int joyAxis, bool useDeadZone)
     {
         analogMapping.AddDualAxisAction(firstAction, secondAction, device, joyAxis, useDeadZone);
     }
@@ -220,7 +219,7 @@ public class ActionMapping : Node
     }
 
     /* Binds a key to an action. */
-    private void AddActionMapping(String gameAction, String keyString)
+    private void AddActionMapping(string gameAction, string keyString)
     {
         ClassPair inputClassAndKeyCode = GetClassPairFromKeyString(keyString);
         if (inputClassAndKeyCode == null)
@@ -236,12 +235,12 @@ public class ActionMapping : Node
 
     /* Finds the input method and Godot integer representing the key for the
     keyString binding. */
-    private ClassPair GetClassPairFromKeyString(String keyStringToMatch)
+    private ClassPair GetClassPairFromKeyString(string keyStringToMatch)
     {
         foreach (IInputMethod inputMethod in actionBindings.Keys)
         {
-            Dictionary<String, int> inputClassBindings = actionBindings[inputMethod];
-            foreach (String keyString in inputClassBindings.Keys)
+            Dictionary<string, int> inputClassBindings = actionBindings[inputMethod];
+            foreach (string keyString in inputClassBindings.Keys)
             {
                 if (keyString.Equals(keyStringToMatch))
                 {
@@ -253,9 +252,9 @@ public class ActionMapping : Node
     }
 
     /* Print all the ActionMappings to the console.*/
-    private void ShowMappings()
+    private static void ShowMappings()
     {
-        foreach (String action in InputMap.GetActions())
+        foreach (string action in InputMap.GetActions())
         {
             GD.Print("Action: " + action + ", Mappings: " + InputMap.GetActionList(action));
         }
@@ -279,10 +278,10 @@ public class ActionMapping : Node
                 Add the binding to the dictionary, with the key being a string
                 representation of the input_event class.
     return dict */
-    private Dictionary<string, Dictionary<string, Godot.Collections.Array<String>>> GetBindingsAsSaveableDictionary()
+    private Dictionary<string, Dictionary<string, Godot.Collections.Array<string>>> GetBindingsAsSaveableDictionary()
     {
-        var bindings = new Dictionary<string, Dictionary<string, Godot.Collections.Array<String>>>();
-        foreach (String gameAction in InputMap.GetActions())
+        var bindings = new Dictionary<string, Dictionary<string, Godot.Collections.Array<string>>>();
+        foreach (string gameAction in InputMap.GetActions())
         {
             foreach (InputEvent inputForGameAction in InputMap.GetActionList(gameAction))
             {
@@ -293,17 +292,17 @@ public class ActionMapping : Node
                         continue;
                     }
 
-                    String inputTypeName = inputMethod.GetInputMethodName();
+                    string inputTypeName = inputMethod.GetInputMethodName();
                     int keyCodeValue = inputMethod.GetKeyCode(inputForGameAction);
 
                     // Give the action mappings dict some default values
                     if (!bindings.ContainsKey(inputTypeName))
                     {
-                        bindings[inputTypeName] = new Dictionary<String, Godot.Collections.Array<String>>();
+                        bindings[inputTypeName] = new Dictionary<string, Godot.Collections.Array<string>>();
                     }
                     if (!bindings[inputTypeName].ContainsKey(gameAction))
                     {
-                        bindings[inputTypeName][gameAction] = new Godot.Collections.Array<String>();
+                        bindings[inputTypeName][gameAction] = new Godot.Collections.Array<string>();
                     }
 
                     bindings[inputTypeName][gameAction].Add(KeyIntToString(keyCodeValue, inputMethod));
@@ -315,9 +314,9 @@ public class ActionMapping : Node
 
     /* Converts KeyCode Enum values to readable string that can be stored in a file.
     The strings are defined in setup_aliases(). */
-    private String KeyIntToString(int keyCodeValue, IInputMethod inputMethod)
+    private string KeyIntToString(int keyCodeValue, IInputMethod inputMethod)
     {
-        foreach (String keyString in actionBindings[inputMethod].Keys)
+        foreach (string keyString in actionBindings[inputMethod].Keys)
         {
             if (actionBindings[inputMethod][keyString] == keyCodeValue)
             {
@@ -329,7 +328,7 @@ public class ActionMapping : Node
 
     /* Converts readable string representations of keys into the godot KeyCode Enum
     values. The strings are defined in setup_aliases(). */
-    private int? KeyStringToInt(String keyString, IInputMethod inputMethod)
+    private int? KeyStringToInt(string keyString, IInputMethod inputMethod)
     {
         if (actionBindings[inputMethod].ContainsKey(keyString))
         {
@@ -363,9 +362,9 @@ public class ActionMapping : Node
     {
         var saveableActionMappings = GetBindingsAsSaveableDictionary();
 
-        foreach (String inputMethodName in saveableActionMappings.Keys)
+        foreach (string inputMethodName in saveableActionMappings.Keys)
         {
-            foreach (String action in saveableActionMappings[inputMethodName].Keys)
+            foreach (string action in saveableActionMappings[inputMethodName].Keys)
             {
                 config.SetValue(inputMethodName, action, saveableActionMappings[inputMethodName][action]);
             }
@@ -373,8 +372,8 @@ public class ActionMapping : Node
 
         foreach (DualAxisAction daa in analogMapping.GetDualAxisMappings())
         {
-            String action = daa.GetFirstAction() + "|" + daa.GetSecondAction();
-            String binding = daa.GetDevice() + "|" + daa.GetJoyAxis() + "|" + daa.UseDeadZone();
+            string action = daa.GetFirstAction() + "|" + daa.GetSecondAction();
+            string binding = daa.GetDevice() + "|" + daa.GetJoyAxis() + "|" + daa.UseDeadZone();
             config.SetValue("Dual Axis", action, binding);
         }
 
@@ -384,7 +383,7 @@ public class ActionMapping : Node
             GD.Print("SaveActionMappingsConfig() Create directory Error: " + error);
             return;
         }
-        String filePath = configFile.GetFinalFilePath();
+        string filePath = configFile.GetFinalFilePath();
         error = config.Save(filePath);
         if (error != Error.Ok)
         {
@@ -407,15 +406,15 @@ public class ActionMapping : Node
 
         foreach (IInputMethod inputMethod in actionBindings.Keys)
         {
-            String inputMethodName = inputMethod.GetInputMethodName();
+            string inputMethodName = inputMethod.GetInputMethodName();
             if (!config.HasSection(inputMethodName))
             {
                 continue;
             }
 
-            foreach (String action in config.GetSectionKeys(inputMethodName))
+            foreach (string action in config.GetSectionKeys(inputMethodName))
             {
-                foreach (String binding in (Godot.Collections.Array)config.GetValue(inputMethodName, action))
+                foreach (string binding in (Godot.Collections.Array)config.GetValue(inputMethodName, action))
                 {
                     AddActionMapping(action, binding);
                 }
@@ -423,17 +422,17 @@ public class ActionMapping : Node
         }
 
         // Load the dual axis mappings
-        String dualAxisSection = "Dual Axis";
+        const string dualAxisSection = "Dual Axis";
         if (config.HasSection(dualAxisSection))
         {
-            foreach (String action in config.GetSectionKeys(dualAxisSection))
+            foreach (string action in config.GetSectionKeys(dualAxisSection))
             {
-                String value = (String)config.GetValue(dualAxisSection, action);
+                string value = (string)config.GetValue(dualAxisSection, action);
 
-                String[] daaActions = action.Split("|");
-                String firstAction = daaActions[0];
-                String secondAction = daaActions[1];
-                String[] daaParameters = value.Split("|");
+                string[] daaActions = action.Split("|");
+                string firstAction = daaActions[0];
+                string secondAction = daaActions[1];
+                string[] daaParameters = value.Split("|");
                 int device = int.Parse(daaParameters[0]);
                 int joyAxis = int.Parse(daaParameters[1]);
                 bool useDeadZone = bool.Parse(daaParameters[2]);

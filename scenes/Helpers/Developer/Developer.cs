@@ -3,19 +3,14 @@ using System;
 
 public class Developer
 {
-    public class AssertionException : Exception
+    private class AssertionException : Exception
     {
-        public AssertionException() { }
-
         public AssertionException(string message)
             : base(message) { }
-
-        public AssertionException(string message, Exception inner)
-            : base(message, inner) { }
     }
 
 
-    private static void PrintStackTrace(String format, params object[] arguments)
+    private static void PrintStackTrace(string format, params object[] arguments)
     {
         // https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.stacktrace?view=net-5.0
         // Thankfully this isn't really required because Godot gives a better trace than StackTrace()
@@ -30,13 +25,13 @@ public class Developer
         // }
     }
 
-    public static void Fail(String message="")
+    public static void Fail(string message="")
     {
         PrintStackTrace("Fail");
         throw new AssertionException(message);
     }
 
-    public static void AssertEquals(object expected, object actual, String message="")
+    public static void AssertEquals(object expected, object actual, string message="")
     {
         if (actual.Equals(expected))
             return;
@@ -45,34 +40,34 @@ public class Developer
         throw new AssertionException(message);
     }
 
-    public static void AssertTrue(bool value, String message="")
+    public static void AssertTrue(bool value, string message="")
     {
         if (value)
             return;
         
-        PrintStackTrace("Expected: true\nActual: {0}", value);
+        PrintStackTrace("Expected: true\nActual: {0}", false);
         throw new AssertionException(message);
     }
 
-    public static void AssertFalse(bool value, String message="")
+    public static void AssertFalse(bool value, string message="")
     {
         if (!value)
             return;
         
-        PrintStackTrace("Expected: {0} == false", value);
+        PrintStackTrace("Expected: {0} == false", true);
         throw new AssertionException(message);
     }
 
-    public static void AssertNotNull(object value, String message="")
+    public static void AssertNotNull(object value, string message="")
     {
         if (value != null)
             return;
         
-        PrintStackTrace("Expected: {0} != null", value);
+        PrintStackTrace("Expected: {0} != null", null);
         throw new AssertionException(message);
     }
 
-    public static void AssertNull(object value, String message="")
+    public static void AssertNull(object value, string message="")
     {
         if (value == null)
             return;
@@ -81,7 +76,7 @@ public class Developer
         throw new AssertionException(message);
     }
 
-    public static void AssertLessThan(float value, float lessThan, String message="")
+    public static void AssertLessThan(float value, float lessThan, string message="")
     {
         if (value < lessThan)
             return;
@@ -90,7 +85,7 @@ public class Developer
         throw new AssertionException(message);
     }
 
-    public static void AssertLessThanEquals(float value, float lessThanEquals, String message="")
+    public static void AssertLessThanEquals(float value, float lessThanEquals, string message="")
     {
         if (value <= lessThanEquals)
             return;
@@ -99,7 +94,7 @@ public class Developer
         throw new AssertionException(message);
     }
 
-    public static void AssertGreaterThan(float value, float greaterThan, String message="")
+    public static void AssertGreaterThan(float value, float greaterThan, string message="")
     {
         if (value > greaterThan)
             return;
@@ -108,7 +103,7 @@ public class Developer
         throw new AssertionException(message);
     }
 
-    public static void AssertGreaterThanEquals(float value, float greaterThanEquals, String message="")
+    public static void AssertGreaterThanEquals(float value, float greaterThanEquals, string message="")
     {
         if (value >= greaterThanEquals)
             return;

@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Collections.Generic;
 using Godot;
@@ -17,18 +16,18 @@ For example:
 */
 public class AnalogMapping
 {
-    private float DEAD_ZONE = 0.2f;
-    private Dictionary<String, DualAxisAction> dualAxisActions;
+    private const float DeadZone = 0.2f;
+    private readonly Dictionary<string, DualAxisAction> dualAxisActions;
 
     public AnalogMapping()
     {
-        dualAxisActions = new Dictionary<String, DualAxisAction>();
+        dualAxisActions = new Dictionary<string, DualAxisAction>();
     }
 
     /* Add a new dual axis action. It is stored in a dictionary with the two actions as keys. This means that actions
     can be overridden with different devices. It also means that actions cannot be assigned more than twice to a DAA
     otherwise an error will be thrown. */
-    public void AddDualAxisAction(String firstAction, String secondAction, int device, int joyAxis, bool useDeadZone)
+    public void AddDualAxisAction(string firstAction, string secondAction, int device, int joyAxis, bool useDeadZone)
     {
         DualAxisAction dualAxisAction = new DualAxisAction(firstAction, secondAction, device, joyAxis, useDeadZone);
         dualAxisActions.Add(firstAction, dualAxisAction);
@@ -36,14 +35,14 @@ public class AnalogMapping
     }
 
     /* Check if the DAA exists. */
-    public bool HasDualAxisActionMapping(String action)
+    public bool HasDualAxisActionMapping(string action)
     {
         return dualAxisActions.ContainsKey(action);
     }
 
     /* For example, if a dual axis action was: ["move_left", "move_right"], then when we ask
     for "move_left" we will get a analogue answer if GetJoyAxis() is negative. */
-    public float GetDualActionStrength(String action)
+    public float GetDualActionStrength(string action)
     {
         if (!HasDualAxisActionMapping(action))
         {
@@ -59,12 +58,12 @@ public class AnalogMapping
         // Remap to include the deadzone if the DAA was created to do so.
         if (dualAxisAction.UseDeadZone())
         {
-            axisValue = ApplyDeadZone(DEAD_ZONE, axisValue);
+            axisValue = ApplyDeadZone(DeadZone, axisValue);
         }
         return axisValue;
     }
 
-    /* Remapps from [deadZone, 1] to [0, 1]*/
+    /* Remaps from [deadZone, 1] to [0, 1]. */
     private float ApplyDeadZone(float deadZone, float value)
     {
         float newValue = (value - 0.2f) / (1 - deadZone);

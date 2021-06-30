@@ -1,23 +1,22 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 /* This class represents a Task that is run on another thread. It contains all
 the data required for this operation. */
 public class Task
 {
-    private object targetInstance;
-    private String targetMethod;
-    private object targetArgument;
-    private List<object> targetArrayArgument;
+    private readonly object targetInstance;
+    private readonly string targetMethod;
+    private readonly object targetArgument;
+    private readonly List<object> targetArrayArgument;
+    private readonly object tagSpecific;
+    private readonly bool noArgument;
+    private readonly bool arrayArgument;
     private object result;
-    private object tagSpecific;
-    private bool noArgument;
-    private bool arrayArgument;
     public object TaskTag;
 
-    private Task(object instance, String method, object parameter, List<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument, bool arrayArgument)
+    private Task(object instance, string method, object parameter, List<object> arrayParameter, object taskTag, object taskTagSpecific, bool noArgument, bool arrayArgument)
     {
         this.targetInstance = instance;
         this.targetMethod = method;
@@ -30,13 +29,13 @@ public class Task
         this.result = null;
     }
 
-    public Task(object instance, String method, object taskTag, object taskTagSpecific)
+    public Task(object instance, string method, object taskTag, object taskTagSpecific)
         : this(instance, method, null,      null,           taskTag, taskTagSpecific, true, false) { }
 
-    public Task(object instance, String method, object parameter, object taskTag, object taskTagSpecific)
+    public Task(object instance, string method, object parameter, object taskTag, object taskTagSpecific)
         : this(instance, method, parameter, null,           taskTag, taskTagSpecific, false, false) { }
 
-    public Task(object instance, String method, List<object> arrayParameter, object taskTag, object taskTagSpecific)
+    public Task(object instance, string method, List<object> arrayParameter, object taskTag, object taskTagSpecific)
         : this(instance, method, null,      arrayParameter, taskTag, taskTagSpecific, false, true) { }
 
     public object GetTag()
@@ -65,7 +64,7 @@ public class Task
         System.Reflection.MethodInfo method = type.GetMethod(targetMethod);
         if (method == null)
         {
-            GD.Print(String.Format("Target Method {0} was null. Is the method private or does it not exist?", targetMethod));
+            GD.Print(string.Format("Target Method {0} was null. Is the method private or does it not exist?", targetMethod));
         }
 
         if (noArgument)

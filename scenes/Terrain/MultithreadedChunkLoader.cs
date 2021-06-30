@@ -5,12 +5,12 @@ using System.Collections.Generic;
 
 public class MultithreadedChunkLoader
 {
-    private Terrain terrain;
-    private ThreadPool threadPool;
-    bool singleThreadedThreadPool;
+    private readonly Terrain terrain;
+    private readonly ThreadPool threadPool;
+    private readonly bool singleThreadedThreadPool;
 
-    private ConcurrentSet<Vector2> chunksLoading;
-    private ConcurrentSet<Vector2> chunksLighting;
+    private readonly ConcurrentSet<Vector2> chunksLoading;
+    private readonly ConcurrentSet<Vector2> chunksLighting;
 
     public MultithreadedChunkLoader(Terrain terrain, ThreadPool threadPool, bool singleThreadedThreadPool)
     {
@@ -20,23 +20,6 @@ public class MultithreadedChunkLoader
 
         chunksLoading = new ConcurrentSet<Vector2>();
         chunksLighting = new ConcurrentSet<Vector2>();
-    }
-
-    public void LightAllChunks(Terrain terrain, Vector2 worldSizeInChunks)
-    {
-        Developer.Fail("Unused");
-
-        for (int i = 0; i < worldSizeInChunks.x; i++)
-        for (int j = 0; j < worldSizeInChunks.y; j++)
-        {
-            // BeginLightingChunk(new Vector2(i, j));
-        }
-
-        for (int i = 0; i < worldSizeInChunks.x; i++)
-        for (int j = 0; j < worldSizeInChunks.y; j++)
-        {
-            // FinishLightingChunkForcefully(new Vector2(i, j));
-        }
     }
 
     /* Starts to load a chunk if it needs to be loaded and isn't already loading. */
@@ -53,7 +36,7 @@ public class MultithreadedChunkLoader
             return false;
 
         chunksLoading.Add(chunkPosition);
-        GD.Print("Loading Chunk: " + chunkPosition);
+        // GD.Print("Loading Chunk: " + chunkPosition);
 
         Array<object> chunkData = new Array<object>{
             chunkPosition,
@@ -87,7 +70,7 @@ public class MultithreadedChunkLoader
         
         // Add this chunk to the set, marking it as lighting
         chunksLighting.Add(chunkPosition);
-        GD.Print("Lighting chunk: " + chunkPosition);
+        // GD.Print("Lighting chunk: " + chunkPosition);
 
         // Check the dependencies are loading or loaded.
         IList<Vector2> dependencies = chunk.GetDependencies();
@@ -96,7 +79,7 @@ public class MultithreadedChunkLoader
             bool neededLoading = BeginLoadingChunk(chunkToLoadDependency, loadedChunksConcurrent, lazy);
             if (neededLoading)
             {
-                GD.Print("Loading chunk: " + chunkToLoadDependency + " for light: " + chunkPosition);
+                // GD.Print("Loading chunk: " + chunkToLoadDependency + " for light: " + chunkPosition);
             }
         }
 
@@ -129,12 +112,12 @@ public class MultithreadedChunkLoader
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
 
-        GD.Print("ThreadPool(): Started loading chunk: " + chunkPosition);
+        // GD.Print("ThreadPool(): Started loading chunk: " + chunkPosition);
 
         chunk.Create(chunkPosition, terrain.ChunkBlockCount, terrain.WorldBlocksImage, terrain.WorldWallsImage);
         chunksLoading.Remove(chunk.ChunkPosition);
 
-        GD.Print("ThreadPool(): Finished loading chunk: " + chunkPosition);
+        // GD.Print("ThreadPool(): Finished loading chunk: " + chunkPosition);
 
         return chunk;
     }
@@ -144,7 +127,7 @@ public class MultithreadedChunkLoader
         Vector2 chunkPosition = (Vector2)data[0];
         Chunk chunk = (Chunk)data[1];
 
-        GD.Print("ThreadPool(): Started lighting chunk: " + chunkPosition);
+        // GD.Print("ThreadPool(): Started lighting chunk: " + chunkPosition);
 
         chunk.ComputeLightingPass();
 
@@ -152,7 +135,7 @@ public class MultithreadedChunkLoader
         {
             chunk.Update();
             chunksLighting.Remove(chunk.ChunkPosition);
-            GD.Print("ThreadPool(): Finished lighting chunk: " + chunkPosition);
+            // GD.Print("ThreadPool(): Finished lighting chunk: " + chunkPosition);
         }
         catch (System.ObjectDisposedException)
         {
@@ -166,6 +149,12 @@ public class MultithreadedChunkLoader
     public void FinishLoadingChunkForcefully(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
     {
         Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "FinishLoadingChunkForcefully() requires the lock. ");
+
+        if (!chunksLoading.Contains(chunkPosition))
+            return;
+
+        // GD.Print("Force loading chunk: " + chunkPosition);
+
         loadedChunksConcurrent.Unlock();
         while (true)
         {
@@ -180,6 +169,11 @@ public class MultithreadedChunkLoader
     public void FinishLightingChunkForcefully(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunksConcurrent)
     {
         Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "FinishLightingChunkForcefully() requires the lock. ");
+
+        if (!chunksLighting.Contains(chunkPosition))
+            return;
+
+        // GD.Print("Force lighting chunk: " + chunkPosition);
 
         foreach (Vector2 dependency in Chunk.GetDependencies(chunkPosition, terrain.GetWorldSizeInChunks()))
         {

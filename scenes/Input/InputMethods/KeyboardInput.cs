@@ -10,12 +10,11 @@ public class KeyboardInput : IInputMethod
     }
     public InputEvent GetInputEvent(int keyCode)
     {
-        InputEventKey inputEventKey = new InputEventKey();
-        inputEventKey.Scancode = (uint)keyCode;
+        InputEventKey inputEventKey = new InputEventKey {Scancode = (uint) keyCode};
         return inputEventKey;
     }
 
-    public String GetInputMethodName()
+    public string GetInputMethodName()
     {
         return "Keyboard";
     }

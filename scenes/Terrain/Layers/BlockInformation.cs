@@ -1,21 +1,20 @@
 using Godot;
-using System;
 
 public class BlockInformation
 {
-    public String Name;
-    public Color ReadableColour;
-    public Color SaveableColour;
+    private readonly string name;
+    private readonly Color readableColour;
+    private Color saveableColour;
     // public Sprite sprite;
 
-    public BlockInformation(String name, byte red, byte green, byte blue)
+    public BlockInformation(string name, byte red, byte green, byte blue)
     {
-        this.Name = name;
-        this.ReadableColour = Color.Color8(red, green, blue);
+        this.name = name;
+        this.readableColour = Color.Color8(red, green, blue);
     }
 
     public void SetSaveableColour(Color saveableColour)
     {
-        this.SaveableColour = saveableColour;
+        this.saveableColour = saveableColour;
     }
 }

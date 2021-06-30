@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 /* This interface defines an input method for the ActionMapping system. This
 allows for a InputEvent to be used with the different children that work
@@ -20,5 +19,5 @@ public interface IInputMethod
 
     // Name of the input method for saving and loading the mappings
     // to a file.
-    String GetInputMethodName();
+    string GetInputMethodName();
 }

@@ -2,11 +2,11 @@ using System.Collections.Concurrent;
 
 public class ConcurrentSet<T>
 {
-    private ConcurrentDictionary<T, byte> backendDict;
+    private readonly ConcurrentDictionary<T, byte> backendDict;
 
     public ConcurrentSet()
     {
-        this.backendDict = new ConcurrentDictionary<T, byte>();
+        backendDict = new ConcurrentDictionary<T, byte>();
     }
 
     public void Add(T item)
@@ -21,7 +21,6 @@ public class ConcurrentSet<T>
 
     public bool Remove(T item)
     {
-        byte removed;
-        return backendDict.TryRemove(item, out removed);
+        return backendDict.TryRemove(item, out byte _);
     }
 }

@@ -6,8 +6,8 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
 {
     private ConcurrentDictionary<TKey, TValue> volatileDictionary;
     private ConcurrentDictionary<TKey, TValue> lazyDictionary;
-    private SafeMutex mutex;
-    public bool IsLocked { get { return mutex.IsLocked; } }
+    private readonly SafeMutex mutex;
+    public bool IsLocked => mutex.IsLocked;
 
     public LazyVolatileDictionary()
     {
@@ -70,16 +70,14 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
 
     public bool VolatileRemove(TKey key)
     {
-        TValue temp;
-        return volatileDictionary.TryRemove(key, out temp);;
+        return volatileDictionary.TryRemove(key, out TValue _);
     }
 
     public void VolatileRemove(IEnumerable<TKey> keys)
     {
         foreach (TKey key in keys)
         {
-            TValue temp;
-            volatileDictionary.TryRemove(key, out temp);
+            volatileDictionary.TryRemove(key, out TValue _);
         }
     }
 
@@ -104,8 +102,7 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
 
                 // Erase the ones to keep. This means that we will be left with
                 // the ones the replace.
-                TValue temp;
-                volatileDictionary.TryRemove(keepKey, out temp);
+                volatileDictionary.TryRemove(keepKey, out TValue _);
             }
         }
 
@@ -125,16 +122,14 @@ public class LazyVolatileDictionary<TKey, TValue> where TValue : class
 
     public bool LazyRemove(TKey key)
     {
-         TValue temp;
-         return volatileDictionary.TryRemove(key, out temp);
+        return volatileDictionary.TryRemove(key, out TValue _);
     }
 
     public void LazyRemove(IEnumerable<TKey> keys)
     {
         foreach (TKey key in keys)
         {
-            TValue temp;
-            volatileDictionary.TryRemove(key, out temp);
+            volatileDictionary.TryRemove(key, out TValue _);
         }
     }
 

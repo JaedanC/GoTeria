@@ -10,35 +10,17 @@ public abstract class Entity : Node2D, ICollidable
     protected KinematicBody2D rigidBody;
     protected CollisionShape2D hitbox;
     protected Vector2 velocity;
-    public Vector2 SmoothPosition
-    {
-        get
-        {
-            return smoothing.Position;
-        }
-    }
-    
+    public Vector2 SmoothPosition => smoothing.Position;
+
     /* Hide the Entity's position with the rigidbody one. If you require the smooth location
     use SmoothPosition. */
     public new Vector2 Position {
-        get
-        {
-            return rigidBody.Position;
-        }
-        set
-        {
-            rigidBody.Position = value;
-        }
+        get => rigidBody.Position;
+        set => rigidBody.Position = value;
     }
     public new float Rotation {
-        get
-        {
-            return (float)smoothing.Get("rotation");
-        }
-        set
-        {
-            rigidBody.Rotation = value;
-        }
+        get => (float)smoothing.Get("rotation");
+        set => rigidBody.Rotation = value;
     }
 
     public override void _Ready()
@@ -55,8 +37,9 @@ public abstract class Entity : Node2D, ICollidable
         this.terrain = terrain;
         this.collisionSystem = collisionSystem;
 
-        if (collisionComponent != null)
-            collisionComponent.Initialise(terrain, collisionSystem);
+        // if (collisionComponent != null)
+        //     collisionComponent.Initialise(terrain, collisionSystem);
+        collisionComponent?.Initialise(terrain, collisionSystem);
     }
 
     public void Teleport()

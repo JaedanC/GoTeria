@@ -15,17 +15,18 @@ public class Chunk : Node2D, IResettable
     private WorldFile worldFile;
     private ChunkLighting chunkLighting;
     private Image worldImage;
-    private Vector2 chunkPosition;
     private Vector2 blockCount;
     private Vector2 blockPixelSize;
     private bool memoryAllocated;
-    private ChunkStack chunkStack;
-    public Vector2 ChunkPosition { get { return chunkPosition; } }
-    public bool LoadingDone { get; set; }
-    public bool LightingDone { get; set; }
+    private readonly ChunkStack chunkStack;
+    public Vector2 ChunkPosition { get; private set; }
+
+    private bool loadingDone;
+
+    private bool lightingDone;
     // private ChunkLighting chunkLighting;
-    public Block[] Blocks { get { return chunkStack.Blocks; } }
-    public Wall[] Walls { get { return chunkStack.Walls; } }
+    public Block[] Blocks => chunkStack.Blocks;
+    public Wall[] Walls => chunkStack.Walls;
 
 
     public static int BlockPositionToBlockIndex(Vector2 chunkSize, Vector2 blockPosition)
@@ -78,23 +79,23 @@ public class Chunk : Node2D, IResettable
     public void Initialise(object[] parameters)
     {
         this.worldImage = (Image)parameters[0];
-        this.chunkPosition = (Vector2)parameters[1];
+        this.ChunkPosition = (Vector2)parameters[1];
         this.blockPixelSize = (Vector2)parameters[2];
         this.blockCount = (Vector2)parameters[3];
         this.terrain = (Terrain)parameters[4];
         this.worldFile = (WorldFile)parameters[5];
         this.chunkLighting = (ChunkLighting)parameters[6];
-        this.LightingDone = false;
-        this.LoadingDone = false;
-        this.Position = blockPixelSize * chunkPosition * blockCount;
+        this.lightingDone = false;
+        this.loadingDone = false;
+        this.Position = blockPixelSize * ChunkPosition * blockCount;
     }
 
     public LoadingPhase GetLoadingPhase()
     {
-        if (!LoadingDone)
+        if (!loadingDone)
             return LoadingPhase.NeedsLoading;
 
-        if (!LightingDone)
+        if (!lightingDone)
             return LoadingPhase.NeedsLighting;
 
         return LoadingPhase.ReadyToDraw;
@@ -106,12 +107,12 @@ public class Chunk : Node2D, IResettable
             AllocateMemory(blockCount);
 
         chunkStack.Create(chunkPosition, blockCount, worldBlocksImages, worldWallsImage);
-        LoadingDone = true;
+        loadingDone = true;
     }
 
     public IList<Vector2> GetDependencies()
     {
-        return Chunk.GetDependencies(chunkPosition, terrain.GetWorldSizeInChunks());
+        return Chunk.GetDependencies(ChunkPosition, terrain.GetWorldSizeInChunks());
     }
 
     public override void _Draw()
@@ -126,7 +127,7 @@ public class Chunk : Node2D, IResettable
         // chunkLighting.ComputeLightingPass();
         // terrain.LightingEngine.LightChunk(this);
         chunkLighting.CalculateLightOrUseCachedLight(this);
-        LightingDone = true;
+        lightingDone = true;
         // Update();
     }
 
@@ -140,7 +141,7 @@ public class Chunk : Node2D, IResettable
     run after all the blocks have been loaded.*/
     private void DrawChunk()
     {
-        if (!LoadingDone || !LightingDone)
+        if (!loadingDone || !lightingDone)
             return;
 
         DrawSetTransform(Vector2.Zero, 0, blockPixelSize);

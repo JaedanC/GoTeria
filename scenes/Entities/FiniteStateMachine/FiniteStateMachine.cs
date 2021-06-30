@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 
 // Template class
@@ -14,15 +13,14 @@ public abstract class FiniteStateMachine : Node
 
     public override void _Ready()
     {
-        this.futurePlayer = new WorldSpawn.Future<Player>();
-        // this.player = WorldSpawn.ActiveWorldSpawn.GetPlayer();
-        this.myself = GetParent<Entity>();
+        futurePlayer = new WorldSpawn.Future<Player>();
+        myself = GetParent<Entity>();
         alive = -1;
     }
 
     public override void _PhysicsProcess(float delta)
     {
-        this.player = WorldSpawn.Future<Player>.Redeem(futurePlayer);
+        player = WorldSpawn.Future<Player>.Redeem(futurePlayer);
         alive += 1;
         currentState.PhysicsProcess(this, myself, player, alive, delta);
     }

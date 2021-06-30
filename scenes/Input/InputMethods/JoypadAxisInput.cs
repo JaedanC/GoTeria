@@ -10,12 +10,11 @@ public class JoypadAxisInput : IInputMethod
     }
     public InputEvent GetInputEvent(int keyCode)
     {
-        InputEventJoypadMotion inputEventJoypadMotion = new InputEventJoypadMotion();
-        inputEventJoypadMotion.Axis = keyCode;
+        InputEventJoypadMotion inputEventJoypadMotion = new InputEventJoypadMotion {Axis = keyCode};
         return inputEventJoypadMotion;
     }
 
-    public String GetInputMethodName()
+    public string GetInputMethodName()
     {
         return "JoypadAxis";
     }

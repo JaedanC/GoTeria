@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 using Priority_Queue;
 
@@ -17,15 +16,15 @@ public class ThreadPool : Node
     private bool singleThreaded;
     private bool discardFinishedTasks;
 
-    private SimplePriorityQueue<Task, float> __tasks;
+    private SimplePriorityQueue<Task, float> tasks;
     // private Array<Task> __tasks;
-    private bool __started;
-    private bool __finished;
-    private Mutex __tasksLock;
-    private Semaphore __tasksWait;
-    private List<Task> __finishedTasks;
-    private Mutex __finishedTasksLock;
-    private List<Thread> __pool;
+    private bool started;
+    private bool finished;
+    private Mutex tasksLock;
+    private Semaphore tasksWait;
+    private List<Task> finishedTasks;
+    private Mutex finishedTasksLock;
+    private List<Thread> pool;
 
     private enum ParameterType
     {
@@ -39,12 +38,12 @@ public class ThreadPool : Node
         Name = "ThreadPool";
 
         // __tasks = new Array<Task>();
-        __started = false;
-        __finished = false;
-        __tasksLock = new Mutex();
-        __tasksWait = new Semaphore();
-        __finishedTasks = new List<Task>();
-        __finishedTasksLock = new Mutex();
+        started = false;
+        finished = false;
+        tasksLock = new Mutex();
+        tasksWait = new Semaphore();
+        finishedTasks = new List<Task>();
+        finishedTasksLock = new Mutex();
     }
 
     public void Initialise(bool singleThreaded, bool discardFinishedTasks, int numThreads)
@@ -52,8 +51,8 @@ public class ThreadPool : Node
         Developer.AssertGreaterThanEquals(numThreads, 1, "Number of threads must be at least one");
         this.singleThreaded = singleThreaded;
         this.discardFinishedTasks = discardFinishedTasks;
-        __tasks = new SimplePriorityQueue<Task, float>();
-        __pool = __CreatePool(numThreads);
+        tasks = new SimplePriorityQueue<Task, float>();
+        pool = __CreatePool(numThreads);
     }
 
     public override void _Notification(int what)
@@ -68,57 +67,57 @@ public class ThreadPool : Node
         base.QueueFree();
     }
 
-    public void SubmitTaskUnparameterized(object instance, String method, float priority, object taskTag = null, object taskTagSpecific = null)
+    public void SubmitTaskUnparameterized(object instance, string method, float priority, object taskTag = null, object taskTagSpecific = null)
     {
         __EnqueueTask(instance, method, null, null, taskTag, taskTagSpecific, priority, ParameterType.None);
     }
 
-    public void SubmitTask(object instance, String method, object parameter, float priority, object taskTag = null, object taskTagSpecific = null)
+    public void SubmitTask(object instance, string method, object parameter, float priority, object taskTag = null, object taskTagSpecific = null)
     {
         __EnqueueTask(instance, method, parameter, null, taskTag, taskTagSpecific, priority, ParameterType.Object);
     }
 
-    public void SubmitTaskArrayParameterized(object instance, String method, List<object> listParameter, float priority, object taskTag = null, object taskTagSpecific = null)
+    public void SubmitTaskArrayParameterized(object instance, string method, List<object> listParameter, float priority, object taskTag = null, object taskTagSpecific = null)
     {
         __EnqueueTask(instance, method, null, listParameter, taskTag, taskTagSpecific, priority, ParameterType.Array);
     }
 
     public void Shutdown()
     {
-        __finished = true;
-        foreach (Thread i in __pool)
+        finished = true;
+        foreach (Thread i in pool)
         {
-            __tasksWait.Post();
+            tasksWait.Post();
         }
-        __tasksLock.Lock();
-        __tasks.Clear();
-        __tasksLock.Unlock();
+        tasksLock.Lock();
+        tasks.Clear();
+        tasksLock.Unlock();
     }
 
     public List<Task> FetchFinishedTasks()
     {
-        __finishedTasksLock.Lock();
-        List<Task> result = __finishedTasks;
-        __finishedTasks = new List<Task>();
-        __finishedTasksLock.Unlock();
+        finishedTasksLock.Lock();
+        List<Task> result = finishedTasks;
+        finishedTasks = new List<Task>();
+        finishedTasksLock.Unlock();
         return result;
     }
 
     public List<Task> FetchFinishedTasksByTag(object tag)
     {
-        __finishedTasksLock.Lock();
+        finishedTasksLock.Lock();
         List<Task> result = new List<Task>();
         List<Task> newFinishedTasks = new List<Task>();
-        for (int i = 0; i < __finishedTasks.Count; i++)
+        for (int i = 0; i < finishedTasks.Count; i++)
         {
-            Task task = __finishedTasks[i];
+            Task task = finishedTasks[i];
             if (task.GetTag().Equals(tag))
                 result.Add(task);
             else
                 newFinishedTasks.Add(task);
         }
-        __finishedTasks = newFinishedTasks;
-        __finishedTasksLock.Unlock();
+        finishedTasks = newFinishedTasks;
+        finishedTasksLock.Unlock();
         return result;
     }
 
@@ -128,37 +127,37 @@ public class ThreadPool : Node
         OS.DelayMsec(1); // if there is nothing to do, go sleep
     }
 
-    private void __EnqueueTask(object instance, String method, object parameter, List<object> arrayParameter,
+    private void __EnqueueTask(object instance, string method, object parameter, List<object> arrayParameter,
                                object taskTag, object taskTagSpecific, float priority, ParameterType parameterType)
     {
-        if (__finished)
+        if (finished)
             return;
-        __tasksLock.Lock();
+        tasksLock.Lock();
         switch (parameterType)
         {
             case ParameterType.None:
-                __tasks.Enqueue(new Task(instance, method, taskTag, taskTagSpecific), priority);
+                tasks.Enqueue(new Task(instance, method, taskTag, taskTagSpecific), priority);
                 break;
             case ParameterType.Object:
-                __tasks.Enqueue(new Task(instance, method, parameter, taskTag, taskTagSpecific), priority);
+                tasks.Enqueue(new Task(instance, method, parameter, taskTag, taskTagSpecific), priority);
                 break;
             case ParameterType.Array:
-                __tasks.Enqueue(new Task(instance, method, arrayParameter, taskTag, taskTagSpecific), priority);
+                tasks.Enqueue(new Task(instance, method, arrayParameter, taskTag, taskTagSpecific), priority);
                 break;
             default:
                 Developer.Fail();
                 break;
         }
-        GD.Print("Tasks size:" + __tasks.Count);
-        __tasksWait.Post();
+        // GD.Print("Tasks size:" + __tasks.Count);
+        tasksWait.Post();
         __Start();
-        __tasksLock.Unlock();
+        tasksLock.Unlock();
     }
 
     private void __WaitForShutdown()
     {
         Shutdown();
-        foreach (Thread t in __pool)
+        foreach (Thread t in pool)
         {
             if (t.IsActive())
                 t.WaitToFinish();
@@ -183,14 +182,14 @@ public class ThreadPool : Node
             Task task = __DrainTask();
             task.__ExecuteTask();
             if (!(task.TaskTag is Task))
-                __finishedTasks.Add(task);
+                finishedTasks.Add(task);
         }
-        else if (!__started)
+        else if (!started)
         {
-            foreach (Thread t in __pool)
+            foreach (Thread t in pool)
             {
                 t.Start(this, "__ExecuteTasks", t);
-                __started = true;
+                started = true;
             }
         }
     }
@@ -204,45 +203,45 @@ public class ThreadPool : Node
         //GD.Print("Force waiting for " + str(tag_specific) + " thread to finish");
         while (true)
         {
-            __finishedTasksLock.Lock();
-            foreach (Task task in __finishedTasks)
+            finishedTasksLock.Lock();
+            foreach (Task task in finishedTasks)
             {
                 if (task.GetTagSpecific().Equals(taskSpecific))
                 {
                     //GD.Print("Found");
-                    __finishedTasksLock.Unlock();
+                    finishedTasksLock.Unlock();
                     return;
                 }
             }
-            __finishedTasksLock.Unlock();
+            finishedTasksLock.Unlock();
             OS.DelayMsec(2);
         }
     }
 
     private Task __DrainTask()
     {
-        __tasksLock.Lock();
+        tasksLock.Lock();
         Task result;
-        if (__tasks.Count == 0)
+        if (tasks.Count == 0)
         {
             result = new Task(this, "DoNothing", null, null, null); // normally, this is not expected, but better safe than sorry
             result.TaskTag = result;
         }
         else
         {
-            result = __tasks.Dequeue();
+            result = tasks.Dequeue();
         }
-        __tasksLock.Unlock();
+        tasksLock.Unlock();
         return result;
     }
 
     private void __ExecuteTasks(Thread argThread)
     {
         // GD.Print(arg_thread);
-        while (!__finished)
+        while (!finished)
         {
-            __tasksWait.Wait();
-            if (__finished)
+            tasksWait.Wait();
+            if (finished)
                 return;
             Task task = __DrainTask();
             // GD.Print(task);
@@ -256,9 +255,9 @@ public class ThreadPool : Node
                 }
                 else
                 {
-                    __finishedTasksLock.Lock();
-                    __finishedTasks.Add(task);
-                    __finishedTasksLock.Unlock();
+                    finishedTasksLock.Lock();
+                    finishedTasks.Add(task);
+                    finishedTasksLock.Unlock();
                     // Signals unused.
                     //CallDeferred("emit_signal", "task_finished", task.tag);
                 }

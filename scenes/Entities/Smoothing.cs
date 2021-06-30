@@ -27,53 +27,40 @@ By Lawnjelly
 */
 
 using Godot;
-using System;
 
 public class Smoothing : Node2D
 {
     private NodePath target = new NodePath("../RigidBody");
-    private int flags = ENABLED | TRANSLATE;
+    private int flags = Enabled | TrackTranslate;
     
     [Export]
     public NodePath Target
     {
-        get
-        {
-            return GetTarget();
-        }
-        set
-        {
-            SetTarget(value);
-        }
+        get => GetTarget();
+        set => SetTarget(value);
     }
 
     [Export(PropertyHint.Flags, "enabled,translate,rotate,scale,global in,global out")]
     public int Flags {
-        get
-        {
-            return OnExportGetFlags();
-        }
-        set
-        {
-            OnExportSetFlags(value);
-        }
+        get => OnExportGetFlags();
+        set => OnExportSetFlags(value);
     }
-    private Node2D _m_Target;
-    private Vector2 m_Pos_curr = Vector2.Zero;
-    private Vector2 m_Pos_prev = Vector2.Zero;
-    private float m_Angle_curr;
-    private float m_Angle_prev;
-    private Vector2 m_Scale_curr = Vector2.Zero;
-    private Vector2 m_Scale_prev = Vector2.Zero;
+    private Node2D mTarget;
+    private Vector2 mPosCurr = Vector2.Zero;
+    private Vector2 mPosPrev = Vector2.Zero;
+    private float mAngleCurr;
+    private float mAnglePrev;
+    private Vector2 mScaleCurr = Vector2.Zero;
+    private Vector2 mScalePrev = Vector2.Zero;
 
-    private const int ENABLED = 1 << 0;
-    private const int TRANSLATE = 1 << 1;
-    private const int ROTATE = 1 << 2;
-    private const int SCALE = 1 << 3;
-    private const int GLOBAL_IN = 1 << 4;
-    private const int GLOBAL_OUT = 1 << 5;
-    private const int DIRTY = 1 << 6;
-    private const int INVISIBLE = 1 << 7;
+    private const int Enabled = 1 << 0;
+    private const int TrackTranslate = 1 << 1;
+    private const int TrackRotate = 1 << 2;
+    private const int TrackScale = 1 << 3;
+    private const int GlobalIn = 1 << 4;
+    private const int GlobalOut = 1 << 5;
+    private const int Dirty = 1 << 6;
+    private const int Invisible = 1 << 7;
 
 
     // User Functions
@@ -83,13 +70,13 @@ public class Smoothing : Node2D
     so we can update both the previous and current values. */
     public void Teleport()
     {
-        var tempFlags = flags;
-        SetFlags(TRANSLATE | ROTATE | SCALE);
+        int tempFlags = flags;
+        SetFlags(TrackTranslate | TrackRotate | TrackScale);
 
         RefreshTransform();
-        m_Pos_prev = m_Pos_curr;
-        m_Angle_prev = m_Angle_curr;
-        m_Scale_prev = m_Scale_curr;
+        mPosPrev = mPosCurr;
+        mAnglePrev = mAngleCurr;
+        mScalePrev = mScaleCurr;
 
         // Call frame update to make sure all components of the node are set
         _Process(0);
@@ -100,23 +87,23 @@ public class Smoothing : Node2D
 
     public void SetEnabled(bool enable)
     {
-        ChangeFlags(ENABLED, enable);
+        ChangeFlags(Enabled, enable);
         SetProcessing();
     }
 
-    public bool isEnabled()
+    public bool IsEnabled()
     {
-        return TestFlags(ENABLED);
+        return TestFlags(Enabled);
     }
 
     // ##########################################################################################
 
     public override void _Ready()
     {
-        m_Angle_curr = 0;
-        m_Angle_prev = 0;
+        mAngleCurr = 0;
+        mAnglePrev = 0;
 
-        Developer.AssertNotNull(_m_Target, "A target must be defined for the Smoothing2D node to work.");
+        Developer.AssertNotNull(mTarget, "A target must be defined for the Smoothing2D node to work.");
     }
 
     private void SetTarget(NodePath newTarget)
@@ -126,7 +113,7 @@ public class Smoothing : Node2D
             FindTarget();
     }
 
-    private String GetTarget()
+    private string GetTarget()
     {
         return target;
     }
@@ -145,8 +132,8 @@ public class Smoothing : Node2D
 
     private void SetProcessing()
     {
-        bool enabled = TestFlags(ENABLED);
-        if (TestFlags(INVISIBLE))
+        bool enabled = TestFlags(Enabled);
+        if (TestFlags(Invisible))
         {
             enabled = false;
         }
@@ -165,122 +152,122 @@ public class Smoothing : Node2D
     {
         if (what == NotificationVisibilityChanged)
         {
-            ChangeFlags(INVISIBLE, IsVisibleInTree() == false);
+            ChangeFlags(Invisible, IsVisibleInTree() == false);
             SetProcessing();
         }
     }
 
     private void RefreshTransform()
     {
-        ClearFlags(DIRTY);
+        ClearFlags(Dirty);
 
         if (!HasTarget())
             return;
 
-        if (TestFlags(GLOBAL_IN))
+        if (TestFlags(GlobalIn))
         {
-            if (TestFlags(TRANSLATE))
+            if (TestFlags(TrackTranslate))
             {
-                m_Pos_prev = m_Pos_curr;
-                m_Pos_curr = _m_Target.GlobalPosition;
+                mPosPrev = mPosCurr;
+                mPosCurr = mTarget.GlobalPosition;
             }
 
-            if (TestFlags(ROTATE))
+            if (TestFlags(TrackRotate))
             {
-                m_Angle_prev = m_Angle_curr;
-                m_Angle_curr = _m_Target.GlobalRotation;
+                mAnglePrev = mAngleCurr;
+                mAngleCurr = mTarget.GlobalRotation;
             }
 
-            if (TestFlags(SCALE))
+            if (TestFlags(TrackScale))
             {
-                m_Scale_prev = m_Scale_curr;
-                m_Scale_curr = _m_Target.GlobalScale;
+                mScalePrev = mScaleCurr;
+                mScaleCurr = mTarget.GlobalScale;
             }
         }
         else
         {
-            if (TestFlags(TRANSLATE))
+            if (TestFlags(TrackTranslate))
             {
-                m_Pos_prev = m_Pos_curr;
-                m_Pos_curr = _m_Target.Position;
+                mPosPrev = mPosCurr;
+                mPosCurr = mTarget.Position;
             }
 
-            if (TestFlags(ROTATE))
+            if (TestFlags(TrackRotate))
             {
-                m_Angle_prev = m_Angle_curr;
-                m_Angle_curr = _m_Target.Rotation;
+                mAnglePrev = mAngleCurr;
+                mAngleCurr = mTarget.Rotation;
             }
 
-            if (TestFlags(SCALE))
+            if (TestFlags(TrackScale))
             {
-                m_Scale_prev = m_Scale_curr;
-                m_Scale_curr = _m_Target.Scale;
+                mScalePrev = mScaleCurr;
+                mScaleCurr = mTarget.Scale;
             }
         }
     }
 
     private void FindTarget()
     {
-        _m_Target = null;
+        mTarget = null;
         if (target.IsEmpty())
             return;
 
         // Not sure about this.
-        _m_Target = GetNode<Node2D>(target);
+        mTarget = GetNode<Node2D>(target);
 
-        if (_m_Target is Node2D)
+        if (mTarget is Node2D)
             return;
 
-        _m_Target = null;
+        mTarget = null;
     }
 
     private bool HasTarget()
     {
-        if (_m_Target == null)
+        if (mTarget == null)
             return false;
 
         // Has not been deleted?
-        if (IsInstanceValid(_m_Target))
+        if (IsInstanceValid(mTarget))
             return true;
 
-        _m_Target = null;
+        mTarget = null;
         return false;
     }
 
     public override void _Process(float delta)
     {
-        if (TestFlags(DIRTY))
+        if (TestFlags(Dirty))
             RefreshTransform();
         
         float f = Engine.GetPhysicsInterpolationFraction();
 
-        if (TestFlags(GLOBAL_OUT))
+        if (TestFlags(GlobalOut))
         {
             // Translate
-            if (TestFlags(TRANSLATE))
-                GlobalPosition = m_Pos_prev.LinearInterpolate(m_Pos_curr, f);
+            if (TestFlags(TrackTranslate))
+                GlobalPosition = mPosPrev.LinearInterpolate(mPosCurr, f);
 
             // Rotate
-            if (TestFlags(ROTATE))
-                GlobalRotation = LerpAngle(m_Angle_prev, m_Angle_curr, f);
+            if (TestFlags(TrackRotate))
+                GlobalRotation = LerpAngle(mAnglePrev, mAngleCurr, f);
 
             // Scale?
-            if (TestFlags(SCALE))
-                GlobalScale = m_Scale_prev.LinearInterpolate(m_Scale_curr, f);
+            if (TestFlags(TrackScale))
+                GlobalScale = mScalePrev.LinearInterpolate(mScaleCurr, f);
         }
         else
         {
             // Translate
-            if (TestFlags(TRANSLATE))
-                Position = m_Pos_prev.LinearInterpolate(m_Pos_curr, f);
+            if (TestFlags(TrackTranslate))
+                Position = mPosPrev.LinearInterpolate(mPosCurr, f);
 
             // Rotate
-            if (TestFlags(ROTATE))
-                Rotation = LerpAngle(m_Angle_prev, m_Angle_curr, f);
+            if (TestFlags(TrackRotate))
+                Rotation = LerpAngle(mAnglePrev, mAngleCurr, f);
 
             // Scale
-            if (TestFlags(SCALE))
-                Scale = m_Scale_prev.LinearInterpolate(m_Scale_curr, f);
+            if (TestFlags(TrackScale))
+                Scale = mScalePrev.LinearInterpolate(mScaleCurr, f);
         }
     }
 
@@ -288,20 +275,20 @@ public class Smoothing : Node2D
     {
         // Take care of the special case where multiple physics ticks
         // occur before a frame .. the data must flow!
-        if (TestFlags(DIRTY))
+        if (TestFlags(Dirty))
             RefreshTransform();
 
-        SetFlags(DIRTY);
+        SetFlags(Dirty);
     }
 
-    private float LerpAngle(float from, float to, float weight)
+    private static float LerpAngle(float from, float to, float weight)
     {
         return from + ShortAngleDist(from, to) * weight;
     }
 
-    private float ShortAngleDist(float from, float to)
+    private static float ShortAngleDist(float from, float to)
     {
-        float maxAngle  = 2 * Mathf.Pi;
+        const float maxAngle = 2 * Mathf.Pi;
         // Floating point modulus
         float diff = (to - from) % maxAngle;
         return (2 * diff % maxAngle) - diff;
@@ -309,12 +296,12 @@ public class Smoothing : Node2D
 
     private void SetFlags(int f)
     {
-        this.flags |= f;
+        flags |= f;
     }
 
     private void ClearFlags(int f)
     {
-        this.flags &= ~f;
+        flags &= ~f;
     }
 
     private bool TestFlags(int f)

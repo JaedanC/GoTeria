@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 public class LightUpdateColourQueueSet
 {
-    private Queue<LightingEngine.LightUpdate> updateQueue;
-    private System.Collections.Generic.Dictionary<Vector2, Color> updateDictionary;
-    public int Count { get { return updateQueue.Count; } }
+    private readonly Queue<LightingEngine.LightUpdate> updateQueue;
+    private readonly Dictionary<Vector2, Color> updateDictionary;
+    public int Count => updateQueue.Count;
 
     public LightUpdateColourQueueSet()
     {

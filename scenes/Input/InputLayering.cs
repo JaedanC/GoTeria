@@ -1,15 +1,14 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 
 public class InputLayering : Node
 {
-    private HashSet<String> consumedActions;
+    private HashSet<string> consumedActions;
     private AnalogMapping analogMapping;
 
     public override void _Ready()
     {
-        consumedActions = new HashSet<String>();
+        consumedActions = new HashSet<string>();
     }
 
     public void Initialise(AnalogMapping analogMapping)
@@ -26,47 +25,43 @@ public class InputLayering : Node
     the action was triggered and it has not already been popped. This allows for a
     system where nodes can greedily steal the action and prevent other nodes from
     reading it. */
-    public bool PopAction(String action)
+    public bool PopAction(string action)
     {
-        if (PollAction(action))
-        {
-            consumedActions.Add(action);
-            return true;
-        }
-        return false;
+        if (!PollAction(action))
+            return false;
+        
+        consumedActions.Add(action);
+        return true;
     }
 
     /* Checks whether an action was triggered and it was allowed to be read without
     changing it's readability status. */
-    public bool PollAction(String action)
+    public bool PollAction(string action)
     {
         return Input.IsActionPressed(action) && !consumedActions.Contains(action);
     }
 
     /* Same as PopAction but will only return true on the first frame this was
     called. */
-    public bool PopActionPressed(String action)
+    public bool PopActionPressed(string action)
     {
-        if (PollActionPressed(action))
-        {
-            consumedActions.Add(action);
-            return true;
-        }
-        return false;
+        if (!PollActionPressed(action))
+            return false;
+        
+        consumedActions.Add(action);
+        return true;
     }
 
     /* Same as PollAction but will only return true on the first frame this was
     called. */
-    public bool PollActionPressed(String action)
+    public bool PollActionPressed(string action)
     {
-        InputEventAction blah = new InputEventAction();
-
         return Input.IsActionJustPressed(action) && !consumedActions.Contains(action);
     }
 
     /* Accesses the Dual Axis Actions if one exists. Returns a value in the range [0, 1]
     depending on the strength of the action. */
-    public float PollActionStrength(String action)
+    public float PollActionStrength(string action)
     {
         if (consumedActions.Contains(action))
         {
@@ -82,7 +77,7 @@ public class InputLayering : Node
 
     /* Same as PollActionStrength() but pops the action so nothing else can read it
     when done. */
-    public float PopActionStrength(String action)
+    public float PopActionStrength(string action)
     {
         float actionStrength = PollActionStrength(action);
         consumedActions.Add(action);
