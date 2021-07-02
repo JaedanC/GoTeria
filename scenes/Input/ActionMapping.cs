@@ -69,6 +69,7 @@ public class ActionMapping : Node
         AddActionMapping("place_light", ",");
         AddActionMapping("remove_light", "mouse5");
         AddActionMapping("remove_light", ".");
+        AddActionMapping("inspect", "e");
 
         AddActionMapping("jump", "joy_a");
         AddActionMapping("brake", "joy_b");

@@ -39,7 +39,7 @@ public abstract class Entity : Node2D, ICollidable
 
         // if (collisionComponent != null)
         //     collisionComponent.Initialise(terrain, collisionSystem);
-        collisionComponent?.Initialise(terrain, collisionSystem);
+        collisionComponent?.Initialise(collisionSystem);
     }
 
     public void Teleport()

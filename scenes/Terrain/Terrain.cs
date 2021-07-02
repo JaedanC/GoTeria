@@ -10,7 +10,8 @@ public class Terrain : Node2D
 
     private Player player;
     private InputLayering inputLayering;
-    private ITerrainStack terrainStack;
+    private WorldImage worldImage;
+    private TerrainStack terrainStack;
     private WorldFile worldFile;
     private ObjectPool<Chunk> chunkPool;
     private ThreadPool threadPool;
@@ -36,7 +37,7 @@ public class Terrain : Node2D
         Name = "Terrain";
         
         // Variable checks
-        Developer.AssertGreaterThanEquals(LoadMargin, 2, "Any less than 2 and light will force load on chunk borders and stutter the game. ");
+        Developer.AssertGreaterThanEquals(LoadMargin, 2, "Any less than 2 and light will force load on chunk borders and stutter the game.");
 
         // Dependencies
         lightingEngine = GetNode<LightingEngine>("Lighting");
@@ -62,10 +63,11 @@ public class Terrain : Node2D
 
         // Use instances
         this.terrainStack = worldFile.GetITerrainStack();
-        this.chunkLoader = new ChunkLoader(this, threadPool);
+        this.worldImage = new WorldImage(this, terrainStack.WorldBlocksImage, terrainStack.WorldWallsImage, terrainStack.WorldLiquidsImage);
+        this.chunkLoader = new ChunkLoader(this, threadPool, worldImage);
 
         // Instance locals
-        this.chunkPool = new ObjectPool<Chunk>(15, ChunkBlockCount);
+        this.chunkPool = new ObjectPool<Chunk>(15, worldImage, ChunkBlockCount);
         this.chunkLighting = new ChunkLighting(lightingEngine, lightingCacheFile, lightingConfigFile, GetWorldSizeInChunks());
 
         // Initialise further
@@ -79,11 +81,11 @@ public class Terrain : Node2D
     public override void _Process(float delta)
     {
         // Save the all chunks loaded in memory to a file.
-        if (inputLayering.PopActionPressed("save_world"))
+        if (inputLayering.PopActionPressed("save_world") && false)
         {
             // TODO: Make this save to the current file with just worldFile.SaveWorld()
-            TeriaFile blockFile = new TeriaFile(true, "saves/SavedWorld/worlds/blocks.png");
-            TeriaFile wallFile = new TeriaFile(true, "saves/SavedWorld/worlds/walls.png");
+            TeriaFile blockFile = new TeriaFile(true, "saves/SavedWaterWorld/worlds/blocks.png");
+            TeriaFile wallFile = new TeriaFile(true, "saves/SavedWaterWorld/worlds/walls.png");
             worldFile.SaveWorld(blockFile, wallFile, false);
             lightingEngine.SaveLight();
         }
@@ -125,7 +127,7 @@ public class Terrain : Node2D
     {
         Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "LoadVisibleChunks() Requires the lock to be on.");
 
-        Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin);
+        IEnumerable<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin);
         foreach (Vector2 chunkPosition in visibleChunkPositions)
         {
             Vector2 worldImageInChunks = WorldBlocksImage.GetSize() / ChunkBlockCount;
@@ -153,8 +155,8 @@ public class Terrain : Node2D
         }
         else
         {
-            chunk = chunkPool.GetInstance(WorldBlocksImage, chunkPosition, BlockPixelSize,
-                                          ChunkBlockCount, this, worldFile, chunkLighting);
+            chunk = chunkPool.GetInstance(chunkPosition, BlockPixelSize,
+                                          ChunkBlockCount, this, chunkLighting);
             AddChild(chunk);
         }
 
@@ -185,7 +187,7 @@ public class Terrain : Node2D
         Developer.AssertTrue(loadedChunksConcurrent.IsLocked, "DeleteInvisibleChunks() Requires the lock to be on.");
 
         // First we grab a set the worldPositions that should be loaded in the game 
-        Array<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin);
+        IEnumerable<Vector2> visibleChunkPositions = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin);
 
         // Loop through the loaded chunks and store the ones that we should keep in
         // visibleChunks while erasing them from the old loadedChunks dictionary. 
@@ -204,9 +206,9 @@ public class Terrain : Node2D
 
     private void CreateChunkStreamingRegions()
     {
-        Array<Vector2> urgentVisibilityPoints = player.GetVisibilityChunkPositions();
-        Array<Vector2> drawVisibilityPoints = player.GetVisibilityChunkPositions(LightingMargin, true);
-        Array<Vector2> loadVisibilityPoints = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin, true, LightingMargin);
+        IEnumerable<Vector2> urgentVisibilityPoints = player.GetVisibilityChunkPositions();
+        IEnumerable<Vector2> drawVisibilityPoints = player.GetVisibilityChunkPositions(LightingMargin, true);
+        IEnumerable<Vector2> loadVisibilityPoints = player.GetVisibilityChunkPositions(LoadMargin + LightingMargin, true, LightingMargin);
 
         // GD.Print("Urgent:", urgentVisibilityPoints);
         // GD.Print("Load:", loadVisibilityPoints);
@@ -349,39 +351,9 @@ public class Terrain : Node2D
         return (worldPosition / ChunkPixelDimensions).Floor();
     }
 
-    /* Returns a block if it exists using the given chunkPosition and blockPosition
-    values.
-        - Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
-        index in the world.
-        - Block positions are the position of the block relative to the chunk it is
-        in. It cannot be larger than the chunk's blockSize.
-    Blocks are Dictionaries containing a set of standard variables. See the Block
-    documentation in the Chunk scene.
-
-    Fastest function to get blocks.*/
-    public Block GetBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition)
+    public MasterBlock GetTopTileFromWorldBlockPosition(Vector2 worldBlockPosition)
     {
-        Chunk chunk = GetChunkFromChunkPosition(chunkPosition);
-        if (chunk == null)
-            return null;
-        return chunk.GetLoadingPhase() != Chunk.LoadingPhase.NeedsLoading ? chunk.GetBlockFromBlockPosition(blockPosition) : null;
-    }
-
-    public IBlock GetTopIBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition)
-    {
-        Chunk chunk = GetChunkFromChunkPosition(chunkPosition);
-        if (chunk == null)
-            return null;
-        if (chunk.GetLoadingPhase() == Chunk.LoadingPhase.NeedsLoading)
-            return null;
-        return chunk.GetTopIBlockFromBlockPosition(blockPosition);
-    }
-
-    public IBlock GetTopIBlockFromWorldBlockPosition(Vector2 worldBlockPosition)
-    {
-        Vector2 chunkPosition = (worldBlockPosition / ChunkBlockCount).Floor();
-        Vector2 blockPosition = worldBlockPosition - chunkPosition * ChunkBlockCount;
-        return GetTopIBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition);
+        return worldImage.GetTopTilePixelv(worldBlockPosition);
     }
 
     /* Returns a block if it exists using the given worldPosition.
@@ -392,84 +364,36 @@ public class Terrain : Node2D
     Slowest function to get blocks.*/
     public Block GetBlockFromWorldPosition(Vector2 worldPosition)
     {
-        Vector2 chunkPosition = GetChunkPositionFromWorldPosition(worldPosition);
-        Vector2 blockPosition = GetBlockPositionFromWorldPositionAndChunkPosition(worldPosition, chunkPosition);
-        return GetBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition);
+        Vector2 worldBlockPosition = WorldPositionToWorldBlockPosition(worldPosition);
+        return worldImage.GetBlockPixelv(worldBlockPosition);
     }
-
-    /* Returns a block position using the given worldPosition and chunkPosition
-    values.
-        - World positions are locations represented by pixels. Entities in the world
-        are stored using this value.
-        - Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
-        index in the world.
-    Block positions are the position of the block relative to the chunk it is in. It
-    cannot be larger than the chunk's blockSize.
-    Fastest function to get block positions.*/
-    public Vector2 GetBlockPositionFromWorldPositionAndChunkPosition(Vector2 worldPosition, Vector2 chunkPosition)
-    {
-        Vector2 blockPosition = (worldPosition - chunkPosition * ChunkPixelDimensions).Floor();
-        return (blockPosition / BlockPixelSize).Floor();
-    }
-
-    /* Returns a block position using the given worldPosition.
-        - World positions are locations represented by pixels. Entities in the world
-        are stored using this value.
-    Block positions are the position of the block relative to the chunk it is in. It
-    cannot be larger than the chunk's blockSize.
-    Slowest function to get block positions. */
-    public Vector2 GetBlockPositionFromWorldPosition(Vector2 worldPosition)
-    {
-        Vector2 chunkPosition = GetChunkPositionFromWorldPosition(worldPosition);
-        return GetBlockPositionFromWorldPositionAndChunkPosition(worldPosition, chunkPosition);
-    }
-
-    /* Sets a block at the given chunkPosition and blockPosition to be the
-    newBlock if it exists.
-        - Chunk positions are Vectors like [0, 0] or [0, 1] that represent a chunk's
-        index in the world.
-        - Block positions are the position of the block relative to the chunk it is
-        in. It cannot be larger than the chunk's blockSize.
-        - Blocks are Dictionaries containing a set of standard variables. See the
-        Block documentation in the Chunk scene.
-    Fastest function to set blocks. */
-    public void SetBlockFromChunkPositionAndBlockPosition(Vector2 chunkPosition, Vector2 blockPosition, Block newBlock)
-    {
-        Chunk chunk = GetChunkFromChunkPosition(chunkPosition);
-        if (chunk == null)
-            return;
-        chunk.SetBlockFromBlockPosition(blockPosition, newBlock);
-        Vector2 worldBlockPosition = chunkPosition * ChunkBlockCount + blockPosition;
-        SetWorldImage(worldBlockPosition, newBlock.Colour);
-    }
-
+    
     /* Sets a block at the given worldPosition to be the newBlock if it exists.
         - World positions are locations represented by pixels. Entities in the world
         are stored using this value.
         - Blocks are Dictionaries containing a set of standard variables. See the
         Block documentation in the Chunk scene.
     Slowest function to set blocks. */
-    public void SetBlockAtWorldPosition(Vector2 worldPosition, Block newBlock)
+    public void SetBlockAtWorldPosition(Vector2 worldPosition, Tiles.Blocks newBlock)
     {
-        Vector2 chunkPosition = GetChunkPositionFromWorldPosition(worldPosition);
-        Vector2 blockPosition = GetBlockPositionFromWorldPositionAndChunkPosition(worldPosition, chunkPosition);
-        SetBlockFromChunkPositionAndBlockPosition(chunkPosition, blockPosition, newBlock);
-    }
-
-    private void SetWorldImage(Vector2 worldBlockPosition, Color colour)
-    {
-        if (worldBlockPosition.x < 0 || worldBlockPosition.y < 0 ||
-                worldBlockPosition.x >= WorldBlocksImage.GetWidth() ||
-                worldBlockPosition.y >= WorldBlocksImage.GetHeight())
+        Chunk chunk = GetChunkFromWorldPosition(worldPosition);
+        if (chunk == null)
             return;
-        WorldBlocksImage.SetPixelv(worldBlockPosition, colour);
 
+        Vector2 worldBlockPosition = WorldPositionToWorldBlockPosition(worldPosition);
+        worldImage.SetBlockPixelv(worldBlockPosition, newBlock);
+        chunk.Update();
         CheckIfUpdateLighting(worldBlockPosition);
     }
 
+    public Vector2 WorldPositionToWorldBlockPosition(Vector2 worldPosition)
+    {
+        return worldPosition / BlockPixelSize;
+    }
+    
     private void CheckIfUpdateLighting(Vector2 worldBlockPosition)
     {
-        IBlock topBlock = GetTopIBlockFromWorldBlockPosition(worldBlockPosition);
+        MasterBlock topBlock = GetTopTileFromWorldBlockPosition(worldBlockPosition);
         if (Helper.IsLight(topBlock.Colour))
             lightingEngine.AddLight(worldBlockPosition, Colors.White);
         else

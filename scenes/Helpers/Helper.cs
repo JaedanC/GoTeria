@@ -5,10 +5,10 @@ public class Helper
 {
     public static bool IsLight(Color colour)
     {
-        return colour.a == Helper.Light.a; // TODO: Note there's a floating point operation here. Use a tolerance.
+        return colour.a == Helper.EmptyColour.a; // TODO: Note there's a floating point operation here. Use a tolerance.
     }
 
-    private static readonly Color Light = new Color(0, 0, 0, 0);
+    public static readonly Color EmptyColour = new Color(0, 0, 0, 0);
 
     public static bool InBounds(Vector2 position, Vector2 bounds)
     {

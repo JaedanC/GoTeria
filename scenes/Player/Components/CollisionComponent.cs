@@ -4,7 +4,6 @@ using Godot;
 public class CollisionComponent : Node2D
 {
     private ICollidable parent;
-    private Terrain terrain;
     private CollisionSystem collisionSystem;
     private Rect2 previousParentHitboxRect;
     private Rect2 nextParentHitboxRect;
@@ -20,9 +19,8 @@ public class CollisionComponent : Node2D
         // this.collisionSystem = WorldSpawn.ActiveWorldSpawn.GetCollisionSystem();
     }
 
-    public void Initialise(Terrain terrain, CollisionSystem collisionSystem)
+    public void Initialise(CollisionSystem collisionSystem)
     {
-        this.terrain = terrain;
         this.collisionSystem = collisionSystem;
     }
 
@@ -30,7 +28,7 @@ public class CollisionComponent : Node2D
     {
         UpdateCollisionVisiblityRect(delta);
         CreateCollisionVisibleBlockHitboxes();
-        Move(parent.GetVelocity(), delta);
+        Move(parent.GetVelocity());
     }
 
     /* This function expands a Rect2 to include the player and where the player would be
@@ -59,7 +57,7 @@ public class CollisionComponent : Node2D
         collisionSystem.CreateBlockHitboxesInArea(mergedParentHitboxRect);
     }
 
-    private void Move(Vector2 vector, float delta)
+    private void Move(Vector2 vector)
     {
         // Fixes infinite velocity Portal 2 style
         Vector2 oldParentPosition = parent.GetRigidBody().Position;

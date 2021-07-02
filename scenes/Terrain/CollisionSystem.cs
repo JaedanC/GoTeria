@@ -20,7 +20,7 @@ public class CollisionSystem : Node
     {
         loadedBlocks = new Dictionary<Vector2, StaticBody2D>();
         mentionedBlocks = new HashSet<Vector2>();
-        blockScene = (PackedScene)ResourceLoader.Load("res://scenes/Terrain/Chunk/Layers/BlockHitbox/BlockHitbox.tscn");
+        blockScene = (PackedScene)ResourceLoader.Load("res://scenes/Terrain/Chunk/BlockHitbox/BlockHitbox.tscn");
     }
 
     public void Initialise(Terrain terrain)
@@ -35,7 +35,7 @@ public class CollisionSystem : Node
     }
 
     /* Instance the block hitboxes of the points in the worldBlockPoints Array. Does not load a block twice. */
-    public void CreateBlockHitboxes(Godot.Collections.Array<Vector2> worldBlockPoints)
+    public void CreateBlockHitboxes(IEnumerable<Vector2> worldBlockPoints)
     {
         foreach (Vector2 visibleBlockPoint in worldBlockPoints)
         {
@@ -44,21 +44,18 @@ public class CollisionSystem : Node
 
             // Don't add collision for air.
             // TODO: In future this is where we would put slopes.
-            if (existingBlock != null && existingBlock.IsSolid())
-            {
-                if (loadedBlocks.ContainsKey(visibleBlockPoint))
-                    continue;
+            if (existingBlock == null || !existingBlock.IsSolid() || loadedBlocks.ContainsKey(visibleBlockPoint))
+                continue;
                 
-                BlockHitbox blockHitbox = (BlockHitbox)blockScene.Instance(); // Instance the block scene.
+            BlockHitbox blockHitbox = (BlockHitbox)blockScene.Instance(); // Instance the block scene.
 
-                // The order of these two operations is very important. Flip them, and collision goes out the window.
-                // I assume this is because the _Ready() method in the block requires this value, but I'll be honest
-                // I have no idea why this is the case from looking at the source code.
-                blockHitbox.Position = visibleBlockPoint * terrain.BlockPixelSize + terrain.BlockPixelSize / 2;
-                AddChild(blockHitbox);
-                blockHitbox.Initialise(terrain);
-                loadedBlocks[visibleBlockPoint] = blockHitbox;
-            }
+            // The order of these two operations is very important. Flip them, and collision goes out the window.
+            // I assume this is because the _Ready() method in the block requires this value, but I'll be honest
+            // I have no idea why this is the case from looking at the source code.
+            blockHitbox.Position = visibleBlockPoint * terrain.BlockPixelSize + terrain.BlockPixelSize / 2;
+            AddChild(blockHitbox);
+            blockHitbox.Initialise(terrain);
+            loadedBlocks[visibleBlockPoint] = blockHitbox;
         }
     }
 

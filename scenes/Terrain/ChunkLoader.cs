@@ -7,14 +7,16 @@ public class ChunkLoader
 {
     private readonly Terrain terrain;
     private readonly ThreadPool threadPool;
+    private readonly WorldImage worldImage;
 
     private readonly ConcurrentSet<Vector2> chunksLoading;
     private readonly ConcurrentSet<Vector2> chunksLighting;
 
-    public ChunkLoader(Terrain terrain, ThreadPool threadPool)
+    public ChunkLoader(Terrain terrain, ThreadPool threadPool, WorldImage worldImage)
     {
         this.terrain = terrain;
         this.threadPool = threadPool;
+        this.worldImage = worldImage;
 
         chunksLoading = new ConcurrentSet<Vector2>();
         chunksLighting = new ConcurrentSet<Vector2>();
@@ -25,8 +27,11 @@ public class ChunkLoader
     an error if not. Returns true if the chunk was placed in the thread pool. */
     public bool BeginLoadingChunk(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunks, bool lazy)
     {
-        Developer.AssertTrue(Helper.InBounds(chunkPosition, terrain.GetWorldSizeInChunks()), "BeginLoadingChunk(): " + chunkPosition + " was out of bounds.");
         Developer.AssertTrue(loadedChunks.IsLocked, "BeginLoadingChunk() requires the lock.");
+        
+        // Is out of bounds
+        if (Helper.OutOfBounds(chunkPosition, terrain.GetWorldSizeInChunks()))
+            return false;
         
         // The chunk is already loading
         if (chunksLoading.Contains(chunkPosition))
@@ -52,8 +57,11 @@ public class ChunkLoader
     an error if not. */
     public void BeginLightingChunk(Vector2 chunkPosition, LazyVolatileDictionary<Vector2, Chunk> loadedChunks, bool lazy)
     {
-        Developer.AssertTrue(Helper.InBounds(chunkPosition, terrain.GetWorldSizeInChunks()), "BeginLightingChunk(): " + chunkPosition + " was out of bounds.");
         Developer.AssertTrue(loadedChunks.IsLocked, "BeginLightingChunk() requires the lock.");
+        
+        // Is out of bounds
+        if (Helper.OutOfBounds(chunkPosition, terrain.GetWorldSizeInChunks()))
+            return;
 
         // The chunk is already lighting
         if (chunksLighting.Contains(chunkPosition))
@@ -108,7 +116,7 @@ public class ChunkLoader
         Chunk chunk = (Chunk)data[1];
 
         // GD.Print("ThreadPool(): Started loading chunk: " + chunkPosition);
-        chunk.Create(chunkPosition, terrain.ChunkBlockCount, terrain.WorldBlocksImage, terrain.WorldWallsImage);
+        chunk.Create(chunkPosition, terrain.ChunkBlockCount, worldImage);
         chunksLoading.Remove(chunk.ChunkPosition);
         // GD.Print("ThreadPool(): Finished loading chunk: " + chunkPosition);
         return chunk;
@@ -149,7 +157,7 @@ public class ChunkLoader
             return;
 
         // Blocks until the chunk is done. We unlock so that things on the thread pool can continue in the meantime.
-        // GD.Print("Force loading chunk: " + chunkPosition);
+        GD.Print("Force loading chunk: " + chunkPosition);
         loadedChunks.Unlock();
         while (true)
         {
@@ -177,7 +185,7 @@ public class ChunkLoader
             FinishLoadingChunkForcefully(dependency, loadedChunks);
         }
         // Blocks until the chunk is done. We unlock so that things on the thread pool can continue in the meantime.
-        // GD.Print("Force lighting chunk: " + chunkPosition);
+        GD.Print("Force lighting chunk: " + chunkPosition);
         loadedChunks.Unlock();
         while (true)
         {

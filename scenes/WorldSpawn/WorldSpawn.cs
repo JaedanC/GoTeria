@@ -17,8 +17,10 @@ public class WorldSpawn : Node
     private Vector2 blockPixelSize = new Vector2(16, 16);
 
     [Export]
-    private readonly Vector2 chunkBlockCount = new Vector2(420, 400);
+    // private readonly Vector2 chunkBlockCount = new Vector2(80, 40);
     // private readonly Vector2 chunkBlockCount = new Vector2(210, 200);
+    private readonly Vector2 chunkBlockCount = new Vector2(420, 400);
+    // private readonly Vector2 chunkBlockCount = new Vector2(1024, 2048);
     private readonly bool singleThreadedThreadPool;
     private readonly bool singleThreadedLightingEngine;
     private readonly int threadPoolThreads;
@@ -31,6 +33,7 @@ public class WorldSpawn : Node
     private readonly TeriaFile configFile;
     private readonly TeriaFile blockFile;
     private readonly TeriaFile wallFile;
+    private readonly TeriaFile liquidFile;
     private readonly TeriaFile lightingConfigFile;
     private readonly TeriaFile lightingCacheFile;
 
@@ -58,6 +61,7 @@ public class WorldSpawn : Node
         singleThreadedThreadPool = false;
         singleThreadedLightingEngine = false;
         saveFileName = "SavedWorld";
+        // saveFileName = "WaterWorld";
         threadPoolThreads = Mathf.Max(1, OS.GetProcessorCount() - 2);
         // threadPoolThreads = OS.GetProcessorCount();
         // threadPoolThreads = 1;
@@ -66,11 +70,12 @@ public class WorldSpawn : Node
         configFile = new TeriaFile(true, "saves/" + saveFileName + "/bindings.ini");
         blockFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/blocks.png");
         wallFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/walls.png");
+        liquidFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/liquids.png");
         lightingCacheFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/light.png");
         lightingConfigFile = new TeriaFile(true, "saves/" + saveFileName + "/worlds/lighting.json");
 
         analogMapping = new AnalogMapping();
-        worldFile = new WorldFile(blockFile, wallFile);
+        worldFile = new WorldFile(blockFile, wallFile, liquidFile);
         config = new ConfigFile();
 
         // Value checks

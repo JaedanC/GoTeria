@@ -4,27 +4,31 @@ using Godot;
 /* A WorldFile allows access to the images that make up the terrain. */
 public class WorldFile
 {
-    private readonly ITerrainStack terrainStack;
+    private readonly TerrainStack terrainStack;
     private TeriaFile blockFile;
     private TeriaFile wallFile;
+    private TeriaFile liquidFile;
     private static readonly Mutex LoadMutex = new Mutex();
 
 
-    public WorldFile(TeriaFile blockFile, TeriaFile wallFile)
+    public WorldFile(TeriaFile blockFile, TeriaFile wallFile, TeriaFile liquidFile)
     {
         this.blockFile = blockFile;
         this.wallFile = wallFile;
+        this.liquidFile = liquidFile;
 
         Image blockImage = LoadImage(blockFile);
         Image wallImage = LoadImage(wallFile);
+        Image liquidImage = LoadImage(liquidFile);
         Developer.AssertNotNull(blockImage, "Block image was null");
         Developer.AssertNotNull(wallImage, "Wall image was null");
+        Developer.AssertNotNull(liquidImage, "Liquid image was null");
 
-        terrainStack = new TerrainStack(blockImage, wallImage);
+        terrainStack = new TerrainStack(blockImage, wallImage, liquidImage);
     }
 
     /* Retrieve the images in the ITerrainStack.  */
-    public ITerrainStack GetITerrainStack()
+    public TerrainStack GetITerrainStack()
     {
         Developer.AssertNotNull(terrainStack);
         return terrainStack;

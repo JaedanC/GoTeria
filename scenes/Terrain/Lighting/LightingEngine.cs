@@ -63,7 +63,7 @@ public class LightingEngine : Node2D
 
     public override void _Notification(int what)
     {
-        if (what == MainLoop.NotificationPredelete)
+        if (what == NotificationPredelete)
         {
             keepLightThread = false;
             if (lightingThread.ThreadState == System.Threading.ThreadState.Running)
@@ -266,13 +266,13 @@ public class LightingEngine : Node2D
             // Set the colour then
             worldLightImage.SetPixelv(node.WorldPosition, node.Colour);
 
-            IBlock topBlock = terrain.GetTopIBlockFromWorldBlockPosition(node.WorldPosition);
-            if (topBlock == null)
+            MasterBlock topTile = terrain.GetTopTileFromWorldBlockPosition(node.WorldPosition);
+            if (topTile == null)
             {
                 continue;
             }
 
-            float reduction = topBlock.GetTransparency();
+            float reduction = topTile.GetTransparency();
             Color newColour = new Color(
                 node.Colour.r - reduction,
                 node.Colour.g - reduction,
@@ -459,12 +459,14 @@ public class LightingEngine : Node2D
 
         if (!scaleSame)
         {
+            if (screenLightLevels == null)
+                screenLightLevels = new Image();
             // "Can't resize pool vector if locked"
-            screenLightLevels = new Image(); // Maybe this will fix it?
+            // screenLightLevelsShaderTexture.CreateFromImage(screenLightLevels, (uint)Texture.FlagsEnum.Filter);
             screenLightLevels.Create((int)blocksOnScreen.x, (int)blocksOnScreen.y, false, Image.Format.Rgba8); // This is still the culprit...
-            screenLightLevelsShaderTexture.CreateFromImage(screenLightLevels, (uint)Texture.FlagsEnum.Filter);
+            screenLightLevelsShaderTexture.CreateFromImage(screenLightLevels, 0);
         }
-
+        
         worldLightImage.LockImage();
         screenLightLevels.BlitRect(worldLightImage.GetImage(), new Rect2(topLeftBlock, blocksOnScreen), Vector2.Zero);
         worldLightImage.UnlockImage();

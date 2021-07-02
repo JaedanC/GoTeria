@@ -12,27 +12,14 @@ public class Chunk : Node2D, IResettable
     }
 
     private Terrain terrain;
-    private WorldFile worldFile;
     private ChunkLighting chunkLighting;
-    private Image worldImage;
-    private Vector2 blockCount;
+    private Vector2 chunkSize;
     private Vector2 blockPixelSize;
     private bool memoryAllocated;
-    private readonly ChunkStack chunkStack;
+    private ChunkStack chunkStack;
     public Vector2 ChunkPosition { get; private set; }
-
     private bool loadingDone;
-
     private bool lightingDone;
-    // private ChunkLighting chunkLighting;
-    public Block[] Blocks => chunkStack.Blocks;
-    public Wall[] Walls => chunkStack.Walls;
-
-
-    public static int BlockPositionToBlockIndex(Vector2 chunkSize, Vector2 blockPosition)
-    {
-        return (int)(chunkSize.x * blockPosition.y + blockPosition.x);
-    }
 
     public static IList<Vector2> GetDependencies(Vector2 chunkPosition, Vector2 worldSizeInChunks)
     {
@@ -62,32 +49,30 @@ public class Chunk : Node2D, IResettable
     public Chunk()
     {
         Name = "Chunk";
-        chunkStack = new ChunkStack();
     }
-
 
     /* This function should only be run once. This initialises a chunk to have the memory it requires
     to be allocated on the heap. */
     public void AllocateMemory(params object[] memoryAllocationParameters)
     {
-        blockCount = (Vector2)memoryAllocationParameters[0];
-        chunkStack.AllocateMemory(blockCount);
+        Developer.AssertFalse(memoryAllocated, "Don't allocate memory twice for chunk.");
+        WorldImage worldImage = (WorldImage)memoryAllocationParameters[0];
+        chunkSize = (Vector2)memoryAllocationParameters[1];
+        chunkStack = new ChunkStack(worldImage, chunkSize);
         memoryAllocated = true;
     }
 
     /* This is the method that is called when a chunk is reset before it is reused. */
     public void Initialise(object[] parameters)
     {
-        this.worldImage = (Image)parameters[0];
-        this.ChunkPosition = (Vector2)parameters[1];
-        this.blockPixelSize = (Vector2)parameters[2];
-        this.blockCount = (Vector2)parameters[3];
-        this.terrain = (Terrain)parameters[4];
-        this.worldFile = (WorldFile)parameters[5];
-        this.chunkLighting = (ChunkLighting)parameters[6];
+        this.ChunkPosition = (Vector2)parameters[0];
+        this.blockPixelSize = (Vector2)parameters[1];
+        this.chunkSize = (Vector2)parameters[2];
+        this.terrain = (Terrain)parameters[3];
+        this.chunkLighting = (ChunkLighting)parameters[4];
         this.lightingDone = false;
         this.loadingDone = false;
-        this.Position = blockPixelSize * ChunkPosition * blockCount;
+        this.Position = blockPixelSize * ChunkPosition * chunkSize;
     }
 
     public LoadingPhase GetLoadingPhase()
@@ -101,18 +86,18 @@ public class Chunk : Node2D, IResettable
         return LoadingPhase.ReadyToDraw;
     }
 
-    public void Create(Vector2 chunkPosition, Vector2 blockCount, Image worldBlocksImages, Image worldWallsImage)
+    public void Create(Vector2 chunkPosition, Vector2 chunkSize, WorldImage worldImage)
     {
         if (!memoryAllocated)
-            AllocateMemory(blockCount);
+            AllocateMemory(worldImage, chunkSize);
 
-        chunkStack.Create(chunkPosition, blockCount, worldBlocksImages, worldWallsImage);
+        chunkStack.Initialise(chunkPosition);
         loadingDone = true;
     }
 
     public IList<Vector2> GetDependencies()
     {
-        return Chunk.GetDependencies(ChunkPosition, terrain.GetWorldSizeInChunks());
+        return GetDependencies(ChunkPosition, terrain.GetWorldSizeInChunks());
     }
 
     public override void _Draw()
@@ -150,68 +135,5 @@ public class Chunk : Node2D, IResettable
             DrawTexture(texture, Vector2.Zero);
         }
         DrawSetTransform(Vector2.Zero, 0, Vector2.One);
-    }
-
-    private bool IsValidBlockPosition(Vector2 blockPosition)
-    {
-        return !(blockPosition.x < 0 || blockPosition.x >= blockCount.x ||
-                 blockPosition.y < 0 || blockPosition.y >= blockCount.y);
-    }
-
-    public int BlockPositionToBlockIndex(Vector2 blockPosition)
-    {
-        return (int)(blockCount.x * blockPosition.y + blockPosition.x);
-    }
-
-    public IBlock GetTopIBlockFromBlockPosition(Vector2 blockPosition)
-    {
-        if (!IsValidBlockPosition(blockPosition))
-            return null;
-        return chunkStack.GetTopIBlock(blockPosition);
-    }
-
-    private IBlock GetIBlockFromBlockPosition(IBlock[] blocks, Vector2 blockPosition)
-    {
-        if (!IsValidBlockPosition(blockPosition))
-            return null;
-        return blocks[BlockPositionToBlockIndex(blockPosition)];
-    }
-
-    public Block GetBlockFromBlockPosition(Vector2 blockPosition)
-    {
-        return (Block)GetIBlockFromBlockPosition(chunkStack.Blocks, blockPosition);
-    }
-
-    public Wall GetWallFromBlockPosition(Vector2 blockPosition)
-    {
-        return (Wall)GetIBlockFromBlockPosition(chunkStack.Walls, blockPosition);
-    }
-
-    private void SetIBlockFromBlockPosition(IBlock[] blocks, Image chunkLayerImage, Vector2 blockPosition, IBlock newBlock)
-    {
-        if (!IsValidBlockPosition(blockPosition))
-            return;
-
-        Color newColour;
-        if (newBlock.IsSolid())
-            newColour = newBlock.Colour;
-        else
-            newColour = new Color(0, 0, 0, 0);
-
-        blocks[BlockPositionToBlockIndex(blockPosition)] = newBlock;
-        chunkLayerImage.Lock();
-        chunkLayerImage.SetPixelv(blockPosition, newColour);
-        chunkLayerImage.Unlock();
-        Update();
-    }
-
-    public void SetBlockFromBlockPosition(Vector2 blockPosition, Block newBlock)
-    {
-        SetIBlockFromBlockPosition(chunkStack.Blocks, chunkStack.GetBlocksImage(), blockPosition, newBlock);
-    }
-
-    public void SetWallFromBlockPosition(Vector2 blockPosition, Wall newWall)
-    {
-        SetIBlockFromBlockPosition(chunkStack.Walls, chunkStack.GetWallsImage(), blockPosition, newWall);
     }
 }

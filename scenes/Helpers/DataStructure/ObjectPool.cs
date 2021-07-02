@@ -25,7 +25,7 @@ public class ObjectPool<T> : Resource where T : Node, IResettable, new()
     /* Unload the orphan T's when the game is closed. */
     public override void _Notification(int what)
     {
-        if (what == MainLoop.NotificationPredelete)
+        if (what == NotificationPredelete)
         {
             foreach (T instance in pool)
             {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 using Godot.Collections;
 
@@ -41,15 +42,20 @@ public class Player : Entity
         if (inputLayering.PopAction("place_block"))
         {
             Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
-            Block newBlock = new Block(1, new Color(1, 1, 0, 1));
-            terrain.SetBlockAtWorldPosition(mouseWorldPosition, newBlock);
+            terrain.SetBlockAtWorldPosition(mouseWorldPosition, Tiles.Blocks.Dirt);
         }
 
         if (inputLayering.PopAction("dig"))
         {
             Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
-            Block newBlock = new Block(0, new Color(0, 0, 0, 0));
-            terrain.SetBlockAtWorldPosition(mouseWorldPosition, newBlock);
+            terrain.SetBlockAtWorldPosition(mouseWorldPosition, Tiles.Blocks.Air);
+        }
+        
+        if (inputLayering.PopActionPressed("inspect"))
+        {
+            Vector2 mouseWorldPosition = ScreenToWorldPosition(GetViewport().GetMousePosition());
+            Block block = terrain.GetBlockFromWorldPosition(mouseWorldPosition);
+            GD.Print(block + ", Name: " + block.Name + ", Colour: " + block.Colour);
         }
 
         if (inputLayering.PopActionPressed("teleport"))
@@ -187,8 +193,8 @@ public class Player : Entity
     public Array<Vector2> GetVisibilityChunkPositionCorners()
     {
         Array<Vector2> worldPositionCorners = GetVisibilityWorldPositionCorners();
-        var chunkPositionTopLeft = (worldPositionCorners[0] / terrain.ChunkPixelDimensions).Floor();
-        var chunkPositionBottomRight = (worldPositionCorners[1] / terrain.ChunkPixelDimensions).Floor();
+        Vector2 chunkPositionTopLeft = (worldPositionCorners[0] / terrain.ChunkPixelDimensions).Floor();
+        Vector2 chunkPositionBottomRight = (worldPositionCorners[1] / terrain.ChunkPixelDimensions).Floor();
         return new Array<Vector2>(chunkPositionTopLeft, chunkPositionBottomRight);
     }
 
@@ -212,7 +218,7 @@ public class Player : Entity
         ...
     ]
     */
-    public Array<Vector2> GetVisibilityChunkPositions(int margin = 0, bool borderOnly = false, int borderIgnore = 0)
+    public IEnumerable<Vector2> GetVisibilityChunkPositions(int margin = 0, bool borderOnly = false, int borderIgnore = 0)
     {
         Array<Vector2> chunkCorners = GetVisibilityChunkPositionCorners();
 
@@ -229,7 +235,7 @@ public class Player : Entity
             for (int i = (int)topLeftMargin.x; i < (int)bottomRightMargin.x + 1; i++)
                 for (int j = (int)topLeftMargin.y; j < (int)bottomRightMargin.y + 1; j++)
                 {
-                    // borderIgnore reduces the radius of the border by borderIgnore ammount, from the inside.
+                    // borderIgnore reduces the radius of the border by borderIgnore amount, from the inside.
                     // It's like eating a donut but from the middle first. Don't do this btw.
                     Vector2 ignoreTopLeft = chunkCorners[0] - Vector2.One * borderIgnore;
                     Vector2 ignoreBottomRight = chunkCorners[1] + Vector2.One * borderIgnore;
